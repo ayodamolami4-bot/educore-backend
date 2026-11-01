@@ -40,6 +40,9 @@ class SchoolRulesTest {
 
   @Test
   void incompleteOrOversizedComponentsDoNotBecomeZeroOrAValidTotal() {
+    assertThrows(
+        Api.Failure.class,
+        () -> SchoolRules.total(new BigDecimal("19.95"), BigDecimal.TEN, BigDecimal.TEN));
     assertThrows(Api.Failure.class, () -> SchoolRules.total(null, BigDecimal.TEN, BigDecimal.TEN));
     assertThrows(
         Api.Failure.class,

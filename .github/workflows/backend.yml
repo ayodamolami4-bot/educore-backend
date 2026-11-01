@@ -40,7 +40,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client fonts-dejavu-core
       - name: Generate isolated test credentials and databases
         env:
           POSTGRES_ADMIN_PASSWORD: educore_ci_only

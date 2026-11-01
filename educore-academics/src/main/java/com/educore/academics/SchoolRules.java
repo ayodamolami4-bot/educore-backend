@@ -51,7 +51,7 @@ public final class SchoolRules {
     if (value == null
         || value.signum() < 0
         || value.compareTo(BigDecimal.valueOf(max)) > 0
-        || value.scale() > 2)
+        || value.stripTrailingZeros().scale() > 1)
       throw Api.fail(
           422, "INVALID_SCORE", "A required component is missing or exceeds its maximum.");
   }
