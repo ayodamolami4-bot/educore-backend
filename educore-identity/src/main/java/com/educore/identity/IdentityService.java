@@ -787,6 +787,21 @@ public class IdentityService {
 
   public Object slip(Actor actor, UUID school, String type, UUID subject, String key) {
     actor.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    String subjectType = "TEACHER".equals(type) ? "STAFF" : type;
+    if (!Set.of("STAFF", "STUDENT", "GUARDIAN").contains(subjectType))
+      throw fail(422, "INVALID_SUBJECT_TYPE", "Choose STAFF, TEACHER, STUDENT or GUARDIAN.");
+    if ("STAFF".equals(subjectType)
+        && "SCHOOL_OFFICE".equals(actor.context().role())
+        && db.queryForObject(
+                "select count(*) from memberships where school_id=? and subject_id=? and role='TEACHER' and active",
+                Integer.class,
+                school,
+                subject)
+            == 0)
+      throw fail(
+          403,
+          "ADMINISTRATOR_INVITATION_FORBIDDEN",
+          "Only the principal can issue administrator access instructions.");
     return commands.execute(
         actor.accountId().toString(),
         school.toString(),
@@ -798,7 +813,7 @@ public class IdentityService {
               one(
                   "select account_id from provisioned_subjects where school_id=? and subject_type=? and subject_id=?",
                   school,
-                  type,
+                  subjectType,
                   subject);
           UUID account = (UUID) link.get("account_id");
           var a = account(account);
@@ -902,29 +917,82 @@ public class IdentityService {
               var guardian = payload.path("guardian");
               UUID guardianId = uuid(guardian.path("id").asText());
               UUID guardianAccount = provision(school, "GUARDIAN", guardianId, guardian);
-              membership(
-                  guardianAccount,
+              guardianVersion(
                   school,
-                  schoolName,
-                  "PARENT",
                   studentId,
-                  student.path("fullName").asText(),
                   guardianId,
-                  true,
-                  true);
+                  1,
+                  () ->
+                      membership(
+                          guardianAccount,
+                          school,
+                          schoolName,
+                          "PARENT",
+                          studentId,
+                          student.path("fullName").asText(),
+                          guardianId,
+                          true,
+                          true));
             }
             case "TEACHER_REGISTERED" -> {
               var teacher = payload.path("teacher");
-              UUID subject = uuid(teacher.path("id").asText());
-              UUID account = provision(school, "STAFF", subject, teacher);
-              membership(account, school, schoolName, "TEACHER", null, null, subject, true, false);
+              applyStaff(school, schoolName, teacher, "TEACHER", true, 1);
             }
-            case "GUARDIAN_LINK_REVOKED" ->
-                db.update(
-                    "update memberships set active=false where school_id=? and child_id=? and subject_id=? and role='PARENT'",
-                    school,
-                    uuid(payload.path("studentId").asText()),
-                    uuid(payload.path("guardianId").asText()));
+            case "STAFF_ACCESS_CHANGED" -> {
+              var staff = payload.path("staff");
+              applyStaff(
+                  school,
+                  schoolName,
+                  staff,
+                  staff.path("role").asText(),
+                  staff.path("active").asBoolean(),
+                  staff.path("version").asLong());
+            }
+            case "GUARDIAN_LINK_UPDATED" -> {
+              var parent = payload.path("guardian");
+              UUID guardian = uuid(parent.path("id").asText()),
+                  child = uuid(payload.path("studentId").asText());
+              UUID account = provision(school, "GUARDIAN", guardian, parent);
+              guardianVersion(
+                  school,
+                  child,
+                  guardian,
+                  payload.path("version").asLong(1),
+                  () -> {
+                    membership(
+                        account,
+                        school,
+                        schoolName,
+                        "PARENT",
+                        child,
+                        payload.path("studentName").asText(),
+                        guardian,
+                        payload.path("learningAccess").asBoolean(),
+                        payload.path("payerAccess").asBoolean());
+                    db.update(
+                        "update memberships set active=true,learning_access=?,payer_access=? where school_id=? and child_id=? and subject_id=? and role='PARENT'",
+                        payload.path("learningAccess").asBoolean(),
+                        payload.path("payerAccess").asBoolean(),
+                        school,
+                        child,
+                        guardian);
+                  });
+            }
+            case "GUARDIAN_LINK_REVOKED" -> {
+              UUID child = uuid(payload.path("studentId").asText()),
+                  guardian = uuid(payload.path("guardianId").asText());
+              guardianVersion(
+                  school,
+                  child,
+                  guardian,
+                  payload.path("version").asLong(2),
+                  () ->
+                      db.update(
+                          "update memberships set active=false where school_id=? and child_id=? and subject_id=? and role='PARENT'",
+                          school,
+                          child,
+                          guardian));
+            }
             default -> throw fail(422, "UNKNOWN_EVENT", "Unsupported identity event.");
           }
           return ack("Event applied.");
@@ -966,6 +1034,16 @@ public class IdentityService {
           text(person.path("fullName").asText(), 2, 120, "Full name"),
           Api.phone(person.path("phone").asText()));
     }
+    if ("STAFF".equals(type)
+        && db.queryForObject(
+                "select count(*) from provisioned_subjects where school_id=? and account_id=? and subject_type='STAFF' and subject_id<>?",
+                Integer.class,
+                school,
+                account,
+                subject)
+            > 0)
+      throw fail(
+          409, "STAFF_ALREADY_LINKED", "This account already has a staff record in this school.");
     db.update(
         "insert into provisioned_subjects(school_id,subject_type,subject_id,account_id) values (?,?,?,?)",
         school,
@@ -973,6 +1051,91 @@ public class IdentityService {
         subject,
         account);
     return account;
+  }
+
+  private void applyStaff(
+      UUID school,
+      String schoolName,
+      com.fasterxml.jackson.databind.JsonNode person,
+      String role,
+      boolean active,
+      long version) {
+    if (!Set.of("PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS", "TEACHER").contains(role) || version < 1)
+      throw fail(422, "INVALID_STAFF_ACCESS", "Unsupported staff preset or source version.");
+    UUID subject = uuid(person.path("id").asText());
+    db.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))",
+        Object.class,
+        "staff-access|" + school);
+    var old =
+        db.queryForList(
+            "select source_version,account_id from provisioned_subjects where school_id=? and subject_type='STAFF' and subject_id=? for update",
+            school,
+            subject);
+    // A v1 teacher registration still needs its initial membership after provision().
+    if (!old.isEmpty()
+        && ((Number) old.get(0).get("source_version")).longValue() >= version
+        && db.queryForObject(
+                "select count(*) from memberships where school_id=? and subject_id=? and role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER')",
+                Integer.class,
+                school,
+                subject)
+            > 0) return;
+    UUID account = provision(school, "STAFF", subject, person);
+    boolean principal =
+        db.queryForObject(
+                "select count(*) from memberships where school_id=? and subject_id=? and role='PRINCIPAL' and active",
+                Integer.class,
+                school,
+                subject)
+            > 0;
+    if (principal
+        && (!active || !"PRINCIPAL".equals(role))
+        && db.queryForObject(
+                "select count(*) from memberships where school_id=? and role='PRINCIPAL' and active",
+                Integer.class,
+                school)
+            <= 1) throw fail(409, "LAST_PRINCIPAL", "The school must retain an active principal.");
+    db.update(
+        "update memberships set active=false where school_id=? and subject_id=? and role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER')",
+        school,
+        subject);
+    membership(account, school, schoolName, role, null, null, subject, true, false);
+    db.update(
+        "update memberships set active=? where account_id=? and school_id=? and role=? and subject_id=?",
+        active,
+        account,
+        school,
+        role,
+        subject);
+    db.update(
+        "update provisioned_subjects set source_version=? where school_id=? and subject_type='STAFF' and subject_id=?",
+        version,
+        school,
+        subject);
+  }
+
+  private void guardianVersion(
+      UUID school, UUID child, UUID guardian, long version, Runnable action) {
+    db.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))",
+        Object.class,
+        "guardian-access|" + school + "|" + child + "|" + guardian);
+    var old =
+        db.queryForList(
+            "select source_version from guardian_access_versions where school_id=? and child_id=? and guardian_id=?",
+            school,
+            child,
+            guardian);
+    if (!old.isEmpty() && ((Number) old.get(0).get("source_version")).longValue() >= version)
+      return;
+    action.run();
+    db.update(
+        "insert into guardian_access_versions(school_id,child_id,guardian_id,source_version) values (?,?,?,?) on conflict(school_id,child_id,guardian_id) do update set source_version=excluded.source_version",
+        school,
+        child,
+        guardian,
+        version);
   }
 
   private void membership(

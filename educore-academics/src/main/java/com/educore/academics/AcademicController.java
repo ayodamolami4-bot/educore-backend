@@ -271,11 +271,12 @@ public class AcademicController {
     Actor.internalOnly("finance", "communication", "academics");
     if (b.guardianId() != null
         && school.db.queryForObject(
-                "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active",
+                "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and (?<>'finance' or payer_access)",
                 Integer.class,
                 b.schoolId(),
                 b.studentId(),
-                b.guardianId())
+                b.guardianId(),
+                Actor.internalCaller())
             == 0) throw Api.fail(404, "NOT_FOUND", "The child relationship is unavailable.");
     if (b.termId() != null)
       school.one("select id from terms where school_id=? and id=?", b.schoolId(), b.termId());

@@ -69,7 +69,7 @@ public class SchoolService {
           UUID staff = UUID.randomUUID();
           db.update("insert into schools(id,code,name) values (?,?,?)", id, code, name);
           db.update(
-              "insert into staff(id,school_id,full_name,phone) values (?,?,?,?)",
+              "insert into staff(id,school_id,full_name,phone,staff_role) values (?,?,?,?,'PRINCIPAL')",
               staff,
               id,
               fullName,
@@ -665,7 +665,7 @@ public class SchoolService {
         });
   }
 
-  private void validateFields(JsonNode definition, Map<String, Object> values) {
+  void validateFields(JsonNode definition, Map<String, Object> values) {
     Set<String> allowed = new HashSet<>();
     for (JsonNode f : definition.path("studentFields")) {
       String key = f.path("key").asText();
@@ -690,7 +690,7 @@ public class SchoolService {
     if ("PARENT".equals(c.role())) {
       a.child(student, false);
       if (db.queryForObject(
-              "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active",
+              "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and learning_access",
               Integer.class,
               school,
               student,
@@ -813,7 +813,7 @@ public class SchoolService {
               student,
               guardian);
           db.update(
-              "update guardian_links set active=false where school_id=? and student_id=? and guardian_id=?",
+              "update guardian_links set active=false,version=version+1 where school_id=? and student_id=? and guardian_id=?",
               school,
               student,
               guardian);
@@ -829,7 +829,14 @@ public class SchoolService {
                       "studentId",
                       student,
                       "guardianId",
-                      guardian));
+                      guardian,
+                      "version",
+                      one(
+                              "select version from guardian_links where school_id=? and student_id=? and guardian_id=?",
+                              school,
+                              student,
+                              guardian)
+                          .get("version")));
           commands.audit(
               school,
               a.accountId(),
