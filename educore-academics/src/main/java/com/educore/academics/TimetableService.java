@@ -1,0 +1,303 @@
+package com.educore.academics;
+
+import static com.educore.platform.Api.*;
+
+import com.educore.platform.*;
+import java.time.*;
+import java.util.*;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TimetableService {
+  private final SchoolService s;
+
+  public TimetableService(SchoolService s) {
+    this.s = s;
+  }
+
+  public record PlanInput(UUID termId, LocalDate effectiveFrom) {}
+
+  public record LessonInput(
+      UUID assignmentId, int weekday, String start, int durationMinutes, String room) {}
+
+  public Object create(Actor a, UUID school, PlanInput b, String key) {
+    a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    return s.commands.execute(
+        a.accountId().toString(),
+        school.toString(),
+        "timetable-plans",
+        key,
+        b,
+        () -> {
+          var term = s.one("select * from terms where school_id=? and id=?", school, b.termId());
+          LocalDate start = ((java.sql.Date) term.get("starts_on")).toLocalDate(),
+              end = ((java.sql.Date) term.get("ends_on")).toLocalDate();
+          if (b.effectiveFrom() == null
+              || b.effectiveFrom().isBefore(start)
+              || b.effectiveFrom().isAfter(end))
+            throw fail(
+                422,
+                "INVALID_EFFECTIVE_DATE",
+                "The timetable must become effective within its term.");
+          UUID id = UUID.randomUUID();
+          s.db.update(
+              "insert into timetable_plans(id,school_id,term_id,effective_from,wednesday_pt) values (?,?,?,?,?)",
+              id,
+              school,
+              b.termId(),
+              b.effectiveFrom(),
+              s.school(school).get("wednesday_pt"));
+          return map("id", id, "version", 1, "status", "DRAFT", "effectiveFrom", b.effectiveFrom());
+        });
+  }
+
+  public Object addLesson(
+      Actor a, UUID school, UUID plan, LessonInput b, long version, String key) {
+    a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    return s.commands.execute(
+        a.accountId().toString(),
+        school.toString(),
+        "timetable-plans/" + plan + "/lessons",
+        key,
+        map("lesson", b, "version", version),
+        () -> {
+          var p =
+              s.one(
+                  "select p.*,t.session_id from timetable_plans p join terms t on t.id=p.term_id where p.school_id=? and p.id=? for update of p",
+                  school,
+                  plan);
+          expectVersion(version, ((Number) p.get("version")).longValue());
+          if (!"DRAFT".equals(p.get("status")))
+            throw fail(
+                409,
+                "TIMETABLE_PUBLISHED",
+                "Create a new timetable revision before changing published lessons.");
+          var assignment =
+              s.one(
+                  "select ta.*,c.session_id,st.active from teaching_assignments ta join classes c on c.id=ta.class_id join staff st on st.id=ta.teacher_id where ta.school_id=? and ta.id=?",
+                  school,
+                  b.assignmentId());
+          if (!p.get("session_id").equals(assignment.get("session_id"))
+              || !Boolean.TRUE.equals(assignment.get("active")))
+            throw fail(
+                422,
+                "INVALID_ASSIGNMENT",
+                "The teaching assignment must be active in the timetable's academic session.");
+          LocalTime start;
+          try {
+            start = LocalTime.parse(b.start());
+          } catch (RuntimeException ex) {
+            throw fail(422, "INVALID_TIME", "Use a time such as 08:30.");
+          }
+          int minute = start.getHour() * 60 + start.getMinute();
+          if (start.getSecond() != 0 || start.getNano() != 0)
+            throw fail(422, "INVALID_TIME", "Use whole-minute lesson times.");
+          SchoolRules.lesson(
+              b.weekday(), minute, b.durationMinutes(), Boolean.TRUE.equals(p.get("wednesday_pt")));
+          // The locked plan serialises common versus department class-overlap checks.
+          var conflicts =
+              s.db.queryForList(
+                  "select id from lessons where plan_id=? and weekday=? and start_min<? and end_min>? and (teacher_id=? or (?::text is not null and room=?::text) or (class_id=? and (department is null or ?::text is null or department=?::text)))",
+                  plan,
+                  b.weekday(),
+                  minute + b.durationMinutes(),
+                  minute,
+                  assignment.get("teacher_id"),
+                  b.room(),
+                  b.room(),
+                  assignment.get("class_id"),
+                  assignment.get("department"),
+                  assignment.get("department"));
+          if (!conflicts.isEmpty())
+            throw fail(
+                409,
+                "TIMETABLE_CONFLICT",
+                "The class, teacher or room overlaps an existing lesson.");
+          UUID id = UUID.randomUUID();
+          s.db.update(
+              "insert into lessons(id,school_id,plan_id,assignment_id,class_id,teacher_id,subject_id,department,room,weekday,start_min,end_min) values (?,?,?,?,?,?,?,?,?,?,?,?)",
+              id,
+              school,
+              plan,
+              b.assignmentId(),
+              assignment.get("class_id"),
+              assignment.get("teacher_id"),
+              assignment.get("subject_id"),
+              assignment.get("department"),
+              b.room() == null ? null : text(b.room(), 1, 40, "Room"),
+              b.weekday(),
+              minute,
+              minute + b.durationMinutes());
+          s.db.update("update timetable_plans set version=version+1 where id=?", plan);
+          return map("id", id, "version", 1, "planVersion", version + 1);
+        });
+  }
+
+  public Object review(Actor a, UUID school, UUID plan) {
+    a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    var p =
+        s.one(
+            "select p.*,t.session_id from timetable_plans p join terms t on t.id=p.term_id where p.school_id=? and p.id=?",
+            school,
+            plan);
+    var targets =
+        s.db.queryForList(
+            "select ta.id as \"assignmentId\",ta.class_id as \"classId\",ta.weekly_periods as \"requiredPeriods\",coalesce(sum(l.end_min-l.start_min)/30,0) as \"scheduledPeriods\" from teaching_assignments ta join classes c on c.id=ta.class_id left join lessons l on l.assignment_id=ta.id and l.plan_id=? where ta.school_id=? and c.session_id=? group by ta.id",
+            plan,
+            school,
+            p.get("session_id"));
+    boolean complete =
+        !targets.isEmpty()
+            && targets.stream()
+                .allMatch(
+                    t ->
+                        ((Number) t.get("requiredPeriods")).longValue()
+                            == ((Number) t.get("scheduledPeriods")).longValue());
+    return map(
+        "id",
+        plan,
+        "version",
+        p.get("version"),
+        "status",
+        p.get("status"),
+        "effectiveFrom",
+        p.get("effective_from"),
+        "weeklyTargets",
+        targets,
+        "readyToPublish",
+        complete,
+        "lessons",
+        lessons(plan, null, null, null));
+  }
+
+  public Object publish(Actor a, UUID school, UUID plan, long version, String key) {
+    a.school(school, "PRINCIPAL");
+    return s.commands.execute(
+        a.accountId().toString(),
+        school.toString(),
+        "timetable-plans/" + plan + "/publish",
+        key,
+        map("version", version),
+        () -> {
+          var p =
+              s.one(
+                  "select * from timetable_plans where school_id=? and id=? for update",
+                  school,
+                  plan);
+          expectVersion(version, ((Number) p.get("version")).longValue());
+          if (!"DRAFT".equals(p.get("status")))
+            throw fail(409, "ALREADY_PUBLISHED", "This timetable is already published.");
+          @SuppressWarnings("unchecked")
+          var review = (Map<String, Object>) review(a, school, plan);
+          if (!Boolean.TRUE.equals(review.get("readyToPublish")))
+            throw fail(
+                422,
+                "WEEKLY_TARGETS_INCOMPLETE",
+                "Review and complete each subject's required weekly periods before publication.");
+          s.db.update(
+              "update timetable_plans set status='PUBLISHED',published_at=now(),version=version+1 where id=?",
+              plan);
+          s.commands.audit(
+              school,
+              a.accountId(),
+              "TIMETABLE_PUBLISHED",
+              "TIMETABLE",
+              plan,
+              null,
+              map("effectiveFrom", p.get("effective_from")));
+          s.outbox.add(
+              "communication",
+              "SCHOOL_NOTIFICATION",
+              map(
+                  "schoolId",
+                  school,
+                  "title",
+                  "School timetable published",
+                  "safePreview",
+                  "Your school published an updated timetable. Open your workspace to view it."));
+          return map(
+              "id",
+              plan,
+              "version",
+              version + 1,
+              "status",
+              "PUBLISHED",
+              "effectiveFrom",
+              p.get("effective_from"));
+        });
+  }
+
+  private List<Map<String, Object>> lessons(
+      UUID plan, UUID classId, UUID teacher, String department) {
+    return s.db.queryForList(
+        "select l.id,l.class_id as \"classId\",l.subject_id as \"subjectId\",su.name as \"subjectName\",l.teacher_id as \"teacherId\",st.full_name as \"teacherName\",l.weekday,l.start_min as \"startMinute\",l.end_min as \"endMinute\",l.department,l.room,l.version from lessons l join subjects su on su.id=l.subject_id join staff st on st.id=l.teacher_id where l.plan_id=? and (?::uuid is null or l.class_id=?::uuid) and (?::uuid is null or l.teacher_id=?::uuid) and (?::text is null or l.department is null or l.department=?::text) order by l.weekday,l.start_min,l.id",
+        plan,
+        classId,
+        classId,
+        teacher,
+        teacher,
+        department,
+        department);
+  }
+
+  public Object published(Actor a, UUID school, UUID requestedClass, LocalDate on) {
+    var context = a.school(school);
+    if (on == null) on = LocalDate.now(ZoneId.of("Africa/Lagos"));
+    UUID classId = requestedClass, teacher = null;
+    String department = null;
+    switch (context.role()) {
+      case "PARENT", "STUDENT" -> {
+        UUID student = "PARENT".equals(context.role()) ? context.childId() : context.subjectId();
+        s.learning(a, school, student);
+        var e =
+            s.one(
+                "select * from enrolments where school_id=? and student_id=? and starts_on<=? and (ends_on is null or ends_on>=?) order by starts_on desc limit 1",
+                school,
+                student,
+                on,
+                on);
+        classId = (UUID) e.get("class_id");
+        department = (String) e.get("department");
+        if (requestedClass != null && !requestedClass.equals(classId))
+          throw fail(404, "NOT_FOUND", "This class timetable is unavailable.");
+      }
+      case "TEACHER" -> teacher = context.subjectId();
+      case "PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS" -> {}
+      default -> throw fail(403, "FORBIDDEN", "This role cannot view a timetable.");
+    }
+    var plans =
+        s.db.queryForList(
+            "select p.id,p.version,p.effective_from,p.wednesday_pt from timetable_plans p join terms t on t.id=p.term_id where p.school_id=? and p.status='PUBLISHED' and p.effective_from<=? and t.starts_on<=? and t.ends_on>=? order by p.effective_from desc limit 1",
+            school,
+            on,
+            on,
+            on);
+    if (plans.isEmpty()) return map("items", List.of(), "published", false, "on", on);
+    var p = plans.get(0);
+    return map(
+        "items",
+        lessons((UUID) p.get("id"), classId, teacher, department),
+        "published",
+        true,
+        "version",
+        p.get("version"),
+        "effectiveFrom",
+        p.get("effective_from"),
+        "timezone",
+        "Africa/Lagos",
+        "activities",
+        List.of(
+            map(
+                "type",
+                "BREAK",
+                "weekdays",
+                List.of(1, 2, 3, 4, 5),
+                "start",
+                "11:30",
+                "end",
+                "12:00"),
+            map("type", "SPORTS", "weekdays", List.of(5), "start", "12:00", "end", "13:00")),
+        "wednesdayPtEnabled",
+        p.get("wednesday_pt"));
+  }
+}

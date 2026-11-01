@@ -1,0 +1,131 @@
+name: educore
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run node scripts/init-dev.mjs first}
+      IDENTITY_DATABASE_PASSWORD: ${IDENTITY_DATABASE_PASSWORD:?Generate development configuration}
+      ACADEMICS_DATABASE_PASSWORD: ${ACADEMICS_DATABASE_PASSWORD:?Generate development configuration}
+      FINANCE_DATABASE_PASSWORD: ${FINANCE_DATABASE_PASSWORD:?Generate development configuration}
+      COMMUNICATION_DATABASE_PASSWORD: ${COMMUNICATION_DATABASE_PASSWORD:?Generate development configuration}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - educore-postgres:/var/lib/postgresql/data
+      - ./infra/postgres-init.sh:/docker-entrypoint-initdb.d/01-educore.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  identity:
+    build:
+      context: .
+      args: { SERVICE: educore-identity }
+    environment:
+      SERVER_PORT: 8091
+      IDENTITY_DATABASE_URL: jdbc:postgresql://postgres:5432/educore_identity
+      IDENTITY_DATABASE_USER: educore_identity
+      IDENTITY_DATABASE_PASSWORD: ${IDENTITY_DATABASE_PASSWORD:?Generate development configuration}
+      IDENTITY_RESULT_ENCRYPTION_KEY: ${IDENTITY_RESULT_ENCRYPTION_KEY:?Generate development configuration}
+      ACADEMICS_TO_IDENTITY_KEY: ${ACADEMICS_TO_IDENTITY_KEY:?Generate development configuration}
+      FINANCE_TO_IDENTITY_KEY: ${FINANCE_TO_IDENTITY_KEY:?Generate development configuration}
+      COMMUNICATION_TO_IDENTITY_KEY: ${COMMUNICATION_TO_IDENTITY_KEY:?Generate development configuration}
+      IDENTITY_TO_COMMUNICATION_KEY: ${IDENTITY_TO_COMMUNICATION_KEY:?Generate development configuration}
+      IDENTITY_URL: http://identity:8091
+      ACADEMICS_URL: http://academics:8092
+      COMMUNICATION_URL: http://communication:8094
+    depends_on:
+      postgres: { condition: service_healthy }
+  academics:
+    build:
+      context: .
+      args: { SERVICE: educore-academics }
+    environment:
+      SERVER_PORT: 8092
+      ACADEMICS_DATABASE_URL: jdbc:postgresql://postgres:5432/educore_academics
+      ACADEMICS_DATABASE_USER: educore_academics
+      ACADEMICS_DATABASE_PASSWORD: ${ACADEMICS_DATABASE_PASSWORD:?Generate development configuration}
+      ACADEMICS_RESULT_ENCRYPTION_KEY: ${ACADEMICS_RESULT_ENCRYPTION_KEY:?Generate development configuration}
+      ACADEMICS_TO_IDENTITY_KEY: ${ACADEMICS_TO_IDENTITY_KEY:?Generate development configuration}
+      ACADEMICS_TO_COMMUNICATION_KEY: ${ACADEMICS_TO_COMMUNICATION_KEY:?Generate development configuration}
+      FINANCE_TO_ACADEMICS_KEY: ${FINANCE_TO_ACADEMICS_KEY:?Generate development configuration}
+      COMMUNICATION_TO_ACADEMICS_KEY: ${COMMUNICATION_TO_ACADEMICS_KEY:?Generate development configuration}
+      OPERATOR_TO_ACADEMICS_KEY: ${OPERATOR_TO_ACADEMICS_KEY:?Generate development configuration}
+      IDENTITY_URL: http://identity:8091
+      ACADEMICS_URL: http://academics:8092
+      COMMUNICATION_URL: http://communication:8094
+    ports:
+      - '127.0.0.1:${ACADEMICS_ADMIN_PORT:-8092}:8092'
+    depends_on:
+      postgres: { condition: service_healthy }
+  finance:
+    build:
+      context: .
+      args: { SERVICE: educore-finance }
+    environment:
+      SERVER_PORT: 8093
+      FINANCE_DATABASE_URL: jdbc:postgresql://postgres:5432/educore_finance
+      FINANCE_DATABASE_USER: educore_finance
+      FINANCE_DATABASE_PASSWORD: ${FINANCE_DATABASE_PASSWORD:?Generate development configuration}
+      FINANCE_RESULT_ENCRYPTION_KEY: ${FINANCE_RESULT_ENCRYPTION_KEY:?Generate development configuration}
+      FINANCE_TO_IDENTITY_KEY: ${FINANCE_TO_IDENTITY_KEY:?Generate development configuration}
+      FINANCE_TO_ACADEMICS_KEY: ${FINANCE_TO_ACADEMICS_KEY:?Generate development configuration}
+      FINANCE_TO_COMMUNICATION_KEY: ${FINANCE_TO_COMMUNICATION_KEY:?Generate development configuration}
+      IDENTITY_URL: http://identity:8091
+      ACADEMICS_URL: http://academics:8092
+      COMMUNICATION_URL: http://communication:8094
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+  communication:
+    build:
+      context: .
+      args: { SERVICE: educore-communication }
+    environment:
+      SERVER_PORT: 8094
+      COMMUNICATION_DATABASE_URL: jdbc:postgresql://postgres:5432/educore_communication
+      COMMUNICATION_DATABASE_USER: educore_communication
+      COMMUNICATION_DATABASE_PASSWORD: ${COMMUNICATION_DATABASE_PASSWORD:?Generate development configuration}
+      COMMUNICATION_RESULT_ENCRYPTION_KEY: ${COMMUNICATION_RESULT_ENCRYPTION_KEY:?Generate development configuration}
+      IDENTITY_TO_COMMUNICATION_KEY: ${IDENTITY_TO_COMMUNICATION_KEY:?Generate development configuration}
+      ACADEMICS_TO_COMMUNICATION_KEY: ${ACADEMICS_TO_COMMUNICATION_KEY:?Generate development configuration}
+      FINANCE_TO_COMMUNICATION_KEY: ${FINANCE_TO_COMMUNICATION_KEY:?Generate development configuration}
+      COMMUNICATION_TO_IDENTITY_KEY: ${COMMUNICATION_TO_IDENTITY_KEY:?Generate development configuration}
+      COMMUNICATION_TO_ACADEMICS_KEY: ${COMMUNICATION_TO_ACADEMICS_KEY:?Generate development configuration}
+      IDENTITY_URL: http://identity:8091
+      ACADEMICS_URL: http://academics:8092
+      COMMUNICATION_URL: http://communication:8094
+      EDUCORE_EMAIL_ENABLED: ${EDUCORE_EMAIL_ENABLED:-false}
+      EDUCORE_MAIL_DELAY_MS: ${EDUCORE_MAIL_DELAY_MS:-30000}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_TLS: ${SMTP_TLS:-true}
+    depends_on:
+      postgres: { condition: service_healthy }
+  gateway:
+    build:
+      context: .
+      args: { SERVICE: api-gateway }
+    environment:
+      SERVER_PORT: 8080
+      IDENTITY_URL: http://identity:8091
+      ACADEMICS_URL: http://academics:8092
+      FINANCE_URL: http://finance:8093
+      COMMUNICATION_URL: http://communication:8094
+      EDUCORE_CORS_ORIGINS: ${EDUCORE_CORS_ORIGINS:-http://localhost:8081,http://localhost:4173}
+    ports:
+      - '${GATEWAY_PORT:-8080}:8080'
+    depends_on:
+      identity: { condition: service_healthy }
+      academics: { condition: service_healthy }
+      finance: { condition: service_healthy }
+      communication: { condition: service_healthy }
+volumes:
+  educore-postgres:

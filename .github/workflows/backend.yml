@@ -1,0 +1,76 @@
+name: Backend checks
+on:
+  push:
+    branches: [main, backend/foundation]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: educore_ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Generate isolated test credentials and databases
+        env:
+          POSTGRES_ADMIN_PASSWORD: educore_ci_only
+        run: |
+          node scripts/init-dev.mjs
+          node scripts/init-databases.mjs
+      - name: Build, formatting and unit tests
+        run: |
+          chmod +x mvnw
+          ./mvnw -B spotless:check verify
+      - name: Run five-service PostgreSQL integration tests
+        env:
+          EDUCORE_TEST_CONFIG: .dev/local-runtime.json
+        run: node scripts/integration.mjs
+      - name: Validate and build all five container images
+        run: |
+          docker compose config --quiet
+          docker compose --parallel 1 build
+      - name: Start containers and bootstrap a school
+        env:
+          POSTGRES_PORT: '55432'
+          EDUCORE_MAIL_DELAY_MS: '1000'
+          EDUCORE_CONTAINER_TEST: 'true'
+        run: |
+          docker compose up -d --wait --wait-timeout 180
+          node scripts/bootstrap.mjs CONTAINER "EduCore Container Test School" "Demo Principal" "08012345678"
+          node scripts/container-check.mjs
+      - name: Container diagnostics on failure
+        if: failure()
+        run: docker compose logs --tail 250
+      - name: Stop test containers
+        if: always()
+        run: docker compose down
