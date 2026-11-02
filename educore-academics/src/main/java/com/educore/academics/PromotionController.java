@@ -18,7 +18,7 @@ public class PromotionController {
   Object prepare(
       @PathVariable UUID school,
       @RequestBody PromotionService.Preview b,
-      @RequestHeader("Idempotency-Key") String key) {
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
     return s.prepare(Actor.current(), school, b, key);
   }
 
@@ -38,8 +38,8 @@ public class PromotionController {
       @PathVariable UUID id,
       @PathVariable UUID student,
       @RequestBody PromotionService.Decision b,
-      @RequestHeader("Idempotency-Key") String key,
-      @RequestHeader("If-Match") String version) {
+      @RequestHeader(value = "Idempotency-Key", required = false) String key,
+      @RequestHeader(value = "If-Match", required = false) String version) {
     return s.decide(Actor.current(), school, id, student, b, Api.version(version), key);
   }
 
@@ -47,8 +47,8 @@ public class PromotionController {
   Object confirm(
       @PathVariable UUID school,
       @PathVariable UUID id,
-      @RequestHeader("Idempotency-Key") String key,
-      @RequestHeader("If-Match") String version) {
+      @RequestHeader(value = "Idempotency-Key", required = false) String key,
+      @RequestHeader(value = "If-Match", required = false) String version) {
     return s.confirm(Actor.current(), school, id, Api.version(version), key);
   }
 

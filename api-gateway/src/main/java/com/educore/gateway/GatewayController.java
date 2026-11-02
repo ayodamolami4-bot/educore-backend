@@ -67,8 +67,14 @@ public class GatewayController {
   public ResponseEntity<?> proxy(HttpServletRequest request) throws IOException {
     String route = route(request.getRequestURI());
     if (route == null) return problem(404, "NOT_FOUND", "This API route is unavailable.");
-    byte[] body = request.getInputStream().readNBytes(2 * 1024 * 1024 + 1);
-    if (body.length > 2 * 1024 * 1024)
+    int maximum =
+        request
+                .getRequestURI()
+                .matches("/api/v1/schools/[0-9a-fA-F-]{36}/files/[0-9a-fA-F-]{36}/content")
+            ? 10 * 1024 * 1024
+            : 2 * 1024 * 1024;
+    byte[] body = request.getInputStream().readNBytes(maximum + 1);
+    if (body.length > maximum)
       return problem(413, "REQUEST_TOO_LARGE", "The request exceeds the permitted size.");
     String query = request.getQueryString();
     String url =

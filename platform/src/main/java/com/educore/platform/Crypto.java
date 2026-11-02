@@ -48,6 +48,43 @@ public final class Crypto {
             a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
   }
 
+  public static String hashBytes(byte[] bytes) {
+    try {
+      return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IllegalStateException(ex);
+    }
+  }
+
+  public byte[] sealBytes(byte[] plain) {
+    try {
+      byte[] nonce = new byte[12];
+      RANDOM.nextBytes(nonce);
+      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(128, nonce));
+      byte[] encrypted = cipher.doFinal(plain);
+      byte[] result = new byte[nonce.length + encrypted.length];
+      System.arraycopy(nonce, 0, result, 0, nonce.length);
+      System.arraycopy(encrypted, 0, result, nonce.length, encrypted.length);
+      return result;
+    } catch (GeneralSecurityException ex) {
+      throw new IllegalStateException("Could not protect file content.", ex);
+    }
+  }
+
+  public byte[] openBytes(byte[] bytes) {
+    try {
+      if (bytes == null || bytes.length < 28)
+        throw new IllegalArgumentException("Invalid encrypted file.");
+      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      cipher.init(
+          Cipher.DECRYPT_MODE, key, new GCMParameterSpec(128, Arrays.copyOfRange(bytes, 0, 12)));
+      return cipher.doFinal(Arrays.copyOfRange(bytes, 12, bytes.length));
+    } catch (GeneralSecurityException | IllegalArgumentException ex) {
+      throw new IllegalStateException("Could not read protected file content.", ex);
+    }
+  }
+
   public String seal(String plain) {
     try {
       byte[] nonce = new byte[12];
