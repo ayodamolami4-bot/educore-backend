@@ -39,22 +39,27 @@ On Windows PowerShell use `./mvnw.cmd verify`. Use a **JDK**, which includes the
 
 ## Current scope
 
-The current build implements the shared frontend contracts, a complete enrolment-to-account flow, weekly timetable review/publication, submitted attendance/corrections, invoice/payment foundations and private complaint cases. Internal assessment and promotion rules have unit tests; marks entry, report publication/PDFs, promotion execution, assignments/submissions, threads, imports/exports, financial adjustments/refunds and settlement reconciliation still require implementation. Do not treat a tested rule engine as a finished report or promotion workflow.
+The expanded backend is saved on [backend/complete-workflows](https://github.com/ayodamolami4-bot/educore-backend/tree/backend/complete-workflows). It includes school/staff/student/guardian administration, calendars/curriculum, timetable and examination drafts, attendance, marks/report publication, promotion/graduation, assignments/files, fee plans and reconciliation, parent communication/complaints, delivery workers and reviewed imports/exports.
 
-Payments are deliberately **Paystack test mode only**. A school subaccount must be configured before hosted checkout; a client redirect is never proof of payment. SMTP and native push delivery need deployment configuration and provider/device tests. Device registration and in-app notifications do not mean a push was delivered.
+The latest verified code passed **33 unit tests, 42 PostgreSQL integration groups, all five Docker builds and two container startup checks**. Some final scheduling/assessment edge cases and release work remain; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
 
-## Checks
+## Frontend handoff
 
-`./mvnw spotless:check verify` compiles all programs and runs the unit tests. `scripts/integration.mjs` runs the five programs against four actual PostgreSQL databases, with local HTTP Paystack and SMTP test doubles. It requires a dedicated test database configuration; never point it at a school or another project's database. No live payment or real email delivery is part of the integration test.
+Start with [API.md](docs/API.md). [FRONTEND_ENDPOINTS.md](docs/FRONTEND_ENDPOINTS.md) lists all **220 implemented gateway operations** and **104 request record types**. There is also an [OpenAPI request catalogue](docs/openapi.json) and a [filterable endpoint CSV](docs/ENDPOINT_CATALOGUE.csv).
 
-The frontend source is at https://github.com/ayodamolami4-bot/educore-frontend. Its shared API contracts are preserved under the gateway `/api/v1` base. Official school permissions, validation and calculation always run on Java.
+The frontend Model owns API calls and response mapping, the Presenter owns screen state/actions, and the View owns rendering. School/role/child permissions and official calculations are enforced on Java.
 
-## Team handoff
+The default branch still contains the earlier foundation until the remaining work is reviewed. To inspect the expanded backend after cloning:
 
-- [Working features and remaining work](docs/IMPLEMENTATION_STATUS.md)
-- [Implemented endpoints and request examples](docs/API.md)
-- [Programs, databases and coordination](docs/ARCHITECTURE.md)
-- [Agreed school rules](docs/NIGERIAN_RULES.md)
-- [How to contribute](CONTRIBUTING.md)
+```sh
+git fetch origin
+git checkout backend/complete-workflows
+```
 
-This source is runnable locally. A public API, production hosting, live payments and app-store releases have not been deployed.
+## Architecture and validation
+
+Four business services own separate PostgreSQL databases. Enrollment/account provisioning and notifications use encrypted outbox events, receiver deduplication and retries. Financial commands use stable references, row locks, idempotency keys and explicit version checks. Delivery jobs use database leases. Kafka and Kubernetes are not prerequisites for this local development setup.
+
+Run `./mvnw -B spotless:check verify` for formatting and unit checks. The [Backend checks workflow](.github/workflows/backend.yml) starts real PostgreSQL, runs all five programs and the integration suite, builds Docker images and verifies container startup. Provider HTTP/email/push integrations are tested with local doubles; no live funds or real external deliveries are involved.
+
+[Completion checklist](docs/COMPLETION_CHECKLIST.md) · [Frontend repository](https://github.com/ayodamolami4-bot/educore-frontend)

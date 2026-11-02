@@ -1,40 +1,53 @@
-# Implementation status — 1 November 2026
+# Implementation status — 2 November 2026
 
-This is a working first backend build. The agreed final school application is larger than this implementation. An endpoint below is ready only within the limits stated here and in [API.md](API.md).
+The backend has progressed beyond the original foundation. The saved code on `backend/complete-workflows` implements the workflows below. **The complete agreed application is not yet finished.** Final scheduling/assessment edge cases, screen-by-screen contract review and release work remain.
 
-| Area | Implemented | Still to build or validate |
-| --- | --- | --- |
-| Shared access | Activation, login, password setup/change, verified email change, saved-code/email recovery, opaque rotating sessions, allowed school/role/child selection, recent reauthentication, private recovery-code rotation, sessions and preferences | Assisted recovery when all private proofs are lost; external abuse/rate-limit controls; comprehensive breached-password screening; end-to-end native device testing |
-| School isolation | Current server-checked permissions, school-scoped SQL, separate service databases/users, explicit child/payer checks, distinct sender-to-receiver service keys, no trusted client identity headers | Independent security review, deployment network policies, production monitoring and backup/restore exercise |
-| School setup | Operator creates school and first principal; sessions, three terms, class arms, subject catalogue, versioned metadata | Office/accounts staff account onboarding, full permissions administration and school lifecycle |
-| Enrolment and parents | Atomic child/placement/verified guardian link, optional explicit link to an existing login, account provisioning through outbox, pending-account slips, child link revocation, staff/family-safe reads | Additional-guardian management UI/API, changes/transfers/withdrawals, duplicate review workflow and bulk enrolment |
-| Teachers | Registration with eligible subjects/levels and actual class assignments; account provisioning and attendance-teacher assignment | Complete edit/deactivation/reassignment workflow, staff invitations for every preset, substitute teachers |
-| Timetable | Weekly draft, teacher/class/room conflicts, fixed break/sports/PT reservations, required periods review, principal publication, class/department/teacher/family reads and publication notifications | Draft listing, lesson edits/removal and an easier revision editor; automatic generation; live conflict tests across multiple app instances |
-| Attendance | Assigned teacher's dated roster, drafts, complete submit, submitted-only office overview with missing-register coverage, reasoned office corrections, reviewed absence alerts, own-child history | Repeated-absence flag for 3 absences in 10 teaching days, richer reports/exports, substitute duty workflow |
-| Examination rules | Tested 20/20/60 calculation, A–F grade bands and annual promotion recommendation function | Marks entry/submission/review, class-teacher remarks, principal report publication, report-card PDFs, assessment calendars, corrections to published results |
-| Promotion/graduation | Tested recommendation arithmetic and incomplete-evidence review | Execution/approval records, next-session placement, JSS3 pathway decisions, SSS3 completion and graduation workflows |
-| Fees | Immutable issued invoice lines, NGN integer amounts, partial payments, reasoned cash/verified-bank records, permanent reference uniqueness and receipts in invoice detail | Fee plans, bulk issue, credits/discount approvals, refunds, full bank/provider settlement reconciliation and accountant onboarding |
-| Paystack | Test hosted checkout, signed raw webhook intake/deduplication, authoritative verify, retryable unknown outcomes, exact-once local allocation and exception listing | Live mode is deliberately rejected; actual test-account/subaccount validation, external webhooks and settlement work remain |
-| Communication | In-app private notifications/read status, school-wide notices, parent complaint cases/replies/internal notes/reasoned closure, teaching-day first-response target | Class-targeted notices, parent/teacher message threads, attachments, case reassignment/escalation and school-office walk-in complaints |
-| Email and push | Encrypted private mail queue, opt-in configured SMTP delivery, expiry/retry states; encrypted push-device registration | Real email-provider validation; mail-worker leasing before running multiple Communication instances; native push-provider delivery and delivery receipts |
-| Calendar/history | Session/term dates, teaching-day exceptions, academic audit endpoint and histories for implemented commands | Calendar list/editor, whole-school history screen, immutable storage/retention policy and unified cross-service audit queries |
-| Imports/exports and assignments | No application endpoints yet | CSV preview/validation/confirm imports, scoped CSV/PDF exports, assignment creation, student submissions and teacher feedback |
+## Implemented and exercised
 
-The normal first-school account is **PRINCIPAL**. Teacher, student and parent provisioning is implemented. Having role checks for `SCHOOL_OFFICE` or `ACCOUNTS` does not mean their account-management screens or onboarding endpoints are finished. Current Finance read endpoints do not include the proposed office read-only preset.
+| Area | Current implementation |
+| --- | --- |
+| Shared access | Activation, login, password setup/change, verified-email and saved-code recovery, rotating opaque sessions, allowed school/role/child selection, recent reauthentication, sessions/preferences |
+| School isolation | Server-checked current context, school-scoped SQL and child/payer checks, separate databases/logins, distinct sender-to-receiver keys, no trusted client identity headers |
+| Administration | Office/accounts onboarding, staff presets and lifecycle checks, teacher eligibility/availability and handover, school contacts/forms, student edits/transfers/withdrawals, guardian contacts and versioned permissions |
+| Enrolment | Generated fresh admission numbers, explicit legacy migration, verified guardian linking, outbox account provisioning, private pending-account activation slips |
+| Planning | Versioned curriculum choices; weekly timetable drafts, editing/removal/cloning, required-period review and publication; calendar draft/publication; dated examination schedules with intra-exam conflicts |
+| Attendance | Assigned-teacher registers, drafts/submission, submitted-only office overview and corrections, reviewed absence alerts, own-child history, three-in-ten teaching-day follow-up query |
+| Assessment/reporting | Subject sheets and submission/return; class-teacher remarks/five ratings; principal publication and correction revisions; child-scoped report PDFs and class CSV broadsheets |
+| Promotion/graduation | Evidence-based preview, reasoned exceptions, stale-source checks, JSS3 pathways, principal confirmation, repeat-safe placement and SSS3 school completion; fees remain separate |
+| Learning work/files | Assignment drafts/publication, private student drafts, accepted submission revisions, return/extension/grading, family visibility, private encrypted PDF/JPG/PNG uploads/downloads and attachment scope checks |
+| Fees | Immutable invoice lines, partial payments, cash/verified-bank records, hosted test checkout, signed webhooks/authoritative verification, fee plans and repeat-safe bulk issue, independently approved adjustments, verified refund confirmation, PDF invoices/receipts |
+| Reconciliation | Bank statements and provider settlement matching, gross/fee/net differences, permanent references, exception review and financial overview |
+| Communication | Scoped notice drafts/publication, child-linked parent/class-teacher/office conversations, attachments, read/close actions, current-participant checks |
+| Complaints | Parent/walk-in/phone intake, category/owner restrictions, private notes/files, teaching-day first-response target, resolution and parent acceptance/review, history |
+| Delivery | Leased SMTP and Expo push preparation/delivery/receipt workers, current preferences, retries, expiry, invalid-device suppression and visible unconfigured states |
+| Imports/exports/history | Reviewed CSV previews and mapping, row correction, asynchronous resume without repeating successes, verified sibling groups, teacher assignments, independently reviewed opening balances, scoped CSV/PDF exports and service-owned activity history |
 
 ## Verified evidence
 
-The application build passed **30 unit tests** and **19 integration scenario groups** with all five Java programs and real PostgreSQL. The tests cover multi-school and selected-child isolation, enrolment races/retries, account linking/revocation, timetable conflicts/publication, submitted attendance/corrections, payment verification/deduplication, complaint privacy, recovery, refresh replay and service key separation.
+[GitHub Actions run 41453457869](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41453457869), source commit `3f7bbd716932b3a550ab2877156943130a2b1148`, passed:
 
-Before transfer into the backend repository, [GitHub Actions run 41325001298](https://github.com/ayodamolami4-bot/educore-frontend/actions/runs/41325001298) passed the application tests, built all five Docker images, started Compose, bootstrapped a school and verified gateway sign-in and unconfigured-email behaviour. The backend repository's [Backend checks workflow](https://github.com/ayodamolami4-bot/educore-backend/actions/workflows/backend.yml) repeats those checks for subsequent changes. Paystack HTTP and SMTP were local test doubles. No live money moved, no actual external email was delivered, and no cloud API or app-store build was deployed.
+- **33 unit tests**, with none skipped.
+- **42 integration scenario groups**, using real PostgreSQL and HTTP between all five Java programs.
+- All five Docker image builds and both container startup checks: school bootstrap/activation/gateway sign-in, and truthful unconfigured-email behaviour.
 
-The database development project prepared separately is not proof that the applications are connected to a hosted database. The tested runtime uses four fresh databases in CI; local Compose provides the same four-database layout.
+Paystack, SMTP and Expo were local test doubles. No live money moved, no external mailbox/device delivery was demonstrated, and no cloud API or app-store build was deployed.
 
-## Next delivery order
+## Remaining work
 
-1. Add office/accounts onboarding, teacher changes, timetable editing and parent-link management so the current workflows have complete administration screens.
-2. Build the examination chain: subject teacher submits, class teacher reviews/remarks, principal publishes, families read the published report.
-3. Add promotion/graduation execution using published results, then assignments and submissions.
-4. Finish fee plans/adjustments/settlement reconciliation, targeted messaging, import/export and deployment hardening.
+1. Finish the dated interaction between normal timetables, examinations, departments and optional subject groups. Current weekly and examination schedules validate their own conflicts; do not claim complete cross-schedule replacement/conflict handling.
+2. Finish assessment-roster handling for late admissions/transfers after a cycle snapshot, then test those changes and the school-settings/activity/follow-up edge cases. Source-result corrections already flag affected promotion outcomes for review.
+3. Review every agreed role screen against the implemented contract, including remaining directory filters and consistent response adapters. The source-derived request catalogue is supplied; it is not proof that 94 frontend screens are connected.
+4. Implement the assisted-recovery path when all private proofs are lost, and complete independent access/retry/security review before real school data.
+5. Configure and validate actual payment/email/push providers, native devices, HTTPS hosting, backups/restore and operational monitoring.
 
-Build each workflow with its API, permitted roles, history, failure states and real-database tests before marking the corresponding frontend screen connected.
+The local coding environment became unavailable during the final scheduling work. Those uncommitted changes have **not** been presented as passing or merged into `main`. The branch contains the saved tested checkpoint; `main` still contains the earlier foundation until the remaining work is reviewed.
+
+## Handoff
+
+- [API workflow guide](API.md)
+- [All implemented endpoints and request fields](FRONTEND_ENDPOINTS.md)
+- [OpenAPI request catalogue](openapi.json)
+- [Endpoint CSV](ENDPOINT_CATALOGUE.csv)
+- [Local setup](SETUP.md)
+
+Only endpoints backed by current controllers are included. Internal service routes are intentionally excluded from the frontend catalogue. Paystack live mode is rejected by configuration in this build.

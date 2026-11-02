@@ -1,16 +1,22 @@
-# Backend completion work
+# Backend completion checklist
 
-The final administrator specification (34 templates), shared contracts and teacher/student/parent workflows define the scope. A completed item needs real endpoints, current school/role checks, validated inputs, failure states, history and meaningful PostgreSQL tests. Provider credentials and deployment are separate from implementation.
+Completion requires an implemented workflow, current school/role checks, failure states, history and meaningful PostgreSQL tests. The latest verified evidence is in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
-- [ ] Staff presets, access lifecycle, teacher handover, student edits/transfers/withdrawal and guardian permissions.
-- [ ] Curriculum choices, class workspaces, timetable editing and calendar publication.
-- [ ] Assessment cycles, exam schedule, subject marks submission/return, class-teacher comments/ratings, principal publication, historical report revisions and PDF/CSV reports.
-- [ ] Promotion preview, reasoned exceptions, explicit JSS3 pathways, SSS3 completion and repeat-safe target enrolment.
-- [ ] Assignments, student submissions, teacher feedback and family visibility.
-- [ ] Fee plans/batch issue, approved credits/discounts/refunds, payment directories, settlement reconciliation and receipts.
-- [ ] Scoped announcements, child-linked messaging/attachments, walk-in complaints, owners/status changes and private histories.
-- [ ] Delivery workers for configured push/email with retries, disabled-provider states and safe previews.
-- [ ] CSV preview/confirm imports, authorised exports, activity history and role dashboards.
-- [ ] Complete endpoint handoff, real-database regression tests and runnable Docker checks.
+- [x] Shared account flows, selected school/role/child and service isolation.
+- [x] Office/accounts onboarding, core staff/student/guardian administration and permission versions.
+- [x] Curriculum choices, timetable draft editor/cloning and calendar/exam publication.
+- [ ] Final cross-schedule conflicts, date-specific exam overrides and optional-subject timetable snapshots.
+- [x] Marks chain, class-teacher review, principal report publication/revisions and report PDF/CSV.
+- [ ] Late admission/transfer synchronisation after assessment-roster snapshots.
+- [x] Promotion/repeat execution, explicit JSS3 pathways, SSS3 school completion and stale-source checks.
+- [x] Assignments, private drafts, accepted response/review history, family reads and protected files.
+- [x] Fee plans/batches, independent approvals, confirmed refunds, settlement matching and receipts.
+- [x] Scoped notices, current parent/class-teacher/office participation, attachments and owned complaints.
+- [x] Configured delivery workers with leases/retries/receipts and truthful disabled states.
+- [x] Reviewed academic CSV imports/resume, opening balances, authorised exports and service-owned activity endpoints.
+- [x] Source-derived endpoint/request catalogue and local Docker startup instructions.
+- [ ] Full role-screen contract review, remaining directory filters and final response adapters.
+- [ ] Lost-all-proofs assisted recovery and independent release/security review.
+- [ ] Actual provider/native-device validation, hosting and operational setup.
 
-The foundation tests are documented in IMPLEMENTATION_STATUS.md. Do not describe the unfinished workflows above as complete because their rule functions or database tables exist.
+A checked implementation item does not imply every associated frontend screen, external provider or production operation has been validated. Read the specific limits in the implementation status.
