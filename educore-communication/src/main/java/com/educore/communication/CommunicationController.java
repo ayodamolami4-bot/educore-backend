@@ -38,6 +38,11 @@ public class CommunicationController {
     return s.read(Actor.current(), id);
   }
 
+  @GetMapping("/api/v1/me/notifications/{id}/delivery")
+  Object delivery(@PathVariable UUID id) {
+    return s.deliveryStatus(Actor.current(), id);
+  }
+
   @PostMapping("/api/v1/schools/{school}/notices")
   Object notice(
       @PathVariable UUID school,

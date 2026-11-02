@@ -118,6 +118,35 @@ public class CommunicationService {
     return map("accepted", true, "message", "Marked as read.", "requestId", UUID.randomUUID());
   }
 
+  public Object deliveryStatus(Actor a, UUID id) {
+    var n =
+        one(
+            "select account_id,school_id,child_id,read_at from notifications where id=? and account_id=?",
+            id,
+            a.accountId());
+    a.school((UUID) n.get("school_id"));
+    if ("PARENT".equals(a.context().role()) && n.get("child_id") != null)
+      child(a, (UUID) n.get("school_id"), (UUID) n.get("child_id"));
+    return map(
+        "notificationId",
+        id,
+        "readAt",
+        n.get("read_at"),
+        "dispatch",
+        db.queryForList(
+            "select state,attempts from notification_dispatch where notification_id=?", id),
+        "push",
+        db.queryForList(
+            "select state,error_code as \"errorCode\",attempts,sent_at as \"providerConfirmedAt\" from push_deliveries where notification_id=? order by created_at,id",
+            id),
+        "email",
+        db.queryForList(
+            "select state,last_error_code as \"errorCode\",sent_at as \"sentAt\" from private_mail where event_id=?",
+            id),
+        "deviceReadConfirmed",
+        false);
+  }
+
   public Object event(UUID event, String kind, JsonNode payload) {
     Actor.internalOnly("identity", "academics", "finance");
     String caller = Actor.internalCaller();

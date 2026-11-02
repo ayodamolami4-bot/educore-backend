@@ -12,9 +12,10 @@ import { learningTests } from './learning-tests.mjs';
 import { planningTests } from './planning-tests.mjs';
 import { financeTests } from './finance-tests.mjs';
 import { communicationTests } from './communication-tests.mjs';
+import { deliveryTests } from './delivery-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
-// Only the external Paystack and SMTP providers are local test doubles.
+// Only external Paystack, SMTP and Expo push providers are local test doubles.
 const root = resolve(import.meta.dirname, '..');
 const runtime = { ...process.env, ...(process.env.EDUCORE_TEST_CONFIG ? JSON.parse(readFileSync(process.env.EDUCORE_TEST_CONFIG, 'utf8')) : {}) };
 const names = ['identity', 'academics', 'finance', 'communication'];
@@ -25,7 +26,7 @@ for (const name of names) {
   for (const suffix of ['DATABASE_URL', 'DATABASE_USER', 'DATABASE_PASSWORD']) assert.ok(runtime[name.toUpperCase() + '_' + suffix], `Configure ${name.toUpperCase()}_${suffix}`);
 }
 const temp = resolve(root, '.dev'); mkdirSync(temp, { recursive: true });
-const checks = []; const services = []; const smtpMessages = []; const transactions = new Map(); const settlements = new Map(); const refunds=new Map();
+const checks = []; const services = []; const smtpMessages = []; const transactions = new Map(); const settlements = new Map(); const refunds=new Map(); const pushMessages=[]; const pushTickets=new Map();
 const providerKey = 'sk_test_' + randomBytes(24).toString('hex');
 const passed = name => { checks.push(name); console.log('PASS', name); };
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -54,6 +55,17 @@ const provider = httpServer(async (req,res) => {
     } else {res.writeHead(404).end(); return;}
     res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({status:true,data}));
   } catch {res.writeHead(500,{'Content-Type':'application/json'}).end(JSON.stringify({status:false}));}
+});
+
+const pushProvider=httpServer(async(req,res)=>{
+ try{let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);let data;
+ if(req.url==='/push/send'){
+   assert.equal(body.title,'EduCore');assert.equal(body.body,'You have a school update. Open EduCore to view it.');
+   pushMessages.push(body);const id=randomUUID();pushTickets.set(id,body.to.includes('DeadDevice')?{status:'error',details:{error:'DeviceNotRegistered'}}:{status:'ok'});data={status:'ok',id};
+ }else if(req.url==='/push/getReceipts'){data=Object.fromEntries(body.ids.filter(id=>pushTickets.has(id)).map(id=>[id,pushTickets.get(id)]));}
+ else {res.writeHead(404).end();return;}
+ res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({data}));
+ }catch{res.writeHead(500).end();}
 });
 
 const smtp = tcpServer(socket => {
@@ -85,15 +97,16 @@ async function request(path,{method='GET',body,token,headers={},expected=200,bas
 }
 async function poll(fn,label,attempts=60){let last;for(let i=0;i<attempts;i++){last=await fn();if(last)return last;await pause(500);}throw new Error('Timed out: '+label);}
 async function start() {
-  provider.listen(0,'127.0.0.1');smtp.listen(0,'127.0.0.1');await Promise.all([once(provider,'listening'),once(smtp,'listening')]);
+  provider.listen(0,'127.0.0.1');smtp.listen(0,'127.0.0.1');pushProvider.listen(0,'127.0.0.1');await Promise.all([once(provider,'listening'),once(smtp,'listening'),once(pushProvider,'listening')]);
   runtime.PAYSTACK_SECRET_KEY=providerKey;runtime.PAYSTACK_BASE_URL=`http://127.0.0.1:${provider.address().port}`;
+  runtime.EDUCORE_PUSH_ENABLED='true';runtime.EDUCORE_EXPO_BASE_URL=`http://127.0.0.1:${pushProvider.address().port}`;runtime.EDUCORE_PUSH_RECEIPT_DELAY_MS='0';
   runtime.EDUCORE_EMAIL_ENABLED='true';runtime.SMTP_HOST='127.0.0.1';runtime.SMTP_PORT=String(smtp.address().port);runtime.SMTP_AUTH='false';runtime.SMTP_TLS='false';runtime.SMTP_FROM='no-reply@example.invalid';
   for(const module of [...names.map(n=>'educore-'+n),'api-gateway']) {
     const config=readFileSync(resolve(root,module,'src/main/resources/application.properties'),'utf8');
     const required=[...config.matchAll(/\$\{([A-Z_]+)/g)].map(m=>m[1]);const env={...process.env};
     for(const name of Object.keys(env))if(/_(?:DATABASE_(?:URL|USER|PASSWORD)|RESULT_ENCRYPTION_KEY|TO_[A-Z_]+_KEY)$/.test(name)||pairs.some(p=>name===p+'_KEY'))delete env[name];
     for(const variable of required)if(runtime[variable]!==undefined)env[variable]=runtime[variable];
-    env.EDUCORE_OUTBOX_DELAY_MS='500';env.EDUCORE_MAIL_DELAY_MS='500';env.EDUCORE_PAYMENT_VERIFICATION_DELAY_MS='1000';
+    env.EDUCORE_DELIVERY_DELAY_MS='500';env.EDUCORE_PUSH_DELAY_MS='500';env.EDUCORE_OUTBOX_DELAY_MS='500';env.EDUCORE_MAIL_DELAY_MS='500';env.EDUCORE_PAYMENT_VERIFICATION_DELAY_MS='1000';
     for(const variable of Object.keys(env))if(variable.endsWith('_DATABASE_URL')) {
       env[variable]=env[variable].replace('-pooler.','.');
     }
@@ -209,6 +222,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds,smtpMessages,pushMessages};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);await deliveryTests(helpers,finance);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
-finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();smtp.close();}
+finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();pushProvider.closeAllConnections();pushProvider.close();smtp.close();}
