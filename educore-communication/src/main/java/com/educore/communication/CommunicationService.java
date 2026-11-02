@@ -11,12 +11,12 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class CommunicationService {
-  private final JdbcTemplate db;
-  private final Commands commands;
-  private final Json json;
-  private final Crypto crypto;
-  private final ServiceHttp http;
-  private final String identity, academics;
+  final JdbcTemplate db;
+  final Commands commands;
+  final Json json;
+  final Crypto crypto;
+  final ServiceHttp http;
+  final String identity, academics;
 
   public CommunicationService(
       JdbcTemplate db,
@@ -35,13 +35,13 @@ public class CommunicationService {
     this.academics = academics;
   }
 
-  private Map<String, Object> one(String sql, Object... args) {
+  Map<String, Object> one(String sql, Object... args) {
     var rows = db.queryForList(sql, args);
     if (rows.isEmpty()) throw fail(404, "NOT_FOUND", "The communication record is unavailable.");
     return rows.get(0);
   }
 
-  private void child(Actor a, UUID school, UUID student) {
+  void child(Actor a, UUID school, UUID student) {
     var c = a.school(school, "PARENT", "PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS");
     UUID guardian = null;
     if ("PARENT".equals(c.role())) {
@@ -65,7 +65,7 @@ public class CommunicationService {
     var rows =
         db
             .queryForList(
-                "select * from notifications where account_id=? and school_id=? and (?::text is null or category=?::text) and (not ? or read_at is null) and (?::uuid is null or id<?::uuid) order by id desc limit ?",
+                "select * from notifications where account_id=? and school_id=? and (?::text is null or category=?::text) and (not ? or read_at is null) and (?::uuid is null or id<?::uuid) and (?::uuid is null or child_id is null or child_id=?::uuid) order by id desc limit ?",
                 a.accountId(),
                 school,
                 category,
@@ -73,6 +73,8 @@ public class CommunicationService {
                 unread,
                 cursor,
                 cursor,
+                "PARENT".equals(a.context().role()) ? a.context().childId() : null,
+                "PARENT".equals(a.context().role()) ? a.context().childId() : null,
                 limit + 1)
             .stream()
             .map(
@@ -180,21 +182,41 @@ public class CommunicationService {
                   http.post(
                       identity,
                       "/internal/audience",
-                      map("schoolId", school, "childId", child),
+                      map(
+                          "schoolId",
+                          school,
+                          "childId",
+                          child,
+                          "category",
+                          payload.path("category").asText()),
                       Map.class);
               String category = payload.path("category").asText();
               if (!Set.of("SCHOOL", "LEARNING", "FEES", "MESSAGES", "CASES").contains(category))
                 throw fail(422, "INVALID_CATEGORY", "Invalid event category.");
-              for (Object account : (List<?>) audience.get("items"))
+              for (Object value : (List<?>) audience.get("recipients")) {
+                Map<?, ?> recipient = (Map<?, ?>) value;
+                Object target = payload.path("target");
+                if ("STUDENT".equals(recipient.get("role")))
+                  target =
+                      map(
+                          "screenId",
+                          "ST01",
+                          "schoolId",
+                          school,
+                          "childId",
+                          child,
+                          "resourceId",
+                          payload.path("target").path("resourceId").asText());
                 notify(
                     event,
-                    uuid(account.toString()),
+                    uuid(recipient.get("accountId").toString()),
                     school,
                     child,
                     category,
                     text(payload.path("title").asText(), 1, 160, "Notification title"),
                     text(payload.path("safePreview").asText(), 1, 240, "Safe preview"),
-                    payload.path("target"));
+                    target);
+              }
             }
             default -> throw fail(422, "UNKNOWN_EVENT", "Unsupported communication event.");
           }
@@ -202,7 +224,7 @@ public class CommunicationService {
         });
   }
 
-  private void notify(
+  void notify(
       UUID event,
       UUID account,
       UUID school,

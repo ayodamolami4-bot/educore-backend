@@ -115,7 +115,8 @@ public class FileService {
         throw fail(
             403, "FILE_PURPOSE_FORBIDDEN", "Students can upload only their own learning files.");
     } else if ("ACCOUNTS".equals(role)) {
-      if (!"FINANCE_EVIDENCE".equals(purpose))
+      if (!Set.of("FINANCE_EVIDENCE", "COMMUNICATION").contains(purpose)
+          || ("COMMUNICATION".equals(purpose) && student == null))
         throw fail(
             403, "FILE_PURPOSE_FORBIDDEN", "Accounts access is limited to finance evidence.");
     } else if ("SCHOOL_OFFICE".equals(role) && "FINANCE_EVIDENCE".equals(purpose))

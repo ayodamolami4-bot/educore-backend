@@ -1162,18 +1162,35 @@ public class IdentityService {
         payer);
   }
 
-  public Object internalAudience(UUID school, UUID child) {
+  public Object internalAudience(UUID school, UUID child, String category) {
     Actor.internalOnly("academics", "finance", "communication");
-    return map(
-        "items",
+    String cat = category == null ? "CASES" : category;
+    var recipients =
         db
             .queryForList(
-                "select distinct account_id from memberships where school_id=? and child_id=? and active and role='PARENT'",
+                "select distinct account_id,role,subject_id from memberships where school_id=? and active and ((role='PARENT' and child_id=? and (case when ?='FEES' then payer_access when ?='LEARNING' then learning_access else true end)) or (role='STUDENT' and subject_id=? and ? in ('LEARNING','SCHOOL')))",
                 school,
-                child)
+                child,
+                cat,
+                cat,
+                child,
+                cat)
             .stream()
-            .map(r -> r.get("account_id"))
-            .toList());
+            .map(
+                r ->
+                    map(
+                        "accountId",
+                        r.get("account_id"),
+                        "role",
+                        r.get("role"),
+                        "subjectId",
+                        r.get("subject_id")))
+            .toList();
+    return map(
+        "items",
+        recipients.stream().map(r -> r.get("accountId")).distinct().toList(),
+        "recipients",
+        recipients);
   }
 
   public Object schoolAudience(UUID school) {
@@ -1182,11 +1199,87 @@ public class IdentityService {
         "items",
         db
             .queryForList(
-                "select distinct on(account_id) account_id,role from memberships where school_id=? and active order by account_id,role",
+                "select account_id,role,subject_id,child_id,learning_access,payer_access from memberships where school_id=? and active order by account_id,role,child_id",
                 school)
             .stream()
-            .map(row -> map("accountId", row.get("account_id"), "role", row.get("role")))
+            .map(
+                r ->
+                    map(
+                        "accountId",
+                        r.get("account_id"),
+                        "role",
+                        r.get("role"),
+                        "subjectId",
+                        r.get("subject_id"),
+                        "childId",
+                        r.get("child_id"),
+                        "learningAccess",
+                        r.get("learning_access"),
+                        "payerAccess",
+                        r.get("payer_access")))
             .toList());
+  }
+
+  public Object subjectAccount(UUID school, UUID subject, String role, UUID child) {
+    Actor.internalOnly("communication");
+    return db
+        .queryForList(
+            "select account_id as \"accountId\",subject_id as \"subjectId\",role from memberships where school_id=? and subject_id=? and role=? and active and (?::uuid is null or child_id=?::uuid)",
+            school,
+            subject,
+            role,
+            child,
+            child)
+        .stream()
+        .findFirst()
+        .orElseThrow(() -> fail(404, "NOT_FOUND", "The recipient account is not available."));
+  }
+
+  public Object deliveryContext(UUID account, UUID school, UUID child, String category) {
+    Actor.internalOnly("communication");
+    var rows = db.queryForList("select * from accounts where id=? and status='ACTIVE'", account);
+    if (rows.isEmpty()) return map("allowed", false);
+    var p = rows.get(0);
+    if (db.queryForObject(
+            "select count(*) from memberships where account_id=? and school_id=? and active and (?::uuid is null or (role='PARENT' and child_id=?::uuid and (case when ?='FEES' then payer_access when ?='LEARNING' then learning_access else true end)) or (role='STUDENT' and subject_id=?::uuid and ? in ('LEARNING','SCHOOL')) or role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER'))",
+            Integer.class,
+            account,
+            school,
+            child,
+            child,
+            category,
+            category,
+            child,
+            category)
+        == 0) return map("allowed", false);
+    boolean categoryOn = false;
+    for (var n : json.tree(p.get("categories").toString()))
+      if (n.asText().equals(category)) categoryOn = true;
+    var devices = new ArrayList<Object>();
+    if (Boolean.TRUE.equals(p.get("push_enabled")) && categoryOn)
+      for (var d :
+          db.queryForList(
+              "select d.id,d.token_cipher from push_devices d join sessions s on s.id=d.session_id where d.account_id=? and d.enabled and s.revoked_at is null and s.refresh_expires_at>now()",
+              account))
+        devices.add(map("id", d.get("id"), "token", crypto.open(d.get("token_cipher").toString())));
+    return map(
+        "allowed",
+        true,
+        "devices",
+        devices,
+        "email",
+        Boolean.TRUE.equals(p.get("email_optional_enabled")) && categoryOn
+            ? p.get("verified_email")
+            : null);
+  }
+
+  public Object disablePush(UUID account, UUID device) {
+    Actor.internalOnly("communication");
+    db.update(
+        "update push_devices set enabled=false,version=version+1 where account_id=? and id=?",
+        account,
+        device);
+    return map("accepted", true);
   }
 
   public static Object ack(String message) {

@@ -65,7 +65,7 @@ public class IdentityController {
 
   public record Event(UUID eventId, String kind, JsonNode payload) {}
 
-  public record Audience(UUID schoolId, UUID childId) {}
+  public record Audience(UUID schoolId, UUID childId, String category) {}
 
   @PostMapping("/api/v1/auth/login")
   Object login(@RequestBody Login b) {
@@ -238,6 +238,27 @@ public class IdentityController {
 
   @PostMapping("/internal/audience")
   Object audience(@RequestBody Audience b) {
-    return service.internalAudience(b.schoolId(), b.childId());
+    return service.internalAudience(b.schoolId(), b.childId(), b.category());
+  }
+
+  public record SubjectAccount(UUID schoolId, UUID subjectId, String role, UUID childId) {}
+
+  @PostMapping("/internal/subject-account")
+  Object subjectAccount(@RequestBody SubjectAccount b) {
+    return service.subjectAccount(b.schoolId(), b.subjectId(), b.role(), b.childId());
+  }
+
+  public record Delivery(UUID accountId, UUID schoolId, UUID childId, String category) {}
+
+  @PostMapping("/internal/delivery-context")
+  Object delivery(@RequestBody Delivery b) {
+    return service.deliveryContext(b.accountId(), b.schoolId(), b.childId(), b.category());
+  }
+
+  public record DisableDevice(UUID accountId, UUID deviceId) {}
+
+  @PostMapping("/internal/disable-push-device")
+  Object disable(@RequestBody DisableDevice b) {
+    return service.disablePush(b.accountId(), b.deviceId());
   }
 }

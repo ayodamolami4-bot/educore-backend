@@ -11,6 +11,7 @@ import { academicTests } from './academic-tests.mjs';
 import { learningTests } from './learning-tests.mjs';
 import { planningTests } from './planning-tests.mjs';
 import { financeTests } from './finance-tests.mjs';
+import { communicationTests } from './communication-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
 // Only the external Paystack and SMTP providers are local test doubles.
@@ -194,7 +195,7 @@ async function test(){
  const parentCase=(await request(`/api/v1/schools/${school}/complaints/${caseCreated.id}`,{token:parent.accessToken})).body;assert.ok(parentCase.entries.every(e=>e.visibility==='PUBLIC'));assert.ok(!JSON.stringify(parentCase).includes('STAFF ONLY'));
  await schoolPost(parent,school,`/complaints/${caseCreated.id}/replies`,{body:'Attempt staff note',internal:true},{headers:{'If-Match':`"v${parentCase.version}"`},expected:403});
  const replied=await schoolPost(admin,school,`/complaints/${caseCreated.id}/replies`,{body:'The school has reviewed the fictional record.',internal:false},{headers:{'If-Match':`"v${internal.version}"`}});assert.ok(replied.firstResponseAt);
- const closed=await schoolPost(admin,school,`/complaints/${caseCreated.id}/close`,{reason:'The fictional attendance query has been resolved.'},{headers:{'If-Match':`"v${replied.version}"`}});assert.equal(closed.state,'CLOSED');passed('complaint deadlines use teaching days and staff-only notes stay private');
+ const resolved=await schoolPost(admin,school,`/complaints/${caseCreated.id}/status`,{action:'RESOLVE',reason:'The fictional attendance query has been resolved.'},{headers:{'If-Match':`"v${replied.version}"`}});const closed=await schoolPost(parent,school,`/complaints/${caseCreated.id}/status`,{action:'ACCEPT',reason:'Parent accepts the documented fictional resolution.'},{headers:{'If-Match':`"v${resolved.version}"`}});assert.equal(closed.state,'CLOSED');passed('complaint deadlines use teaching days and staff-only notes stay private');
  const recent=(await request('/api/v1/me/reauthenticate',{method:'POST',token:parent.accessToken,body:{currentPassword:password}})).body;
  const emailAddress='synthetic-'+key()+'@example.invalid';await request('/api/v1/me/email-change-requests',{method:'POST',token:parent.accessToken,headers:{'Idempotency-Key':key()},body:{email:emailAddress,recentAuthToken:recent.recentAuthToken},expected:202});
  assert.equal((await request('/api/v1/me',{token:parent.accessToken})).body.verifiedEmail,undefined);
@@ -208,6 +209,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);await financeTests(helpers,learning);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
 finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();smtp.close();}

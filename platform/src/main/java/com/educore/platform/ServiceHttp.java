@@ -58,6 +58,11 @@ public final class ServiceHttp {
       if (ex.getStatusCode().value() == 404)
         throw Api.fail(
             404, "NOT_FOUND", "The requested school record or relationship is unavailable.");
+      if (java.util.Set.of(400, 403, 409, 412, 422, 428).contains(ex.getStatusCode().value()))
+        throw Api.fail(
+            ex.getStatusCode().value(),
+            "RELATED_RECORD_VALIDATION_FAILED",
+            "A related school record did not pass the required access or validation check.");
       throw new Api.Failure(
           503,
           "DEPENDENCY_UNAVAILABLE",
