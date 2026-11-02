@@ -83,6 +83,17 @@ public class FileService {
         == 0) throw fail(404, "NOT_FOUND", "The child relationship is unavailable.");
   }
 
+  private void communicationChild(Actor a, UUID school, UUID student) {
+    a.child(student, false);
+    if (s.db.queryForObject(
+            "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and (learning_access or payer_access)",
+            Integer.class,
+            school,
+            student,
+            a.context().subjectId())
+        == 0) throw fail(404, "NOT_FOUND", "The current child relationship is unavailable.");
+  }
+
   private void creationScope(
       Actor a, UUID school, String purpose, UUID student, UUID classId, boolean familyVisible) {
     var c = a.school(school);
@@ -107,7 +118,8 @@ public class FileService {
       if (!Set.of("STUDENT_DOCUMENT", "COMMUNICATION", "FINANCE_EVIDENCE").contains(purpose)
           || student == null)
         throw fail(403, "FILE_PURPOSE_FORBIDDEN", "Choose a permitted child-linked file purpose.");
-      childAccess(a, school, student, "FINANCE_EVIDENCE".equals(purpose));
+      if ("COMMUNICATION".equals(purpose)) communicationChild(a, school, student);
+      else childAccess(a, school, student, "FINANCE_EVIDENCE".equals(purpose));
     } else if ("STUDENT".equals(role)) {
       if (student == null
           || !student.equals(c.subjectId())
@@ -322,12 +334,6 @@ public class FileService {
         s.learning(a, school, student);
         if (!Boolean.TRUE.equals(r.get("required"))
             && s.db.queryForObject(
-                    "select count(*) from student_subject_choices where student_id=? and session_id=(select session_id from terms where id=?)",
-                    Integer.class,
-                    student,
-                    r.get("term_id"))
-                > 0
-            && s.db.queryForObject(
                     "select count(*) from student_subject_choices where student_id=? and session_id=(select session_id from terms where id=?) and subject_id=?",
                     Integer.class,
                     student,
@@ -363,7 +369,8 @@ public class FileService {
                 a.context().subjectId())
             == 0) throw fail(404, "NOT_FOUND", "School access is unavailable.");
     if ("PARENT".equals(role) && student != null)
-      childAccess(a, school, student, "FINANCE_EVIDENCE".equals(purpose));
+      if ("COMMUNICATION".equals(purpose)) communicationChild(a, school, student);
+      else childAccess(a, school, student, "FINANCE_EVIDENCE".equals(purpose));
     if (a.accountId().equals(f.get("owner_id"))) return;
     if ("SCHOOL_ASSET".equals(purpose)) return;
     if ("FINANCE_EVIDENCE".equals(purpose) && Set.of("PRINCIPAL", "ACCOUNTS").contains(role))

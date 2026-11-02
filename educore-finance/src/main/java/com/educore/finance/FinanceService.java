@@ -509,7 +509,9 @@ public class FinanceService {
           var i = one("select * from invoices where id=? for update", locked.get("invoice_id"));
           long amount = result.path("amount").asLong(-1),
               expected = ((Number) locked.get("amount_minor")).longValue();
-          if (!reference.equals(result.path("reference").asText())
+          if (!result.path("amount").isIntegralNumber()
+              || !result.path("amount").canConvertToLong()
+              || !reference.equals(result.path("reference").asText())
               || !"NGN".equals(result.path("currency").asText())
               || amount != expected
               || !"test".equals(result.path("domain").asText())) {

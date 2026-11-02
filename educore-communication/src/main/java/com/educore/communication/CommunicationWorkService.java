@@ -165,6 +165,7 @@ public class CommunicationWorkService {
     if (Set.of("PRINCIPAL", "SCHOOL_OFFICE").contains(c.role())) return;
     if (n.get("published_at") == null)
       throw fail(404, "NOT_FOUND", "This notice is not published.");
+    if (Set.of("PARENT", "STUDENT").contains(c.role())) context(a, school, null, "LEARNING");
     if ("SCHOOL".equals(n.get("scope"))) return;
     var access = context(a, school, null, "LEARNING");
     if (!((List<?>) access.get("classIds")).contains(n.get("class_id").toString())
@@ -402,8 +403,12 @@ public class CommunicationWorkService {
     for (Object x : (List<?>) c.get("guardians")) {
       Map<?, ?> g = (Map<?, ?>) x;
       if (id.toString().equals(g.get("id"))
-          && Boolean.TRUE.equals(g.get("FEES".equals(category) ? "payerAccess" : "learningAccess")))
-        allowed = true;
+          && ("FEES".equals(category)
+              ? Boolean.TRUE.equals(g.get("payerAccess"))
+              : Set.of("GENERAL", "STAFF_CONDUCT").contains(category)
+                  ? Boolean.TRUE.equals(g.get("learningAccess"))
+                      || Boolean.TRUE.equals(g.get("payerAccess"))
+                  : Boolean.TRUE.equals(g.get("learningAccess")))) allowed = true;
     }
     if (!allowed) throw fail(404, "NOT_FOUND", "The current guardian relationship is unavailable.");
     return id;

@@ -30,11 +30,12 @@ public class InternalAcademicController {
       if ("PARENT".equals(role)) {
         a.child(student, "FEES".equals(b.category()));
         if (s.db.queryForObject(
-                "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and (case when ?='FEES' then payer_access else learning_access end)",
+                "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and (case when ?='FEES' then payer_access when ? in ('GENERAL','STAFF_CONDUCT','SCHOOL') then (learning_access or payer_access) else learning_access end)",
                 Integer.class,
                 b.schoolId(),
                 student,
                 c.subjectId(),
+                Objects.toString(b.category(), "LEARNING"),
                 Objects.toString(b.category(), "LEARNING"))
             == 0)
           throw Api.fail(404, "NOT_FOUND", "The current child relationship is unavailable.");
@@ -138,6 +139,25 @@ public class InternalAcademicController {
   }
 
   public record Roster(UUID schoolId, UUID termId, List<UUID> classIds) {}
+
+  public record StudentReferences(UUID schoolId, UUID termId, List<String> admissionNumbers) {}
+
+  @PostMapping("/internal/student-references")
+  Object references(@RequestBody StudentReferences b) {
+    Actor.internalOnly("finance");
+    s.one("select id from terms where school_id=? and id=?", b.schoolId(), b.termId());
+    if (b.admissionNumbers() == null
+        || b.admissionNumbers().isEmpty()
+        || b.admissionNumbers().size() > 200)
+      throw Api.fail(
+          422, "INVALID_STUDENT_REFERENCES", "Review one to 200 school admission references.");
+    return Api.map(
+        "items",
+        s.db.queryForList(
+            "select id,admission_number as \"admissionNumber\",full_name as \"fullName\",version from students where school_id=? and admission_number in(select value from jsonb_array_elements_text(?::jsonb)) order by admission_number",
+            b.schoolId(),
+            s.json.write(b.admissionNumbers())));
+  }
 
   @PostMapping("/internal/class-roster")
   Object roster(@RequestBody Roster b) {

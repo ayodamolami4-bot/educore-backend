@@ -254,7 +254,7 @@ public class AdministrationService {
           if (!b.active() || !"TEACHER".equals(b.role())) {
             int work =
                 s.db.queryForObject(
-                        "select count(*) from teaching_assignments t join classes c on c.id=t.class_id join academic_sessions x on x.id=c.session_id where t.teacher_id=? and x.ends_on>=current_date",
+                        "select count(*) from teaching_assignments t join classes c on c.id=t.class_id join academic_sessions x on x.id=c.session_id where t.teacher_id=? and t.active and x.ends_on>=current_date",
                         Integer.class,
                         id)
                     + s.db.queryForObject(
@@ -576,14 +576,15 @@ public class AdministrationService {
       boolean primaryContact,
       String reason) {}
 
-  public Object guardian(Actor a, UUID school, UUID student, GuardianLink b, String key) {
+  public Object guardian(
+      Actor a, UUID school, UUID student, GuardianLink b, Long expectedVersion, String key) {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
     return command(
         a,
         school,
         "students/" + student + "/guardians",
         key,
-        b,
+        map("input", b, "version", expectedVersion),
         () -> {
           var st = s.one("select * from students where school_id=? and id=?", school, student);
           UUID id = b.guardianId();
@@ -606,6 +607,30 @@ public class AdministrationService {
                 text(p.verificationReference(), 4, 160, "Verification reference"));
           }
           var parent = s.one("select * from guardians where school_id=? and id=?", school, id);
+          s.db.queryForObject(
+              "select pg_advisory_xact_lock(hashtextextended(?,0))",
+              Object.class,
+              "guardian-link|" + school + "|" + student + "|" + id);
+          var oldLink =
+              s.db.queryForList(
+                  "select version from guardian_links where school_id=? and student_id=? and guardian_id=? for update",
+                  school,
+                  student,
+                  id);
+          if (!oldLink.isEmpty()) {
+            if (expectedVersion == null)
+              throw fail(
+                  428,
+                  "VERSION_REQUIRED",
+                  "Reload the existing guardian link and send its If-Match version.");
+            expectVersion(expectedVersion, ((Number) oldLink.get(0).get("version")).longValue());
+          }
+          if (b.primaryContact())
+            s.db.update(
+                "update guardian_links set primary_contact=false,version=version+1 where school_id=? and student_id=? and guardian_id<>? and primary_contact",
+                school,
+                student,
+                id);
           String why = text(b.reason(), 5, 500, "Link reason");
           s.db.update(
               "insert into guardian_links(school_id,student_id,guardian_id,relationship,learning_access,payer_access,primary_contact) values (?,?,?,?,?,?,?) on conflict(school_id,student_id,guardian_id) do update set relationship=excluded.relationship,learning_access=excluded.learning_access,payer_access=excluded.payer_access,primary_contact=excluded.primary_contact,active=true,version=guardian_links.version+1",

@@ -147,7 +147,7 @@ public class TimetableService {
     // The locked plan serialises common versus department class-overlap checks.
     var conflicts =
         s.db.queryForList(
-            "select id from lessons where plan_id=? and weekday=? and start_min<? and end_min>? and (teacher_id=? or (?::text is not null and room=?::text) or (class_id=? and (department is null or ?::text is null or department=?::text)))",
+            "select l.id from lessons l join teaching_assignments ta on ta.id=l.assignment_id where l.plan_id=? and l.weekday=? and l.start_min<? and l.end_min>? and (l.teacher_id=? or (?::text is not null and l.room=?::text) or (l.class_id=? and (l.department is null or ?::text is null or l.department=?::text) and not (ta.choice_group is not null and ta.choice_group is not distinct from ?::text)))",
             plan,
             b.weekday(),
             minute + b.durationMinutes(),
@@ -157,7 +157,8 @@ public class TimetableService {
             room,
             assignment.get("class_id"),
             assignment.get("department"),
-            assignment.get("department"));
+            assignment.get("department"),
+            assignment.get("choice_group"));
     if (!conflicts.isEmpty())
       throw fail(
           409, "TIMETABLE_CONFLICT", "The class, teacher or room overlaps an existing lesson.");

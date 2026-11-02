@@ -357,6 +357,13 @@ public class PromotionService {
             throw fail(409, "BATCH_COMPLETED", "This batch is already confirmed.");
           var source =
               s.one("select * from academic_sessions where id=?", b.get("source_session_id"));
+          if (!((java.sql.Date) source.get("ends_on"))
+              .toLocalDate()
+              .isBefore(LocalDate.now(ZoneId.of("Africa/Lagos"))))
+            throw fail(
+                409,
+                "ACADEMIC_YEAR_NOT_ENDED",
+                "Confirm promotion or graduation only after the source academic session has ended.");
           var rows =
               s.db.queryForList(
                   "select * from promotion_rows where batch_id=? order by student_id for update",
@@ -516,7 +523,7 @@ public class PromotionService {
     return map(
         "items",
         s.db.queryForList(
-            "select id,source_session_id as \"sourceSessionId\",decision,target_enrolment_id as \"targetEnrolmentId\",reason,confirmed_at as \"confirmedAt\" from promotion_outcomes where school_id=? and student_id=? order by confirmed_at",
+            "select id,source_session_id as \"sourceSessionId\",decision,requires_review as \"requiresReview\",target_enrolment_id as \"targetEnrolmentId\",reason,confirmed_at as \"confirmedAt\" from promotion_outcomes where school_id=? and student_id=? order by confirmed_at",
             school,
             student),
         "hasMore",

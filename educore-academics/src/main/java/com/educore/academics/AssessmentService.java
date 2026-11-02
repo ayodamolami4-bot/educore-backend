@@ -131,9 +131,8 @@ public class AssessmentService {
               school,
               b.classId());
           s.db.update(
-              "insert into assessment_marks(cycle_id,assignment_id,student_id) select r.cycle_id,sh.assignment_id,r.student_id from assessment_roster r join assessment_sheets sh on sh.cycle_id=r.cycle_id join teaching_assignments ta on ta.id=sh.assignment_id where r.cycle_id=? and (sh.department is null or sh.department=r.department) and (ta.required or not exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=?) or exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=? and ch.subject_id=sh.subject_id))",
+              "insert into assessment_marks(cycle_id,assignment_id,student_id) select r.cycle_id,sh.assignment_id,r.student_id from assessment_roster r join assessment_sheets sh on sh.cycle_id=r.cycle_id join teaching_assignments ta on ta.id=sh.assignment_id where r.cycle_id=? and (sh.department is null or sh.department=r.department) and (ta.required or exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=? and ch.subject_id=sh.subject_id))",
               id,
-              term.get("session_id"),
               term.get("session_id"));
           if (s.db.queryForObject(
                       "select count(*) from assessment_roster where cycle_id=?", Integer.class, id)
@@ -804,6 +803,13 @@ public class AssessmentService {
     boolean complete = submitted == expected;
     var result =
         map(
+            "schoolDaysHeld",
+            s.db.queryForObject(
+                "select count(*) from generate_series(?::date,least(?::date,current_date),interval '1 day') d where coalesce((select teaching_day from calendar_exceptions where school_id=? and on_date=d::date),extract(isodow from d)<=5)",
+                Integer.class,
+                start,
+                end,
+                school),
             "expectedRegisters",
             expected,
             "submittedRegisters",
@@ -847,6 +853,9 @@ public class AssessmentService {
           String reason = text(b.reason(), 5, 500, "Correction reason");
           if (b.closesAt() == null || !b.closesAt().isAfter(Instant.now()))
             throw fail(422, "INVALID_ENTRY_WINDOW", "Set a future correction deadline.");
+          s.db.update(
+              "update assessment_sheets sh set teacher_id=t.teacher_id from teaching_assignments t where t.id=sh.assignment_id and sh.cycle_id=?",
+              id);
           if (b.assignmentId() != null) {
             s.one(
                 "select assignment_id from assessment_sheets where cycle_id=? and assignment_id=?",

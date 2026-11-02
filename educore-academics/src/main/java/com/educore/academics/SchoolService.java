@@ -681,7 +681,7 @@ public class SchoolService {
           enrolChoices(
               school, student, (UUID) c.get("session_id"), b.classId(), department, b.subjectIds());
           db.update(
-              "insert into guardian_links(school_id,student_id,guardian_id,relationship) values (?,?,?,?)",
+              "insert into guardian_links(school_id,student_id,guardian_id,relationship,primary_contact) values (?,?,?,?,true)",
               school,
               student,
               guardian,

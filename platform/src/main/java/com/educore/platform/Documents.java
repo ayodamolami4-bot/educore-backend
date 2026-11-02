@@ -36,6 +36,7 @@ public final class Documents {
   public static List<Map<String, String>> parseCsv(String text) {
     if (text == null || text.getBytes(StandardCharsets.UTF_8).length > 1024 * 1024)
       throw Api.fail(422, "CSV_TOO_LARGE", "Use a CSV file no larger than 1 MB.");
+    if (text.startsWith("\uFEFF")) text = text.substring(1);
     try (CSVParser parser =
         CSVFormat.RFC4180
             .builder()

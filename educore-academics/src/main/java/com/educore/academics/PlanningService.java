@@ -355,6 +355,13 @@ public class PlanningService {
                   old.get("id"));
             }
           }
+          for (var r : rules)
+            s.db.update(
+                "update teaching_assignments set choice_group=? where class_id=? and subject_id=? and department is not distinct from ?::text",
+                r.path("choiceGroup").isTextual() ? r.path("choiceGroup").asText() : null,
+                classId,
+                UUID.fromString(r.path("subjectId").asText()),
+                template.get("department"));
           var old =
               s.db.queryForList(
                   "select id,subject_id from teaching_assignments where class_id=? and department is not distinct from ?::text and active",
@@ -459,41 +466,18 @@ public class PlanningService {
                 422,
                 "CURRICULUM_REQUIRED",
                 "Apply a published class curriculum before choosing alternatives.");
-          var template =
-              s.one(
-                  "select definition from curriculum_templates where school_id=? and id=?",
-                  school,
-                  e.get("curriculum_id"));
-          var rules = s.json.tree(template.get("definition").toString());
-          Set<UUID> selected = new HashSet<>(b.subjectIds() == null ? List.of() : b.subjectIds());
-          if (selected.size() != (b.subjectIds() == null ? 0 : b.subjectIds().size()))
-            throw fail(422, "DUPLICATE_SUBJECT", "Choose distinct alternative subjects.");
-          Set<UUID> allowed = new HashSet<>();
-          Map<String, Integer> groups = new HashMap<>();
-          for (var r : rules)
-            if (!r.path("required").asBoolean()) {
-              UUID id = UUID.fromString(r.path("subjectId").asText());
-              allowed.add(id);
-              String group = r.path("choiceGroup").asText();
-              groups.putIfAbsent(group, 0);
-              if (selected.contains(id)) groups.merge(group, 1, Integer::sum);
-            }
-          if (!allowed.containsAll(selected) || groups.values().stream().anyMatch(n -> n != 1))
-            throw fail(
-                422,
-                "INVALID_SUBJECT_CHOICES",
-                "Choose exactly one alternative from every published choice group; core subjects are included automatically.");
+          var selected = new HashSet<>(b.subjectIds() == null ? List.<UUID>of() : b.subjectIds());
           s.db.update(
               "delete from student_subject_choices where student_id=? and session_id=?",
               student,
               b.sessionId());
-          for (UUID subject : selected)
-            s.db.update(
-                "insert into student_subject_choices(school_id,student_id,session_id,subject_id) values (?,?,?,?)",
-                school,
-                student,
-                b.sessionId(),
-                subject);
+          s.enrolChoices(
+              school,
+              student,
+              b.sessionId(),
+              (UUID) e.get("class_id"),
+              (String) e.get("department"),
+              b.subjectIds());
           s.db.update(
               "update student_choice_versions set version=version+1 where student_id=? and session_id=?",
               student,

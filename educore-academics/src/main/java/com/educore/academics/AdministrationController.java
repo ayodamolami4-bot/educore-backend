@@ -103,6 +103,7 @@ public class AdministrationController {
       @PathVariable UUID id,
       @RequestBody AdministrationService.GuardianLink b,
       @RequestHeader HttpHeaders h) {
-    return s.guardian(Actor.current(), school, id, b, key(h));
+    return s.guardian(
+        Actor.current(), school, id, b, h.getFirst("If-Match") == null ? null : version(h), key(h));
   }
 }

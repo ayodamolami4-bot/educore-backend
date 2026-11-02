@@ -72,12 +72,6 @@ public class AssignmentService {
       throw fail(404, "NOT_FOUND", "This class assignment is unavailable to the student.");
     if (!Boolean.TRUE.equals(w.get("required"))
         && s.db.queryForObject(
-                "select count(*) from student_subject_choices where student_id=? and session_id=(select session_id from terms where id=?)",
-                Integer.class,
-                student,
-                w.get("term_id"))
-            > 0
-        && s.db.queryForObject(
                 "select count(*) from student_subject_choices where student_id=? and session_id=(select session_id from terms where id=?) and subject_id=?",
                 Integer.class,
                 student,
@@ -347,7 +341,7 @@ public class AssignmentService {
     if (student != null) s.learning(a, school, student);
     var rows =
         s.db.queryForList(
-            "select w.id from learning_assignments w join teaching_assignments t on t.id=w.teaching_assignment_id join classes c on c.id=t.class_id join terms term on term.id=w.term_id where w.school_id=? and (?::uuid is null or t.class_id=?::uuid) and (?::uuid is null or w.term_id=?::uuid) and (?::uuid is null or t.teacher_id=?::uuid or c.attendance_teacher_id=?::uuid) and (?::uuid is null or (w.published_at is not null and exists(select 1 from enrolments e where e.student_id=?::uuid and e.class_id=t.class_id and e.starts_on<=current_date and (e.ends_on is null or e.ends_on>=w.published_at::date) and (t.department is null or t.department=e.department)) and (t.required or not exists(select 1 from student_subject_choices sc where sc.student_id=?::uuid and sc.session_id=term.session_id) or exists(select 1 from student_subject_choices sc where sc.student_id=?::uuid and sc.session_id=term.session_id and sc.subject_id=t.subject_id)))) and (?::uuid is null or (w.due_at,w.id)>(select due_at,id from learning_assignments where id=?::uuid and school_id=?)) order by w.due_at,w.id limit ?",
+            "select w.id from learning_assignments w join teaching_assignments t on t.id=w.teaching_assignment_id join classes c on c.id=t.class_id join terms term on term.id=w.term_id where w.school_id=? and (?::uuid is null or t.class_id=?::uuid) and (?::uuid is null or w.term_id=?::uuid) and (?::uuid is null or t.teacher_id=?::uuid or c.attendance_teacher_id=?::uuid) and (?::uuid is null or (w.published_at is not null and exists(select 1 from enrolments e where e.student_id=?::uuid and e.class_id=t.class_id and e.starts_on<=current_date and (e.ends_on is null or e.ends_on>=w.published_at::date) and (t.department is null or t.department=e.department)) and (t.required or exists(select 1 from student_subject_choices sc where sc.student_id=?::uuid and sc.session_id=term.session_id and sc.subject_id=t.subject_id)))) and (?::uuid is null or (w.due_at,w.id)>(select due_at,id from learning_assignments where id=?::uuid and school_id=?)) order by w.due_at,w.id limit ?",
             school,
             classId,
             classId,
@@ -356,7 +350,6 @@ public class AssignmentService {
             teacher,
             teacher,
             teacher,
-            student,
             student,
             student,
             student,

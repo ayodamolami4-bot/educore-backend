@@ -513,7 +513,9 @@ public class FeeAdministrationService {
                     ? p.get("external_reference")
                         .equals(result.path("transaction").path("reference").asText())
                     : result.path("transaction").asText().equals(transaction.path("id").asText());
-            if (!"test".equals(result.path("domain").asText())
+            if (!result.path("amount").isIntegralNumber()
+                || !result.path("amount").canConvertToLong()
+                || !"test".equals(result.path("domain").asText())
                 || !"test".equals(transaction.path("domain").asText())
                 || !transactionMatches
                 || !"processed".equals(result.path("status").asText())

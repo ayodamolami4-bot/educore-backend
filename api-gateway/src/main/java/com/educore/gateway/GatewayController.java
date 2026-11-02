@@ -56,6 +56,8 @@ public class GatewayController {
     if (p.equals("/webhooks/paystack")) return "finance";
     if (!p.matches("/schools/[0-9a-fA-F-]{36}(?:/.*)?")) return null;
     String suffix = p.substring(45);
+    if (suffix.matches("/activity/(?:identity|academics|finance|communication)(?:/.*)?"))
+      return suffix.split("/")[2];
     if (suffix.startsWith("/onboarding/")) return "identity";
     if (suffix.matches(
         "/(?:invoices|payments|payment-intents|fee-plans|fee-batches|fee-adjustments|reconciliation)(?:/.*)?"))
