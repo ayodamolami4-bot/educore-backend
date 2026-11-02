@@ -23,7 +23,7 @@ export async function extendedTests(u) {
 
  const session=await post('/academic-sessions',{name:'Administration test session',startsOn:day(-200),endsOn:day(150)});
  const classA=await post('/classes',{sessionId:session.id,level:'JSS1',arm:'A'}),classB=await post('/classes',{sessionId:session.id,level:'JSS1',arm:'B'});
- const student=await post('/students',{admissionNumber:'ADM-001',fullName:'Student Demo',dateOfBirth:'2012-02-12',sex:'MALE',classId:classA.id,startsOn:day(-30),metadataVersion:1,fields:{},guardian:{fullName:'Guardian Demo',phone:'08072345678',relationship:'FATHER',relationshipVerified:true,verificationReference:'Synthetic guardian check'}},{expected:202});
+ const student=await post('/students',{admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'ADM-001',fullName:'Student Demo',dateOfBirth:'2012-02-12',sex:'MALE',classId:classA.id,startsOn:day(-30),metadataVersion:1,fields:{},guardian:{fullName:'Guardian Demo',phone:'08072345678',relationship:'FATHER',relationshipVerified:true,verificationReference:'Synthetic guardian check'}},{expected:202});
  const patched=(await request(`/api/v1/schools/${school}/students/${student.id}`,{method:'PATCH',token:admin.accessToken,headers:{'Idempotency-Key':key(),'If-Match':'"v1"'},body:{fullName:'Corrected Demo',dateOfBirth:'2012-02-12',sex:'MALE',fields:{},metadataVersion:1,reason:'School checked the birth record'}})).body;
  assert.equal(patched.fullName,'Corrected Demo');
  await post(`/students/${student.id}/transfers`,{classId:classB.id,effectiveOn:day(-10),reason:'Class arm move approved by the office'},{headers:{'If-Match':`"v${patched.version}"`}});

@@ -36,6 +36,32 @@ public class AcademicController {
     return timetable.addLesson(Actor.current(), s, p, b, Api.version(version), key);
   }
 
+  @GetMapping("/api/v1/schools/{s}/timetable-plans")
+  Object plans(@PathVariable UUID s, @RequestParam(required = false) UUID termId) {
+    return timetable.plans(Actor.current(), s, termId);
+  }
+
+  @PutMapping("/api/v1/schools/{s}/timetable-plans/{p}/lessons/{lesson}")
+  Object replaceLesson(
+      @PathVariable UUID s,
+      @PathVariable UUID p,
+      @PathVariable UUID lesson,
+      @RequestBody TimetableService.LessonInput b,
+      @RequestHeader(value = "If-Match", required = false) String version,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return timetable.replaceLesson(Actor.current(), s, p, lesson, b, Api.version(version), key);
+  }
+
+  @PostMapping("/api/v1/schools/{s}/timetable-plans/{p}/lessons/{lesson}/remove")
+  Object removeLesson(
+      @PathVariable UUID s,
+      @PathVariable UUID p,
+      @PathVariable UUID lesson,
+      @RequestHeader(value = "If-Match", required = false) String version,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return timetable.removeLesson(Actor.current(), s, p, lesson, Api.version(version), key);
+  }
+
   @GetMapping("/api/v1/schools/{s}/timetable-plans/{p}/review")
   Object review(@PathVariable UUID s, @PathVariable UUID p) {
     return timetable.review(Actor.current(), s, p);

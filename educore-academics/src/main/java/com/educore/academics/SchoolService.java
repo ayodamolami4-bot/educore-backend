@@ -435,7 +435,7 @@ public class SchoolService {
         });
   }
 
-  private UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
+  UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
     var c = one("select level from classes where school_id=? and id=?", school, b.classId());
     String department = b.department();
     if (department != null) {
@@ -500,7 +500,10 @@ public class SchoolService {
       String department,
       long metadataVersion,
       Map<String, Object> fields,
-      GuardianInput guardian) {}
+      GuardianInput guardian,
+      String admissionType,
+      String legacyReference,
+      List<UUID> subjectIds) {}
 
   public Object enrol(Actor a, UUID school, EnrolInput b, String key) {
     return command(
@@ -512,9 +515,39 @@ public class SchoolService {
         () -> {
           var c =
               one(
-                  "select c.*,s.starts_on as session_start,s.ends_on as session_end from classes c join academic_sessions s on s.id=c.session_id where c.school_id=? and c.id=?",
+                  "select c.*,s.starts_on as session_start,s.ends_on as session_end from classes c join academic_sessions s on s.id=c.session_id where c.school_id=? and c.id=? for update of c",
                   school,
                   b.classId());
+          String admissionType = b.admissionType() == null ? "FRESH" : b.admissionType();
+          if (!Set.of("FRESH", "TRANSFER_IN", "LEGACY_MIGRATION").contains(admissionType))
+            throw fail(
+                422, "INVALID_ADMISSION_TYPE", "Choose FRESH, TRANSFER_IN or LEGACY_MIGRATION.");
+          if ("LEGACY_MIGRATION".equals(admissionType)) {
+            a.school(school, "PRINCIPAL");
+            text(b.legacyReference(), 5, 160, "Existing-school admission evidence");
+          } else {
+            if (b.admissionNumber() != null && !b.admissionNumber().isBlank())
+              throw fail(
+                  422,
+                  "ADMISSION_NUMBER_AUTOMATIC",
+                  "Fresh and incoming transfer admissions receive an automatic school admission number.");
+            if ("SSS3".equals(c.get("level"))
+                && !((java.sql.Date) c.get("session_start"))
+                    .toLocalDate()
+                    .isBefore(LocalDate.of(2026, 9, 1)))
+              throw fail(
+                  422,
+                  "EXTERNAL_SSS3_ADMISSION_RESTRICTED",
+                  "New external SSS3 admission is restricted for this cohort. Record an existing school pupil through a principal-reviewed legacy migration or use internal promotion from SSS2.");
+          }
+          if (c.get("capacity") != null
+              && db.queryForObject(
+                      "select count(*) from enrolments where class_id=? and (ends_on is null or ends_on>=?::date)",
+                      Integer.class,
+                      b.classId(),
+                      b.startsOn())
+                  >= ((Number) c.get("capacity")).intValue())
+            throw fail(409, "CLASS_FULL", "This class has reached its configured capacity.");
           LocalDate start = b.startsOn();
           if (start == null
               || start.isBefore(((java.sql.Date) c.get("session_start")).toLocalDate())
@@ -591,8 +624,34 @@ public class SchoolService {
                     true);
           }
           UUID student = UUID.randomUUID(), enrolment = UUID.randomUUID();
-          String admission =
-              text(b.admissionNumber(), 1, 40, "Admission number").toUpperCase(Locale.ROOT);
+          String admission;
+          if ("LEGACY_MIGRATION".equals(admissionType))
+            admission =
+                text(b.admissionNumber(), 1, 40, "Existing admission number")
+                    .toUpperCase(Locale.ROOT);
+          else {
+            String code = school(school).get("code").toString();
+            if (code.length() > 20) code = code.substring(0, 20);
+            do {
+              long n =
+                  db.queryForObject(
+                      "insert into student_number_sequences(school_id,session_id,next_number) values (?,?,2) on conflict(school_id,session_id) do update set next_number=student_number_sequences.next_number+1 returning next_number-1",
+                      Long.class,
+                      school,
+                      c.get("session_id"));
+              admission =
+                  code
+                      + "/"
+                      + ((java.sql.Date) c.get("session_start")).toLocalDate().getYear()
+                      + "/"
+                      + String.format(Locale.ROOT, "%06d", n);
+            } while (db.queryForObject(
+                    "select count(*) from students where school_id=? and admission_number=?",
+                    Integer.class,
+                    school,
+                    admission)
+                > 0);
+          }
           if (!admission.matches("[A-Z0-9/-]+"))
             throw fail(
                 422, "INVALID_ADMISSION_NUMBER", "Use letters, numbers, slashes or hyphens.");
@@ -614,6 +673,13 @@ public class SchoolService {
               b.classId(),
               department,
               start);
+          db.update(
+              "update students set admission_type=?,legacy_reference=? where id=?",
+              admissionType,
+              b.legacyReference(),
+              student);
+          enrolChoices(
+              school, student, (UUID) c.get("session_id"), b.classId(), department, b.subjectIds());
           db.update(
               "insert into guardian_links(school_id,student_id,guardian_id,relationship) values (?,?,?,?)",
               school,
@@ -665,6 +731,59 @@ public class SchoolService {
         });
   }
 
+  void enrolChoices(
+      UUID school,
+      UUID student,
+      UUID session,
+      UUID classId,
+      String department,
+      List<UUID> choices) {
+    var templates =
+        db.queryForList(
+            "select ct.definition from class_curricula cc join curriculum_templates ct on ct.id=cc.curriculum_id where cc.class_id=? and cc.department in ('',coalesce(?::text,''))",
+            classId,
+            department);
+    if (templates.isEmpty()) {
+      if (choices != null && !choices.isEmpty())
+        throw fail(
+            422,
+            "CURRICULUM_REQUIRED",
+            "Publish and apply the class curriculum before choosing alternatives.");
+      return;
+    }
+    Set<UUID> selected = new HashSet<>(choices == null ? List.of() : choices);
+    Map<String, Integer> groups = new HashMap<>();
+    Set<UUID> allowed = new HashSet<>();
+    for (var template : templates)
+      for (var r : json.tree(template.get("definition").toString()))
+        if (!r.path("required").asBoolean()) {
+          UUID id = UUID.fromString(r.path("subjectId").asText());
+          allowed.add(id);
+          String group = r.path("choiceGroup").asText();
+          groups.putIfAbsent(group, 0);
+          if (selected.contains(id)) groups.merge(group, 1, Integer::sum);
+        }
+    if (selected.size() != (choices == null ? 0 : choices.size())
+        || !allowed.containsAll(selected)
+        || groups.values().stream().anyMatch(n -> n != 1))
+      throw fail(
+          422,
+          "INVALID_SUBJECT_CHOICES",
+          "Select exactly one alternative from every published language, religion or trade choice group.");
+    for (UUID sub : selected)
+      db.update(
+          "insert into student_subject_choices(school_id,student_id,session_id,subject_id) values (?,?,?,?)",
+          school,
+          student,
+          session,
+          sub);
+    db.update(
+        "insert into student_choice_versions(school_id,student_id,session_id) values (?,?,?) on conflict do nothing",
+        school,
+        student,
+        session);
+  }
+
   void validateFields(JsonNode definition, Map<String, Object> values) {
     Set<String> allowed = new HashSet<>();
     for (JsonNode f : definition.path("studentFields")) {
@@ -703,7 +822,7 @@ public class SchoolService {
     if ("STUDENT".equals(c.role()) && student.equals(c.subjectId())) return;
     if ("TEACHER".equals(c.role())
         && db.queryForObject(
-                "select count(*) from enrolments e join classes c on c.id=e.class_id left join teaching_assignments t on t.class_id=c.id where e.school_id=? and e.student_id=? and (c.attendance_teacher_id=? or t.teacher_id=?) and e.starts_on<=current_date and (e.ends_on is null or e.ends_on>=current_date)",
+                "select count(*) from enrolments e join classes c on c.id=e.class_id left join teaching_assignments t on t.class_id=c.id and t.active where e.school_id=? and e.student_id=? and (c.attendance_teacher_id=? or t.teacher_id=?) and e.starts_on<=current_date and (e.ends_on is null or e.ends_on>=current_date)",
                 Integer.class,
                 school,
                 student,

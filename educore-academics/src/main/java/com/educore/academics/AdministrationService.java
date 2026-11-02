@@ -336,6 +336,14 @@ public class AdministrationService {
               b.teacherId(),
               b.weeklyPeriods(),
               id);
+          s.db.update(
+              "update assessment_sheets sh set teacher_id=?,state=case when sh.state='SUBMITTED' then 'RETURNED' else sh.state end,return_reason=?,version=sh.version+1 from assessment_cycles ac where ac.id=sh.cycle_id and ac.state<>'PUBLISHED' and sh.assignment_id=?",
+              b.teacherId(),
+              why,
+              id);
+          s.db.update(
+              "update assessment_cycles set version=version+1 where state<>'PUBLISHED' and id in (select cycle_id from assessment_sheets where assignment_id=?)",
+              id);
           s.commands.audit(
               school,
               a.accountId(),

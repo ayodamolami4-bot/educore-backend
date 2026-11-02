@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+
+export async function planningTests(u,f){
+ const {request,schoolPost,key,day,passed}=u;
+ const {school,admin,teacher,pupil,otherPupil,parent,children,classA,classB,english,math,term,session}=f;
+ const call=async(method,path,body,version,expected=200,token=admin.accessToken,commandKey=key())=>(await request(`/api/v1/schools/${school}${path}`,{method,body,token,expected,headers:{'Idempotency-Key':commandKey,...(version===undefined?{}:{'If-Match':`"v${version}"`})}})).body;
+ const get=(path,token)=>call('GET',path,undefined,undefined,200,token);
+ const assignments=(await get('/teaching-assignments')).items,ae=assignments.find(x=>x.classId===classA.id&&x.subjectId===english.id),be=assignments.find(x=>x.classId===classB.id&&x.subjectId===english.id),am=assignments.find(x=>x.classId===classA.id&&x.subjectId===math.id);
+ assert.ok(ae&&be&&am);
+ const familyWorkspace=await get(`/classes/${classA.id}/workspace`,parent.accessToken);assert.equal(familyWorkspace.students.length,1);assert.equal(familyWorkspace.rosterIsComplete,false);
+ await call('GET',`/classes/${classB.id}/workspace`,undefined,undefined,404,parent.accessToken);
+ const plan=await call('POST','/timetable-plans',{termId:term.id,effectiveFrom:day(-10)});let v=plan.version;
+ const add=async(assignmentId,weekday,start,room)=>{const r=await call('POST',`/timetable-plans/${plan.id}/lessons`,{assignmentId,weekday,start,durationMinutes:60,room},v);v=r.planVersion;return r;};
+ const first=await add(ae.id,1,'08:00','ROOM-A');await add(ae.id,2,'08:00','ROOM-A');await add(be.id,1,'09:00','ROOM-B');await add(be.id,2,'09:00','ROOM-B');await add(am.id,1,'09:00','ROOM-A');await add(am.id,3,'09:00','ROOM-A');
+ const replace=await call('PUT',`/timetable-plans/${plan.id}/lessons/${first.id}`,{assignmentId:ae.id,weekday:1,start:'10:00',durationMinutes:60,room:'ROOM-A'},v);v=replace.planVersion;assert.equal(replace.id,first.id);assert.equal(replace.version,2);
+ assert.equal((await get(`/timetable-plans/${plan.id}/review`)).readyToPublish,true);
+ const published=await call('POST',`/timetable-plans/${plan.id}/publish`,undefined,v);
+ await call('POST',`/timetable-plans/${plan.id}/lessons/${first.id}/remove`,undefined,published.version,409);
+ const clone=await call('POST','/timetable-plans',{termId:term.id,effectiveFrom:day(-10),sourcePlanId:plan.id});assert.equal(clone.revision,2);
+ const review=await get(`/timetable-plans/${clone.id}/review`);assert.equal(review.lessons.length,6);
+ const moved=review.lessons.find(x=>x.classId===classA.id&&x.subjectId===english.id&&x.weekday===1);
+ const removed=await call('POST',`/timetable-plans/${clone.id}/lessons/${moved.id}/remove`,undefined,review.version);
+ const restored=await call('POST',`/timetable-plans/${clone.id}/lessons`,{assignmentId:ae.id,weekday:1,start:'10:00',durationMinutes:60,room:'ROOM-A'},removed.version);
+ await call('POST',`/timetable-plans/${clone.id}/publish`,undefined,restored.planVersion);
+ assert.equal((await get('/timetable')).published,true);assert.equal((await get('/timetable-plans?termId='+term.id)).items.length,2);
+ const teacherProfile=await get('/staff/'+ae.teacherId);
+ const scope={eligibleLevels:['JSS1'],subjectIds:[english.id],unavailable:[{weekday:1,startMinute:600,endMinute:660,reason:'Teacher is unavailable during this school period'}],reason:'Updated confirmed teacher availability'};
+ await call('PUT','/staff/'+ae.teacherId+'/teaching-scope',scope,teacherProfile.version);
+ const blocked=await call('POST','/timetable-plans',{termId:term.id,effectiveFrom:day(-9)});
+ await call('POST',`/timetable-plans/${blocked.id}/lessons`,{assignmentId:ae.id,weekday:1,start:'10:00',durationMinutes:60,room:'ROOM-A'},blocked.version,409);
+ await call('PUT','/staff/'+ae.teacherId+'/teaching-scope',{...scope,unavailable:[]},teacherProfile.version+1);
+ passed('dated class workspaces protect pupil lists; timetable drafts edit, remove and clone without changing published versions; unavailable teachers are rejected');
+
+ const religionA=await call('POST','/subjects',{code:'CRS',name:'Christian Religious Studies',core:false}),religionB=await call('POST','/subjects',{code:'ISLAMIC',name:'Islamic Studies',core:false});
+ await call('POST','/teachers',{fullName:'Religion Options Teacher',phone:'08162345678',eligibleLevels:['JSS1'],subjectIds:[religionA.id,religionB.id],assignments:[{classId:classB.id,subjectId:religionA.id,weeklyPeriods:2}]});
+ const curriculum=await call('POST','/curricula',{sessionId:session.id,level:'JSS1',name:'School approved JSS1 subject combination',subjects:[{subjectId:english.id,required:true,weeklyPeriods:4},{subjectId:math.id,required:true,weeklyPeriods:4},{subjectId:religionA.id,required:false,choiceGroup:'RELIGION',weeklyPeriods:2},{subjectId:religionB.id,required:false,choiceGroup:'RELIGION',weeklyPeriods:2}]});
+ await call('POST',`/curricula/${curriculum.id}/publish`,undefined,curriculum.version);
+ const classVersion=(await get(`/classes/${classA.id}/workspace`)).class.version;
+ await call('PUT',`/classes/${classA.id}/curriculum`,{curriculumId:curriculum.id,teachers:{},reason:'Approved curriculum applied for this school cohort'},classVersion);
+ await call('PUT',`/students/${children[0].id}/subject-choices`,{sessionId:session.id,subjectIds:[religionA.id,religionB.id],reason:'Invalid selection of both alternative subjects'},1,422);
+ const chosen=await call('PUT',`/students/${children[0].id}/subject-choices`,{sessionId:session.id,subjectIds:[religionA.id],reason:'Family confirmed the religious-studies choice'},1);assert.equal(chosen.version,2);assert.equal((await get(`/students/${children[0].id}/subject-choices?sessionId=${session.id}`,parent.accessToken)).subjectIds[0].id,religionA.id);
+ const newBody={fullName:'Fresh Numbered Pupil',dateOfBirth:'2013-01-01',sex:'MALE',classId:classB.id,startsOn:day(0),metadataVersion:1,fields:{},guardian:{fullName:'Fresh Pupil Parent',phone:'08172345678',relationship:'FATHER',relationshipVerified:true,verificationReference:'Verified synthetic admission visit'}};
+ const admissionKey=key();const numbered=await call('POST','/students',newBody,undefined,202,admin.accessToken,admissionKey);assert.match(numbered.admissionNumber,/\/\d{4}\/\d{6}$/);assert.equal((await call('POST','/students',newBody,undefined,202,admin.accessToken,admissionKey)).id,numbered.id);
+ const senior=await call('POST','/classes',{sessionId:session.id,level:'SSS3',arm:'A'});
+ await call('POST','/students',{...newBody,classId:senior.id,department:'SCIENCE'},undefined,422);
+ passed('versioned curriculum applies qualified teachers, validates one choice per subject group, generates stable admission numbers and rejects restricted external SSS3 entry');
+
+ let examDate=new Date(day(1)+'T12:00:00Z');while(examDate.getUTCDay()!==2)examDate.setUTCDate(examDate.getUTCDate()+1);const onDate=examDate.toISOString().slice(0,10);
+ const exams=await call('POST','/exam-schedules',{termId:term.id});let ev=exams.version;
+ const event={classId:classA.id,subjectId:english.id,invigilatorId:ae.teacherId,onDate,start:'09:00',durationMinutes:60,room:'EXAM-A'};
+ const e=await call('POST',`/exam-schedules/${exams.id}/events`,event,ev);ev=e.scheduleVersion;
+ await call('POST',`/exam-schedules/${exams.id}/events`,{...event,start:'09:30',subjectId:math.id,invigilatorId:am.teacherId,room:'EXAM-B'},ev,409);
+ await call('POST',`/exam-schedules/${exams.id}/events`,{...event,classId:classB.id,room:'EXAM-B'},ev,409);
+ const exam2=await call('POST',`/exam-schedules/${exams.id}/events`,{...event,subjectId:math.id,invigilatorId:am.teacherId,start:'10:00'},ev);ev=exam2.scheduleVersion;
+ assert.equal((await get(`/exam-schedules/${exams.id}/review`)).readyToPublish,true);await call('POST',`/exam-schedules/${exams.id}/publish`,undefined,ev);
+ assert.equal((await get('/examinations?termId='+term.id,pupil.accessToken)).items.length,2);assert.equal((await get('/examinations?termId='+term.id,otherPupil.accessToken)).items.length,0);
+ const invalidCalendar=await call('POST','/calendar-plans',{sessionId:session.id,changes:[{onDate,title:'Proposed school closure',teachingDay:false,reason:'Proposed holiday overlaps the published examination'}]});await call('POST',`/calendar-plans/${invalidCalendar.id}/publish`,undefined,invalidCalendar.version,409);
+ const holiday=day(20);const calendar=await call('POST','/calendar-plans',{sessionId:session.id,changes:[{onDate:holiday,title:'School approved holiday',teachingDay:false,reason:'School principal approved this dated holiday'}]});await call('POST',`/calendar-plans/${calendar.id}/publish`,undefined,calendar.version);assert.ok((await get('/calendar?sessionId='+session.id,parent.accessToken)).exceptions.some(x=>x.onDate===holiday&&x.teachingDay===false));
+ const issued={subjects:[{name:'English Language',grade:'CREDIT'}],issuingBodyReference:'SYNTHETIC-BOARD-RECORD'};await call('POST',`/students/${children[0].id}/external-results`,{board:'BECE',examYear:2026,candidateReference:'SYNTHETIC-CANDIDATE',issuedResult:issued,reason:'School recorded the externally issued statement'});assert.deepEqual((await get(`/students/${children[0].id}/external-results`,parent.accessToken)).items[0].issuedResult,issued);
+ await call('GET',`/students/${children[1].id}/external-results`,undefined,undefined,404,parent.accessToken);
+ passed('exam conflicts and family scopes are enforced; published exams block conflicting holiday changes; external results retain the issued grades');
+}

@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { extendedTests } from './extended-tests.mjs';
 import { academicTests } from './academic-tests.mjs';
 import { learningTests } from './learning-tests.mjs';
+import { planningTests } from './planning-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
 // Only the external Paystack and SMTP providers are local test doubles.
@@ -120,7 +121,7 @@ async function test(){
  const english=await schoolPost(admin,school,'/subjects',{code:'ENGLISH',name:'English Language',core:true});const math=await schoolPost(admin,school,'/subjects',{code:'MATHEMATICS',name:'Mathematics',core:true});
  const teacher=await schoolPost(admin,school,'/teachers',{fullName:'Ibrahim Demo',phone:'08022345678',eligibleLevels:['JSS1'],subjectIds:[english.id,math.id],assignments:[{classId:armA.id,subjectId:english.id,weeklyPeriods:2},{classId:armB.id,subjectId:math.id,weeklyPeriods:1}]});
  const teacherTwo=await schoolPost(admin,school,'/teachers',{fullName:'Bisi Demo',phone:'08032345678',eligibleLevels:['JSS1'],subjectIds:[math.id],assignments:[{classId:armA.id,subjectId:math.id,weeklyPeriods:1}]});
- const enrolBody={admissionNumber:'SMK-001',fullName:'Zainab Demo',dateOfBirth:'2010-06-12',sex:'FEMALE',classId:armA.id,startsOn:day(-20),metadataVersion:1,fields:{homeAddress:'Fictional test address'},guardian:{fullName:'Ada Demo',phone:'08042345678',relationshipVerified:true,verificationReference:'Synthetic school verification',relationship:'Mother'}};
+ const enrolBody={admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'SMK-001',fullName:'Zainab Demo',dateOfBirth:'2010-06-12',sex:'FEMALE',classId:armA.id,startsOn:day(-20),metadataVersion:1,fields:{homeAddress:'Fictional test address'},guardian:{fullName:'Ada Demo',phone:'08042345678',relationshipVerified:true,verificationReference:'Synthetic school verification',relationship:'Mother'}};
  const enrolKey=key();const students=await Promise.all([1,2].map(()=>schoolPost(admin,school,'/students',enrolBody,{headers:{'Idempotency-Key':enrolKey},expected:202})));assert.equal(students[0].id,students[1].id);const student=students[0];
  await schoolPost(admin,school,'/students',{...enrolBody,fullName:'Different Demo'},{headers:{'Idempotency-Key':enrolKey},expected:409});passed('concurrent enrolment retries create one student and retain the original result');
  await poll(async()=>{const p=(await request(`/api/v1/schools/${school}/students/${student.id}`,{token:admin.accessToken})).body;return p.onboardingStatus==='ACCOUNTS_PROVISIONED';},'student and guardian account provisioning');
@@ -128,14 +129,14 @@ async function test(){
  const parentView=(await request(`/api/v1/schools/${school}/students/${student.id}`,{token:parent.accessToken})).body;assert.equal(parentView.id,student.id);assert.ok(!('guardians' in parentView));
  await choose(parent,school,'PRINCIPAL',student.id).then(()=>{throw new Error('Parent granted principal role');},()=>{});
  await request('/api/v1/me/context',{method:'PUT',token:parent.accessToken,body:{schoolId:school,role:'PRINCIPAL'},expected:403});passed('automatic guardian access does not expose staff fields or grant administrator privileges');
- const secondChild=await schoolPost(admin,school,'/students',{...enrolBody,admissionNumber:'SMK-002',fullName:'Mariam Demo',guardian:{existingGuardianId:student.guardianId,relationship:'Mother'}},{expected:202});
+ const secondChild=await schoolPost(admin,school,'/students',{...enrolBody,admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'SMK-002',fullName:'Mariam Demo',guardian:{existingGuardianId:student.guardianId,relationship:'Mother'}},{expected:202});
  await poll(async()=>{const c=(await request('/api/v1/me/contexts',{token:parent.accessToken})).body;return c.items.filter(i=>i.role==='PARENT').length===2;},'existing guardian linked to second child');
  await choose(parent,school,'PARENT',secondChild.id);await request(`/api/v1/schools/${school}/students/${student.id}`,{token:parent.accessToken,expected:404});await choose(parent,school,'PARENT',student.id);passed('a second child reuses the parent account and child selection is enforced');
  const otherRecovery=await activate(other.slip);const otherAdmin=await login(other.slip.loginId);await choose(otherAdmin,other.schoolId,'PRINCIPAL');
  const otherSession=await schoolPost(otherAdmin,other.schoolId,'/academic-sessions',{name:'Other school session',startsOn:day(-120),endsOn:day(240)});
  const otherTerm=await schoolPost(otherAdmin,other.schoolId,'/terms',{sessionId:otherSession.id,number:1,startsOn:day(-120),endsOn:day(90)});
  const otherClass=await schoolPost(otherAdmin,other.schoolId,'/classes',{sessionId:otherSession.id,level:'SSS1',arm:'A'});
- const crossSchoolChild=await schoolPost(otherAdmin,other.schoolId,'/students',{...enrolBody,admissionNumber:'SMK-001',fullName:'Tunde Demo',classId:otherClass.id,department:'SCIENCE',guardian:{fullName:'Ada Demo',phone:'08052345678',existingLoginId:parentSlip.loginId,relationshipVerified:true,verificationReference:'Synthetic verified existing parent',relationship:'Mother'}},{expected:202});
+ const crossSchoolChild=await schoolPost(otherAdmin,other.schoolId,'/students',{...enrolBody,admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'SMK-001',fullName:'Tunde Demo',classId:otherClass.id,department:'SCIENCE',guardian:{fullName:'Ada Demo',phone:'08052345678',existingLoginId:parentSlip.loginId,relationshipVerified:true,verificationReference:'Synthetic verified existing parent',relationship:'Mother'}},{expected:202});
  await poll(async()=>{const contexts=(await request('/api/v1/me/contexts',{token:parent.accessToken})).body.items;return contexts.some(c=>c.schoolId===other.schoolId&&c.childId===crossSchoolChild.id);},'global parent linked to another school');
  const stillSame=await login(parentSlip.loginId);assert.equal(stillSame.accountId,parent.accountId);await choose(parent,other.schoolId,'PARENT',crossSchoolChild.id);await request(`/api/v1/schools/${other.schoolId}/students/${crossSchoolChild.id}`,{token:parent.accessToken});
  await schoolPost(otherAdmin,other.schoolId,`/students/${crossSchoolChild.id}/guardians/${crossSchoolChild.guardianId}/revoke`,{reason:'Synthetic school relationship revocation'});
@@ -200,6 +201,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day};await extendedTests(helpers);await academicTests(helpers);await learningTests(helpers);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
 finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();smtp.close();}

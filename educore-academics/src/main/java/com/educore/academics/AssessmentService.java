@@ -126,12 +126,12 @@ public class AssessmentService {
               term.get("starts_on"),
               term.get("ends_on"));
           s.db.update(
-              "insert into assessment_sheets(cycle_id,assignment_id,subject_id,teacher_id,department) select ?,id,subject_id,teacher_id,department from teaching_assignments where school_id=? and class_id=?",
+              "insert into assessment_sheets(cycle_id,assignment_id,subject_id,teacher_id,department) select ?,id,subject_id,teacher_id,department from teaching_assignments where school_id=? and class_id=? and active",
               id,
               school,
               b.classId());
           s.db.update(
-              "insert into assessment_marks(cycle_id,assignment_id,student_id) select r.cycle_id,sh.assignment_id,r.student_id from assessment_roster r join assessment_sheets sh on sh.cycle_id=r.cycle_id join subjects su on su.id=sh.subject_id where r.cycle_id=? and (sh.department is null or sh.department=r.department) and (su.core or not exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=?) or exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=? and ch.subject_id=sh.subject_id))",
+              "insert into assessment_marks(cycle_id,assignment_id,student_id) select r.cycle_id,sh.assignment_id,r.student_id from assessment_roster r join assessment_sheets sh on sh.cycle_id=r.cycle_id join teaching_assignments ta on ta.id=sh.assignment_id where r.cycle_id=? and (sh.department is null or sh.department=r.department) and (ta.required or not exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=?) or exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=? and ch.subject_id=sh.subject_id))",
               id,
               term.get("session_id"),
               term.get("session_id"));

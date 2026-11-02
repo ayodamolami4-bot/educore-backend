@@ -19,15 +19,15 @@ export async function academicTests(u) {
  for(const c of classes)await call('PUT',`/classes/${c.id}/attendance-teacher`,{teacherId:englishTeacher.id},admin.accessToken,1);
  const children=[];
  for(const [index,c]of classes.entries()){
-   const child=await post('/students',{admissionNumber:'ACA-'+index,fullName:['Ayọ Demo','Pathway Demo','Graduate Demo'][index],dateOfBirth:'2010-04-12',sex:'FEMALE',classId:c.id,startsOn:day(-345),...(c.level.startsWith('SSS')?{department:'SCIENCE'}:{}),metadataVersion:1,fields:{},guardian:children.length?{existingGuardianId:children[0].guardianId,relationship:'MOTHER'}:{fullName:'Parent Academic',phone:'08102345678',relationship:'MOTHER',relationshipVerified:true,verificationReference:'Synthetic in-person school check'}},{expected:202});children.push(child);
+   const child=await post('/students',{admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'ACA-'+index,fullName:['Ayọ Demo','Pathway Demo','Graduate Demo'][index],dateOfBirth:'2010-04-12',sex:'FEMALE',classId:c.id,startsOn:day(-345),...(c.level.startsWith('SSS')?{department:'SCIENCE'}:{}),metadataVersion:1,fields:{},guardian:children.length?{existingGuardianId:children[0].guardianId,relationship:'MOTHER'}:{fullName:'Parent Academic',phone:'08102345678',relationship:'MOTHER',relationshipVerified:true,verificationReference:'Synthetic in-person school check'}},{expected:202});children.push(child);
  }
- const reviewChild=await post('/students',{admissionNumber:'ACA-REVIEW',fullName:'Review Demo',dateOfBirth:'2010-04-12',sex:'MALE',classId:classes[0].id,startsOn:day(-345),metadataVersion:1,fields:{},guardian:{existingGuardianId:children[0].guardianId,relationship:'MOTHER'}},{expected:202});
+ const reviewChild=await post('/students',{admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'ACA-REVIEW',fullName:'Review Demo',dateOfBirth:'2010-04-12',sex:'MALE',classId:classes[0].id,startsOn:day(-345),metadataVersion:1,fields:{},guardian:{existingGuardianId:children[0].guardianId,relationship:'MOTHER'}},{expected:202});
  const t1Slip=await slip('TEACHER',englishTeacher.id);await activate(t1Slip);const t1=await login(t1Slip.loginId);await choose(t1,school,'TEACHER');
  const t2Slip=await slip('TEACHER',mathTeacher.id);await activate(t2Slip);const t2=await login(t2Slip.loginId);await choose(t2,school,'TEACHER');
  const parentSlip=await slip('GUARDIAN',children[0].guardianId);await activate(parentSlip);const parent=await login(parentSlip.loginId);await choose(parent,school,'PARENT',children[0].id);
  const assignments=(await get('/teaching-assignments')).items;const cycles=[];let missingChild;
  for(const term of terms){
-   if(term.number===3)missingChild=await post('/students',{admissionNumber:'ACA-LATE',fullName:'Late Arrival',dateOfBirth:'2011-04-12',sex:'MALE',classId:classes[0].id,startsOn:day(-120),metadataVersion:1,fields:{},guardian:{existingGuardianId:children[0].guardianId,relationship:'MOTHER'}},{expected:202});
+   if(term.number===3)missingChild=await post('/students',{admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'ACA-LATE',fullName:'Late Arrival',dateOfBirth:'2011-04-12',sex:'MALE',classId:classes[0].id,startsOn:day(-120),metadataVersion:1,fields:{},guardian:{existingGuardianId:children[0].guardianId,relationship:'MOTHER'}},{expected:202});
    for(const c of classes){
      const cycle=await post('/assessment-cycles',{termId:term.id,classId:c.id,opensAt:new Date(Date.now()-3600000).toISOString(),closesAt:new Date(Date.now()+86400000).toISOString()});
      cycles.push({cycle,term,c});
