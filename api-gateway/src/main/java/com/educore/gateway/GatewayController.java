@@ -57,7 +57,8 @@ public class GatewayController {
     if (!p.matches("/schools/[0-9a-fA-F-]{36}(?:/.*)?")) return null;
     String suffix = p.substring(45);
     if (suffix.startsWith("/onboarding/")) return "identity";
-    if (suffix.matches("/(?:invoices|payments|payment-intents|fee-plans|reconciliation)(?:/.*)?"))
+    if (suffix.matches(
+        "/(?:invoices|payments|payment-intents|fee-plans|fee-batches|fee-adjustments|reconciliation)(?:/.*)?"))
       return "finance";
     if (suffix.matches("/(?:notices|threads|complaints)(?:/.*)?")) return "communication";
     return "academics";

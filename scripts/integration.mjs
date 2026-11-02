@@ -10,6 +10,7 @@ import { extendedTests } from './extended-tests.mjs';
 import { academicTests } from './academic-tests.mjs';
 import { learningTests } from './learning-tests.mjs';
 import { planningTests } from './planning-tests.mjs';
+import { financeTests } from './finance-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
 // Only the external Paystack and SMTP providers are local test doubles.
@@ -23,7 +24,7 @@ for (const name of names) {
   for (const suffix of ['DATABASE_URL', 'DATABASE_USER', 'DATABASE_PASSWORD']) assert.ok(runtime[name.toUpperCase() + '_' + suffix], `Configure ${name.toUpperCase()}_${suffix}`);
 }
 const temp = resolve(root, '.dev'); mkdirSync(temp, { recursive: true });
-const checks = []; const services = []; const smtpMessages = []; const transactions = new Map();
+const checks = []; const services = []; const smtpMessages = []; const transactions = new Map(); const settlements = new Map(); const refunds=new Map();
 const providerKey = 'sk_test_' + randomBytes(24).toString('hex');
 const passed = name => { checks.push(name); console.log('PASS', name); };
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -43,6 +44,12 @@ const provider = httpServer(async (req,res) => {
     } else if (req.method === 'GET' && req.url.startsWith('/transaction/verify/')) {
       const reference = req.url.slice('/transaction/verify/'.length); data = transactions.get(reference);
       if (!data) {res.writeHead(404).end(); return;}
+    } else if(req.method==='GET'&&req.url.startsWith('/settlement?')){
+      const url=new URL(req.url,'http://localhost');data=(settlements.get(url.searchParams.get('subaccount'))||[]).map(({transactions,...x})=>x);
+    } else if(req.method==='GET'&&/^\/settlement\/\d+\/transactions/.test(req.url)){
+      const id=req.url.split('/')[2];data=[...settlements.values()].flat().find(x=>String(x.id)===id)?.transactions||[];
+    } else if(req.method==='GET'&&req.url.startsWith('/refund/')){
+      data=refunds.get(req.url.slice('/refund/'.length));if(!data){res.writeHead(404).end();return;}
     } else {res.writeHead(404).end(); return;}
     res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({status:true,data}));
   } catch {res.writeHead(500,{'Content-Type':'application/json'}).end(JSON.stringify({status:false}));}
@@ -201,6 +208,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);await financeTests(helpers,learning);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
 finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();smtp.close();}

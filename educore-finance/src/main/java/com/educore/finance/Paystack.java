@@ -76,6 +76,44 @@ public class Paystack {
     return request("GET", "/transaction/verify/" + reference, null);
   }
 
+  public JsonNode refund(String id) {
+    configured();
+    if (id == null || !id.matches("[A-Za-z0-9_-]{1,100}"))
+      throw Api.fail(422, "INVALID_REFUND_REFERENCE", "Use the provider's refund identifier.");
+    return request("GET", "/refund/" + id, null);
+  }
+
+  public JsonNode settlements(
+      String subaccount, java.time.LocalDate from, java.time.LocalDate to, int page) {
+    configured();
+    if (subaccount == null
+        || !subaccount.matches("ACCT_[A-Za-z0-9]{1,70}")
+        || page < 1
+        || page > 100)
+      throw Api.fail(
+          422,
+          "INVALID_SETTLEMENT_SCOPE",
+          "Choose the configured school subaccount and a valid page.");
+    return request(
+        "GET",
+        "/settlement?subaccount="
+            + subaccount
+            + "&from="
+            + from
+            + "&to="
+            + to
+            + "&status=success&perPage=100&page="
+            + page,
+        null);
+  }
+
+  public JsonNode settlementTransactions(String id, int page) {
+    configured();
+    if (id == null || !id.matches("[0-9]{1,30}") || page < 1 || page > 100)
+      throw Api.fail(422, "INVALID_SETTLEMENT_ID", "Use the provider settlement identifier.");
+    return request("GET", "/settlement/" + id + "/transactions?perPage=100&page=" + page, null);
+  }
+
   private JsonNode request(String method, String path, Object body) {
     try {
       HttpRequest.Builder b =

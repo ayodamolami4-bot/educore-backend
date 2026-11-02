@@ -13,14 +13,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class FinanceService {
-  private final JdbcTemplate db;
-  private final Commands commands;
-  private final Json json;
-  private final Crypto crypto;
-  private final ServiceHttp http;
-  private final Outbox outbox;
-  private final Paystack paystack;
-  private final String academics;
+  final JdbcTemplate db;
+  final Commands commands;
+  final Json json;
+  final Crypto crypto;
+  final ServiceHttp http;
+  final Outbox outbox;
+  final Paystack paystack;
+  final String academics;
 
   public FinanceService(
       JdbcTemplate db,
@@ -41,13 +41,13 @@ public class FinanceService {
     this.academics = academics;
   }
 
-  private Map<String, Object> one(String sql, Object... args) {
+  Map<String, Object> one(String sql, Object... args) {
     var rows = db.queryForList(sql, args);
     if (rows.isEmpty()) throw fail(404, "NOT_FOUND", "The financial record is unavailable.");
     return rows.get(0);
   }
 
-  private Object child(Actor a, UUID school, UUID student) {
+  Object child(Actor a, UUID school, UUID student) {
     var context = a.school(school, "PRINCIPAL", "ACCOUNTS", "PARENT");
     UUID guardian = null;
     if ("PARENT".equals(context.role())) {
@@ -61,7 +61,7 @@ public class FinanceService {
         Object.class);
   }
 
-  private Map<String, Object> invoice(Actor a, UUID school, UUID id) {
+  Map<String, Object> invoice(Actor a, UUID school, UUID id) {
     var row = one("select * from invoices where school_id=? and id=?", school, id);
     child(a, school, (UUID) row.get("student_id"));
     return row;
@@ -141,9 +141,21 @@ public class FinanceService {
           422, "INVALID_AMOUNT", "Use a positive amount in kobo within the supported limit.");
   }
 
+  static long balance(Map<String, Object> i) {
+    return Math.max(
+        0,
+        ((Number) i.get("total_minor")).longValue()
+            - ((Number) i.get("credit_minor")).longValue()
+            - ((Number) i.get("paid_minor")).longValue()
+            + ((Number) i.get("refunded_minor")).longValue());
+  }
+
   private Object wire(Map<String, Object> i) {
     long total = ((Number) i.get("total_minor")).longValue(),
-        paid = ((Number) i.get("paid_minor")).longValue();
+        paid =
+            ((Number) i.get("paid_minor")).longValue()
+                - ((Number) i.get("refunded_minor")).longValue();
+    long credits = ((Number) i.get("credit_minor")).longValue(), charge = total - credits;
     return map(
         "id",
         i.get("id"),
@@ -163,10 +175,20 @@ public class FinanceService {
         total,
         "paidMinor",
         paid,
+        "grossPaidMinor",
+        i.get("paid_minor"),
+        "creditMinor",
+        credits,
+        "refundedMinor",
+        i.get("refunded_minor"),
+        "chargeMinor",
+        charge,
+        "creditBalanceMinor",
+        Math.max(0, paid - charge),
         "balanceMinor",
-        total - paid,
+        Math.max(0, charge - paid),
         "status",
-        paid == total ? "PAID" : paid == 0 ? "UNPAID" : "PART_PAID",
+        paid >= charge ? "PAID" : paid == 0 ? "UNPAID" : "PART_PAID",
         "dueOn",
         i.get("due_on"),
         "partialAllowed",
@@ -232,9 +254,7 @@ public class FinanceService {
         () -> {
           var i = one("select * from invoices where school_id=? and id=? for update", school, id);
           expectVersion(version, ((Number) i.get("version")).longValue());
-          long balance =
-              ((Number) i.get("total_minor")).longValue()
-                  - ((Number) i.get("paid_minor")).longValue();
+          long balance = balance(i);
           if (b.amountMinor() > balance
               || !Boolean.TRUE.equals(i.get("partial_allowed")) && b.amountMinor() != balance)
             throw fail(
@@ -366,9 +386,7 @@ public class FinanceService {
                   "select * from invoices where school_id=? and id=? for update",
                   school,
                   invoiceId);
-          long balance =
-              ((Number) i.get("total_minor")).longValue()
-                  - ((Number) i.get("paid_minor")).longValue();
+          long balance = balance(i);
           if (b.amountMinor() > balance
               || !Boolean.TRUE.equals(i.get("partial_allowed")) && b.amountMinor() != balance)
             throw fail(
@@ -501,11 +519,7 @@ public class FinanceService {
                 locked.get("id"));
             return null;
           }
-          long
-              balance =
-                  ((Number) i.get("total_minor")).longValue()
-                      - ((Number) i.get("paid_minor")).longValue(),
-              allocated = Math.min(balance, amount);
+          long balance = balance(i), allocated = Math.min(balance, amount);
           record(
               i,
               "PAYSTACK",
