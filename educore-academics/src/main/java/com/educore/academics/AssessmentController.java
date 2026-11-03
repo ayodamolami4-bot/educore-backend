@@ -52,6 +52,15 @@ public class AssessmentController {
     return s.window(Actor.current(), school, id, b, version(h), key(h));
   }
 
+  @PostMapping("/assessment-cycles/{id}/roster/sync")
+  Object syncRoster(
+      @PathVariable UUID school,
+      @PathVariable UUID id,
+      @RequestBody AssessmentService.RosterSync b,
+      @RequestHeader HttpHeaders h) {
+    return s.syncRoster(Actor.current(), school, id, b, version(h), key(h));
+  }
+
   @GetMapping("/assessment-cycles/{id}/sheets/{assignment}")
   Object sheet(@PathVariable UUID school, @PathVariable UUID id, @PathVariable UUID assignment) {
     return s.sheet(Actor.current(), school, id, assignment);

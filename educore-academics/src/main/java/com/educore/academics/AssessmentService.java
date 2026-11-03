@@ -70,6 +70,212 @@ public class AssessmentService {
 
   public record CycleInput(UUID termId, UUID classId, Instant opensAt, Instant closesAt) {}
 
+  private List<Map<String, Object>> eligible(Map<String, Object> c) {
+    return s.db.queryForList(
+        "select e.student_id as \"studentId\",e.id as \"enrolmentId\",e.department from enrolments e join students st on st.id=e.student_id where e.school_id=? and e.class_id=? and st.status<>'WITHDRAWN' and e.starts_on<=? and (e.ends_on is null or e.ends_on>=?) and not exists(select 1 from enrolments later where later.student_id=e.student_id and later.session_id=e.session_id and later.starts_on>e.starts_on and later.starts_on<=?) order by e.student_id",
+        c.get("school_id"),
+        c.get("class_id"),
+        c.get("ends_on"),
+        c.get("starts_on"),
+        c.get("ends_on"));
+  }
+
+  private List<UUID> choices(UUID student, UUID session) {
+    return s.db.queryForList(
+        "select subject_id from student_subject_choices where student_id=? and session_id=?",
+        UUID.class,
+        student,
+        session);
+  }
+
+  private void validateRosterChoices(
+      Map<String, Object> c, Map<String, Object> pupil, Collection<UUID> selected) {
+    if (s.db.queryForObject(
+            "select count(*) from class_curricula where class_id=?",
+            Integer.class,
+            c.get("class_id"))
+        > 0)
+      s.validateChoices(
+          (UUID) c.get("class_id"), (String) pupil.get("department"), new ArrayList<>(selected));
+  }
+
+  private List<Map<String, Object>> roster(UUID cycle) {
+    return s.db.queryForList(
+        "select student_id as \"studentId\",enrolment_id as \"enrolmentId\",department,active from assessment_roster where cycle_id=? order by student_id",
+        cycle);
+  }
+
+  private String markKey(Object assignment, Object student) {
+    return assignment + "/" + student;
+  }
+
+  private Map<String, Map<String, Object>> desiredMarks(
+      Map<String, Object> c,
+      List<Map<String, Object>> expected,
+      List<Map<String, Object>> previous) {
+    UUID id = (UUID) c.get("id");
+    var sheets =
+        s.db.queryForList(
+            "select assignment_id,subject_id,department,required from assessment_sheets where cycle_id=?",
+            id);
+    var marks =
+        s.db.queryForList(
+            "select assignment_id,student_id,active from assessment_marks where cycle_id=?", id);
+    var desired = new LinkedHashMap<String, Map<String, Object>>();
+    for (var pupil : expected) {
+      var old =
+          previous.stream()
+              .filter(r -> r.get("studentId").equals(pupil.get("studentId")))
+              .findFirst();
+      // Choices already assessed in an unchanged placement remain frozen for this term.
+      boolean unchanged =
+          old.isPresent()
+              && Boolean.TRUE.equals(old.get().get("active"))
+              && old.get().get("enrolmentId").equals(pupil.get("enrolmentId"))
+              && Objects.equals(old.get().get("department"), pupil.get("department"));
+      Set<UUID> selected =
+          new HashSet<>(choices((UUID) pupil.get("studentId"), (UUID) c.get("session_id")));
+      if (!unchanged) validateRosterChoices(c, pupil, selected);
+      for (var sh : sheets) {
+        boolean include =
+            unchanged
+                ? marks.stream()
+                    .anyMatch(
+                        m ->
+                            Boolean.TRUE.equals(m.get("active"))
+                                && m.get("assignment_id").equals(sh.get("assignment_id"))
+                                && m.get("student_id").equals(pupil.get("studentId")))
+                : (sh.get("department") == null
+                        || Objects.equals(sh.get("department"), pupil.get("department")))
+                    && (Boolean.TRUE.equals(sh.get("required"))
+                        || selected.contains(sh.get("subject_id")));
+        if (include)
+          desired.put(
+              markKey(sh.get("assignment_id"), pupil.get("studentId")),
+              map("assignmentId", sh.get("assignment_id"), "studentId", pupil.get("studentId")));
+      }
+    }
+    return desired;
+  }
+
+  private List<Map<String, Object>> rosterIssues(Map<String, Object> c) {
+    var expected = eligible(c);
+    var previous = roster((UUID) c.get("id"));
+    var issues = new ArrayList<Map<String, Object>>();
+    for (var pupil : expected) {
+      var old =
+          previous.stream()
+              .filter(
+                  r ->
+                      r.get("studentId").equals(pupil.get("studentId"))
+                          && Boolean.TRUE.equals(r.get("active")))
+              .findFirst();
+      if (old.isEmpty()
+          || !old.get().get("enrolmentId").equals(pupil.get("enrolmentId"))
+          || !Objects.equals(old.get().get("department"), pupil.get("department")))
+        issues.add(
+            map(
+                "studentId",
+                pupil.get("studentId"),
+                "code",
+                old.isEmpty() ? "PUPIL_ADDED" : "PLACEMENT_CHANGED"));
+    }
+    for (var old : previous)
+      if (Boolean.TRUE.equals(old.get("active"))
+          && expected.stream().noneMatch(r -> r.get("studentId").equals(old.get("studentId"))))
+        issues.add(map("studentId", old.get("studentId"), "code", "PUPIL_LEFT_SCOPE"));
+    try {
+      var desired = desiredMarks(c, expected, previous).keySet();
+      Set<String> actual = new HashSet<>();
+      for (var m :
+          s.db.queryForList(
+              "select assignment_id,student_id from assessment_marks where cycle_id=? and active",
+              c.get("id"))) actual.add(markKey(m.get("assignment_id"), m.get("student_id")));
+      if (!desired.equals(actual)) issues.add(map("code", "SUBJECT_ROSTER_CHANGED"));
+    } catch (Api.Failure ex) {
+      issues.add(map("code", "INVALID_SUBJECT_CHOICES", "detail", ex.getMessage()));
+    }
+    return issues;
+  }
+
+  public record RosterSync(String reason) {}
+
+  public Object syncRoster(Actor a, UUID school, UUID id, RosterSync b, long version, String key) {
+    a.school(school, "PRINCIPAL");
+    return command(
+        a,
+        school,
+        "assessment-cycles/" + id + "/roster/sync",
+        key,
+        map("input", b, "version", version),
+        () -> {
+          s.lockPlacements(school);
+          var c = cycle(a, school, id, true, true);
+          expectVersion(version, ((Number) c.get("version")).longValue());
+          if ("PUBLISHED".equals(c.get("state")))
+            throw fail(
+                409,
+                "REOPEN_REQUIRED",
+                "Reopen the published report revision before synchronising its roster.");
+          String reason = text(b.reason(), 5, 500, "Roster review reason");
+          var expected = eligible(c);
+          var previous = roster(id);
+          var desired = desiredMarks(c, expected, previous);
+          var issues = rosterIssues(c);
+          if (issues.isEmpty()) return map("id", id, "version", version, "changed", false);
+          s.db.update(
+              "update assessment_roster set active=false,scope_reason=? where cycle_id=? and active",
+              reason,
+              id);
+          s.db.update(
+              "update assessment_marks set active=false,scope_reason=? where cycle_id=? and active",
+              reason,
+              id);
+          for (var pupil : expected)
+            s.db.update(
+                "insert into assessment_roster(cycle_id,student_id,enrolment_id,department) values (?,?,?,?) on conflict(cycle_id,student_id) do update set enrolment_id=excluded.enrolment_id,department=excluded.department,active=true,scope_reason=null",
+                id,
+                pupil.get("studentId"),
+                pupil.get("enrolmentId"),
+                pupil.get("department"));
+          for (var mark : desired.values())
+            s.db.update(
+                "insert into assessment_marks(cycle_id,assignment_id,student_id) values (?,?,?) on conflict(cycle_id,assignment_id,student_id) do update set active=true,scope_reason=null",
+                id,
+                mark.get("assignmentId"),
+                mark.get("studentId"));
+          s.db.update(
+              "update assessment_sheets sh set active=exists(select 1 from assessment_marks m where m.cycle_id=sh.cycle_id and m.assignment_id=sh.assignment_id and m.active),version=version+1 where sh.cycle_id=?",
+              id);
+          s.db.update(
+              "update assessment_sheets set state='RETURNED',return_reason=? where cycle_id=? and active",
+              reason,
+              id);
+          touch(id);
+          s.commands.audit(
+              school,
+              a.accountId(),
+              "ASSESSMENT_ROSTER_SYNCHRONISED",
+              "ASSESSMENT_CYCLE",
+              id,
+              reason,
+              map("previousRoster", previous, "currentRoster", expected, "issues", issues));
+          return map(
+              "id",
+              id,
+              "version",
+              version + 1,
+              "changed",
+              true,
+              "activePupils",
+              expected.size(),
+              "subjectMarkRows",
+              desired.size(),
+              "sheetsRequireReview",
+              true);
+        });
+  }
+
   public Object create(Actor a, UUID school, CycleInput b, String key) {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
     return command(
@@ -79,6 +285,7 @@ public class AssessmentService {
         key,
         b,
         () -> {
+          s.lockPlacements(school);
           var term = s.one("select * from terms where school_id=? and id=?", school, b.termId());
           var c = s.one("select * from classes where school_id=? and id=?", school, b.classId());
           if (!term.get("session_id").equals(c.get("session_id"))
@@ -118,7 +325,7 @@ public class AssessmentService {
               java.sql.Timestamp.from(b.closesAt()),
               a.accountId());
           s.db.update(
-              "insert into assessment_roster(cycle_id,student_id,enrolment_id,department) select ?,e.student_id,e.id,e.department from enrolments e join students st on st.id=e.student_id where e.school_id=? and e.class_id=? and st.status='ACTIVE' and e.starts_on<=? and (e.ends_on is null or e.ends_on>=?) and not exists(select 1 from enrolments later where later.student_id=e.student_id and later.session_id=e.session_id and later.starts_on>e.starts_on and later.starts_on<=?)",
+              "insert into assessment_roster(cycle_id,student_id,enrolment_id,department) select ?,e.student_id,e.id,e.department from enrolments e join students st on st.id=e.student_id where e.school_id=? and e.class_id=? and st.status<>'WITHDRAWN' and e.starts_on<=? and (e.ends_on is null or e.ends_on>=?) and not exists(select 1 from enrolments later where later.student_id=e.student_id and later.session_id=e.session_id and later.starts_on>e.starts_on and later.starts_on<=?)",
               id,
               school,
               b.classId(),
@@ -126,14 +333,23 @@ public class AssessmentService {
               term.get("starts_on"),
               term.get("ends_on"));
           s.db.update(
-              "insert into assessment_sheets(cycle_id,assignment_id,subject_id,teacher_id,department) select ?,id,subject_id,teacher_id,department from teaching_assignments where school_id=? and class_id=? and active",
+              "insert into assessment_sheets(cycle_id,assignment_id,subject_id,teacher_id,department,required,choice_group) select ?,id,subject_id,teacher_id,department,required,choice_group from teaching_assignments where school_id=? and class_id=? and active",
               id,
               school,
               b.classId());
           s.db.update(
-              "insert into assessment_marks(cycle_id,assignment_id,student_id) select r.cycle_id,sh.assignment_id,r.student_id from assessment_roster r join assessment_sheets sh on sh.cycle_id=r.cycle_id join teaching_assignments ta on ta.id=sh.assignment_id where r.cycle_id=? and (sh.department is null or sh.department=r.department) and (ta.required or exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=? and ch.subject_id=sh.subject_id))",
+              "insert into assessment_marks(cycle_id,assignment_id,student_id) select r.cycle_id,sh.assignment_id,r.student_id from assessment_roster r join assessment_sheets sh on sh.cycle_id=r.cycle_id where r.cycle_id=? and (sh.department is null or sh.department=r.department) and (sh.required or exists(select 1 from student_subject_choices ch where ch.student_id=r.student_id and ch.session_id=? and ch.subject_id=sh.subject_id))",
               id,
               term.get("session_id"));
+          s.db.update(
+              "update assessment_sheets sh set active=exists(select 1 from assessment_marks m where m.cycle_id=sh.cycle_id and m.assignment_id=sh.assignment_id and m.active) where sh.cycle_id=?",
+              id);
+          var prepared = cycle(a, school, id, false, true);
+          for (var pupil : eligible(prepared))
+            validateRosterChoices(
+                prepared,
+                pupil,
+                choices((UUID) pupil.get("studentId"), (UUID) prepared.get("session_id")));
           if (s.db.queryForObject(
                       "select count(*) from assessment_roster where cycle_id=?", Integer.class, id)
                   == 0
@@ -234,6 +450,8 @@ public class AssessmentService {
         sh.get("version"),
         "teacherId",
         sh.get("teacher_id"),
+        "active",
+        sh.get("active"),
         "returnReason",
         sh.get("return_reason"),
         "cycleState",
@@ -246,7 +464,7 @@ public class AssessmentService {
         s.json.value(c.get("policy").toString()),
         "rows",
         s.db.queryForList(
-            "select m.student_id as \"studentId\",st.full_name as \"fullName\",st.admission_number as \"admissionNumber\",m.ca1,m.ca2,m.exam,m.exam_state as \"examState\",m.note from assessment_marks m join students st on st.id=m.student_id where m.cycle_id=? and m.assignment_id=? order by st.full_name,st.id",
+            "select m.student_id as \"studentId\",st.full_name as \"fullName\",st.admission_number as \"admissionNumber\",m.ca1,m.ca2,m.exam,m.exam_state as \"examState\",m.note,m.active,m.scope_reason as \"scopeReason\" from assessment_marks m join students st on st.id=m.student_id where m.cycle_id=? and m.assignment_id=? order by st.full_name,st.id",
             cycle,
             assignment));
   }
@@ -300,6 +518,11 @@ public class AssessmentService {
           if (!a.context().subjectId().equals(sh.get("teacher_id")))
             throw fail(404, "NOT_FOUND", "You can enter only your assigned subject marks.");
           expectVersion(version, ((Number) sh.get("version")).longValue());
+          if (!Boolean.TRUE.equals(sh.get("active")))
+            throw fail(
+                409,
+                "INACTIVE_SUBJECT_ROSTER",
+                "This historical sheet has no current eligible pupils. It is read-only.");
           if ("SUBMITTED".equals(sh.get("state")))
             throw fail(
                 409,
@@ -312,7 +535,7 @@ public class AssessmentService {
             if (row.studentId() == null || !seen.add(row.studentId()))
               throw fail(422, "DUPLICATE_STUDENT", "Use each rostered student once.");
             s.one(
-                "select student_id from assessment_marks where cycle_id=? and assignment_id=? and student_id=?",
+                "select student_id from assessment_marks where cycle_id=? and assignment_id=? and student_id=? and active",
                 id,
                 assignment,
                 row.studentId());
@@ -392,11 +615,16 @@ public class AssessmentService {
             throw fail(
                 404, "NOT_FOUND", "Only the assigned subject teacher can submit this sheet.");
           expectVersion(version, ((Number) sh.get("version")).longValue());
+          if (!Boolean.TRUE.equals(sh.get("active")))
+            throw fail(
+                409,
+                "INACTIVE_SUBJECT_ROSTER",
+                "This historical sheet has no current eligible pupils. It is read-only.");
           if ("SUBMITTED".equals(sh.get("state")))
             throw fail(409, "ALREADY_SUBMITTED", "The subject sheet is already submitted.");
           var rows =
               s.db.queryForList(
-                  "select ca1,ca2,exam,exam_state from assessment_marks where cycle_id=? and assignment_id=?",
+                  "select ca1,ca2,exam,exam_state from assessment_marks where cycle_id=? and assignment_id=? and active",
                   id,
                   assignment);
           if (rows.isEmpty())
@@ -450,10 +678,15 @@ public class AssessmentService {
                 "Reopen the published report revision before returning marks.");
           var sh =
               s.one(
-                  "select version from assessment_sheets where cycle_id=? and assignment_id=? for update",
+                  "select version,active from assessment_sheets where cycle_id=? and assignment_id=? for update",
                   id,
                   assignment);
           expectVersion(version, ((Number) sh.get("version")).longValue());
+          if (!Boolean.TRUE.equals(sh.get("active")))
+            throw fail(
+                409,
+                "INACTIVE_SUBJECT_ROSTER",
+                "This historical sheet has no current eligible pupils. It is read-only.");
           String why = text(b.reason(), 5, 500, "Return reason");
           s.db.update(
               "update assessment_sheets set state='RETURNED',return_reason=?,version=version+1 where cycle_id=? and assignment_id=?",
@@ -499,7 +732,7 @@ public class AssessmentService {
           var c = cycle(a, school, id, true, true);
           editable(c, false);
           s.one(
-              "select student_id from assessment_roster where cycle_id=? and student_id=?",
+              "select student_id from assessment_roster where cycle_id=? and student_id=? and active",
               id,
               student);
           var old =
@@ -545,22 +778,26 @@ public class AssessmentService {
     var c = cycle(a, school, id, false, true);
     var sheets =
         s.db.queryForList(
-            "select sh.assignment_id as \"assignmentId\",sh.subject_id as \"subjectId\",su.name as \"subjectName\",sh.state,sh.version,sh.teacher_id as \"teacherId\" from assessment_sheets sh join subjects su on su.id=sh.subject_id where sh.cycle_id=? order by su.name",
+            "select sh.assignment_id as \"assignmentId\",sh.subject_id as \"subjectId\",su.name as \"subjectName\",sh.state,sh.active,sh.version,sh.teacher_id as \"teacherId\" from assessment_sheets sh join subjects su on su.id=sh.subject_id where sh.cycle_id=? order by su.name",
             id);
     var students =
         s.db.queryForList(
-            "select r.student_id as \"studentId\",st.full_name as \"fullName\",st.admission_number as \"admissionNumber\",r.department,co.version as \"remarkVersion\",co.remark,co.conduct,co.punctuality,co.cooperation,co.handwriting,co.practical_skills as \"practicalSkills\" from assessment_roster r join students st on st.id=r.student_id left join class_remarks co on co.cycle_id=r.cycle_id and co.student_id=r.student_id where r.cycle_id=? order by st.id",
+            "select r.student_id as \"studentId\",st.full_name as \"fullName\",st.admission_number as \"admissionNumber\",r.department,co.version as \"remarkVersion\",co.remark,co.conduct,co.punctuality,co.cooperation,co.handwriting,co.practical_skills as \"practicalSkills\" from assessment_roster r join students st on st.id=r.student_id left join class_remarks co on co.cycle_id=r.cycle_id and co.student_id=r.student_id where r.cycle_id=? and r.active order by st.id",
             id);
     int missing =
         s.db.queryForObject(
-            "select count(*) from assessment_marks where cycle_id=? and (ca1 is null or ca2 is null or exam is null or exam_state='MAKEUP_PENDING')",
+            "select count(*) from assessment_marks where cycle_id=? and active and (ca1 is null or ca2 is null or exam is null or exam_state='MAKEUP_PENDING')",
             Integer.class,
             id);
+    var rosterIssues = rosterIssues(c);
     boolean ready =
-        !students.isEmpty()
+        rosterIssues.isEmpty()
+            && !students.isEmpty()
             && !sheets.isEmpty()
             && missing == 0
-            && sheets.stream().allMatch(x -> "SUBMITTED".equals(x.get("state")))
+            && sheets.stream()
+                .filter(x -> Boolean.TRUE.equals(x.get("active")))
+                .allMatch(x -> "SUBMITTED".equals(x.get("state")))
             && students.stream().allMatch(x -> x.get("remark") != null);
     for (var student : students) {
       var marks = studentMarks(id, (UUID) student.get("studentId"));
@@ -584,6 +821,14 @@ public class AssessmentService {
         students,
         "missingMarkRows",
         missing,
+        "rosterIssues",
+        rosterIssues,
+        "rosterSyncRequired",
+        !rosterIssues.isEmpty(),
+        "archivedStudents",
+        s.db.queryForList(
+            "select r.student_id as \"studentId\",st.full_name as \"fullName\",r.scope_reason as \"scopeReason\" from assessment_roster r join students st on st.id=r.student_id where r.cycle_id=? and not r.active order by st.id",
+            id),
         "readyToPublish",
         ready);
   }
@@ -591,7 +836,7 @@ public class AssessmentService {
   List<Map<String, Object>> studentMarks(UUID cycle, UUID student) {
     var rows =
         s.db.queryForList(
-            "select sh.assignment_id as \"assignmentId\",su.id as \"subjectId\",su.code,su.name,m.ca1,m.ca2,m.exam,m.exam_state as \"examState\",m.note from assessment_marks m join assessment_sheets sh on sh.cycle_id=m.cycle_id and sh.assignment_id=m.assignment_id join subjects su on su.id=sh.subject_id where m.cycle_id=? and m.student_id=? order by su.code",
+            "select sh.assignment_id as \"assignmentId\",su.id as \"subjectId\",su.code,su.name,m.ca1,m.ca2,m.exam,m.exam_state as \"examState\",m.note from assessment_marks m join assessment_sheets sh on sh.cycle_id=m.cycle_id and sh.assignment_id=m.assignment_id join subjects su on su.id=sh.subject_id where m.cycle_id=? and m.student_id=? and m.active and sh.active order by su.code",
             cycle,
             student);
     for (var row : rows)
@@ -621,6 +866,7 @@ public class AssessmentService {
         key,
         map("input", b, "version", version),
         () -> {
+          s.lockPlacements(school);
           var c = cycle(a, school, id, true, true);
           expectVersion(version, ((Number) c.get("version")).longValue());
           if (!Set.of("OPEN", "REVIEW").contains(c.get("state")))

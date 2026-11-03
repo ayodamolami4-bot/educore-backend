@@ -446,6 +446,7 @@ public class PlanningService {
         key,
         map("input", b, "version", version),
         () -> {
+          s.lockPlacements(school);
           var e =
               s.one(
                   "select e.*,coalesce((select cc.curriculum_id from class_curricula cc where cc.class_id=c.id and cc.department=coalesce(e.department,'')),c.curriculum_id) as curriculum_id from enrolments e join classes c on c.id=e.class_id where e.school_id=? and e.student_id=? and e.session_id=? order by e.starts_on desc limit 1 for update of e",

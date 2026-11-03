@@ -351,6 +351,7 @@ public class PromotionService {
         key,
         map("version", version),
         () -> {
+          s.lockPlacements(school);
           var b = batch(school, id, true);
           expectVersion(version, ((Number) b.get("version")).longValue());
           if (!"PREVIEW".equals(b.get("state")))

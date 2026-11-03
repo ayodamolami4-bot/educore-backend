@@ -430,6 +430,7 @@ public class AdministrationService {
         key,
         map("input", b, "version", version),
         () -> {
+          s.lockPlacements(school);
           var st =
               s.one(
                   "select version,status from students where school_id=? and id=? for update",
@@ -528,6 +529,7 @@ public class AdministrationService {
         key,
         map("input", b, "version", version),
         () -> {
+          s.lockPlacements(school);
           var st =
               s.one(
                   "select * from students where school_id=? and id=? for update", school, student);

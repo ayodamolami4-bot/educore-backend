@@ -526,6 +526,7 @@ public class SchoolService {
         key,
         b,
         () -> {
+          lockPlacements(school);
           var c =
               one(
                   "select c.*,s.starts_on as session_start,s.ends_on as session_end from classes c join academic_sessions s on s.id=c.session_id where c.school_id=? and c.id=? for update of c",
@@ -744,13 +745,14 @@ public class SchoolService {
         });
   }
 
-  void enrolChoices(
-      UUID school,
-      UUID student,
-      UUID session,
-      UUID classId,
-      String department,
-      List<UUID> choices) {
+  void lockPlacements(UUID school) {
+    db.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))",
+        Object.class,
+        "school-placements:" + school);
+  }
+
+  void validateChoices(UUID classId, String department, List<UUID> choices) {
     var templates =
         db.queryForList(
             "select ct.definition from class_curricula cc join curriculum_templates ct on ct.id=cc.curriculum_id where cc.class_id=? and cc.department in ('',coalesce(?::text,''))",
@@ -783,6 +785,17 @@ public class SchoolService {
           422,
           "INVALID_SUBJECT_CHOICES",
           "Select exactly one alternative from every published language, religion or trade choice group.");
+  }
+
+  void enrolChoices(
+      UUID school,
+      UUID student,
+      UUID session,
+      UUID classId,
+      String department,
+      List<UUID> choices) {
+    validateChoices(classId, department, choices);
+    Set<UUID> selected = new HashSet<>(choices == null ? List.of() : choices);
     for (UUID sub : selected)
       db.update(
           "insert into student_subject_choices(school_id,student_id,session_id,subject_id) values (?,?,?,?)",
