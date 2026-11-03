@@ -32,7 +32,7 @@ export async function planningTests(u,f){
  passed('dated class workspaces protect pupil lists; timetable drafts edit, remove and clone without changing published versions; unavailable teachers are rejected');
 
  const religionA=await call('POST','/subjects',{code:'CRS',name:'Christian Religious Studies',core:false}),religionB=await call('POST','/subjects',{code:'ISLAMIC',name:'Islamic Studies',core:false});
- await call('POST','/teachers',{fullName:'Islamic Options Teacher',phone:'08162345679',eligibleLevels:['JSS1'],subjectIds:[religionB.id],assignments:[]});
+ await call('POST','/teachers',{fullName:'Islamic Options Teacher',phone:'08162345679',eligibleLevels:['JSS1'],subjectIds:[religionB.id],assignments:[{classId:classA.id,subjectId:religionB.id,weeklyPeriods:2}]});
  await call('POST','/teachers',{fullName:'Religion Options Teacher',phone:'08162345678',eligibleLevels:['JSS1'],subjectIds:[religionA.id],assignments:[{classId:classB.id,subjectId:religionA.id,weeklyPeriods:2}]});
  const curriculum=await call('POST','/curricula',{sessionId:session.id,level:'JSS1',name:'School approved JSS1 subject combination',subjects:[{subjectId:english.id,required:true,weeklyPeriods:4},{subjectId:math.id,required:true,weeklyPeriods:4},{subjectId:religionA.id,required:false,choiceGroup:'RELIGION',weeklyPeriods:2},{subjectId:religionB.id,required:false,choiceGroup:'RELIGION',weeklyPeriods:2}]});
  await call('POST',`/curricula/${curriculum.id}/publish`,undefined,curriculum.version);
