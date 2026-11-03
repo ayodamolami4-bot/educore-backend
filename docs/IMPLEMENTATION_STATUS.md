@@ -25,13 +25,13 @@ The expanded backend is on `backend/complete-workflows`. **The full agreed appli
 
 ## Verified evidence
 
-[GitHub Actions run 41587719319](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41587719319), code commit `cccb5b04256dc974c89913f256e704b99e5053b3`, passed:
+[GitHub Actions run 41589276279](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41589276279), code commit `320c8acd3efc12401d662fb429c38a02b92034b9`, passed:
 
 - **33 unit tests**, none skipped.
-- **51 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
+- **52 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
 - All five Docker image builds and both container startup checks.
 
-The added scenarios exercise cross-schedule replacement/conflicts, family optional-subject scope, roster changes and report privacy, class-package submission/return, directory/settings/form versions, activated-principal protection, activity duties, repeated-absence coverage and failed recovery boundaries.
+The added scenarios exercise cross-schedule replacement/conflicts, family optional-subject scope, roster changes and report privacy, class-package submission/return and re-entry after roster/duty changes, directory/settings/form versions, activated-principal protection, activity duties, repeated-absence coverage and failed recovery boundaries.
 
 Paystack, SMTP and Expo are local test doubles. Actual provider accounts, external mailboxes/native devices and a hosted API have not been demonstrated. Local Docker startup is verified.
 
