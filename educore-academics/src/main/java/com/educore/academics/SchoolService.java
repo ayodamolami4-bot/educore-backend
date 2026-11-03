@@ -303,14 +303,30 @@ public class SchoolService {
         key,
         map("teacherId", teacher, "version", expected),
         () -> {
+          lockPlacements(school);
           var c =
               one("select * from classes where school_id=? and id=? for update", school, classId);
           expectVersion(expected, ((Number) c.get("version")).longValue());
-          one("select id from staff where school_id=? and id=? and active", school, teacher);
+          one(
+              "select id from staff where school_id=? and id=? and active and staff_role='TEACHER'",
+              school,
+              teacher);
           db.update(
               "update classes set attendance_teacher_id=?,version=version+1 where id=?",
               teacher,
               classId);
+          if (!Objects.equals(teacher, c.get("attendance_teacher_id")))
+            db.update(
+                "update assessment_cycles set state='OPEN',version=version+1 where class_id=? and state='REVIEW'",
+                classId);
+          commands.audit(
+              school,
+              a.accountId(),
+              "CLASS_TEACHER_DUTY_CHANGED",
+              "CLASS",
+              classId,
+              "Class attendance and report duty updated",
+              map("previousTeacherId", c.get("attendance_teacher_id"), "teacherId", teacher));
           return map("id", classId, "version", expected + 1, "attendanceTeacherId", teacher);
         });
   }
@@ -436,6 +452,7 @@ public class SchoolService {
   }
 
   UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
+    lockPlacements(school);
     var c =
         one("select level from classes where school_id=? and id=? for update", school, b.classId());
     String department = b.department();

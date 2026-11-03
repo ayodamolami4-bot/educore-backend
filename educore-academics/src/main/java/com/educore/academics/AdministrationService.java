@@ -340,6 +340,11 @@ public class AdministrationService {
         key,
         map("input", b, "version", version),
         () -> {
+          s.lockPlacements(school);
+          s.db.queryForList(
+              "select ac.id from assessment_cycles ac where ac.class_id=(select class_id from teaching_assignments where school_id=? and id=?) order by ac.id for update",
+              school,
+              id);
           var old =
               s.one(
                   "select t.*,c.level from teaching_assignments t join classes c on c.id=t.class_id where t.school_id=? and t.id=? for update of t",
@@ -363,6 +368,9 @@ public class AdministrationService {
                 "TEACHER_NOT_ELIGIBLE",
                 "Choose an active teacher qualified for this subject and level.");
           String why = text(b.reason(), 5, 500, "Handover reason");
+          s.db.update(
+              "update assessment_cycles set state='OPEN' where class_id=? and state='REVIEW'",
+              old.get("class_id"));
           s.db.update(
               "update teaching_assignments set teacher_id=?,weekly_periods=?,version=version+1 where id=?",
               b.teacherId(),

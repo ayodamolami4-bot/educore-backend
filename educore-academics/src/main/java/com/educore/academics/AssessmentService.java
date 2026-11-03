@@ -251,6 +251,8 @@ public class AssessmentService {
               "update assessment_sheets set state='RETURNED',return_reason=? where cycle_id=? and active",
               reason,
               id);
+          if ("REVIEW".equals(c.get("state")))
+            s.db.update("update assessment_cycles set state='OPEN' where id=?", id);
           touch(id);
           s.commands.audit(
               school,
@@ -267,6 +269,8 @@ public class AssessmentService {
               version + 1,
               "changed",
               true,
+              "state",
+              "REVIEW".equals(c.get("state")) ? "OPEN" : c.get("state"),
               "activePupils",
               expected.size(),
               "subjectMarkRows",

@@ -269,6 +269,7 @@ public class PlanningService {
         key,
         map("input", b, "version", version),
         () -> {
+          s.lockPlacements(school);
           var c =
               s.one("select * from classes where school_id=? and id=? for update", school, classId);
           expectVersion(version, ((Number) c.get("version")).longValue());
