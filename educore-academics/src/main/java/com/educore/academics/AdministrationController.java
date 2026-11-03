@@ -26,8 +26,11 @@ public class AdministrationController {
   Object staff(
       @PathVariable UUID school,
       @RequestParam(required = false) UUID cursor,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String role,
+      @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "30") int limit) {
-    return s.staffList(Actor.current(), school, cursor, Api.pageSize(limit));
+    return s.staffList(Actor.current(), school, cursor, Api.pageSize(limit), search, role, active);
   }
 
   @PostMapping("/staff")

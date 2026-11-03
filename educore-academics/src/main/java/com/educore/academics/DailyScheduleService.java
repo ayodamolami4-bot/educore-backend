@@ -84,7 +84,9 @@ public class DailyScheduleService {
         on.getDayOfWeek().getValue() == 5
             ? "FRIDAY_SPORTS"
             : on.getDayOfWeek().getValue() == 3
-                    && Boolean.TRUE.equals(s.school(school).get("wednesday_pt"))
+                    && (Boolean.TRUE.equals(weekly.get("published"))
+                        ? Boolean.TRUE.equals(weekly.get("wednesdayPtEnabled"))
+                        : Boolean.TRUE.equals(s.school(school).get("wednesday_pt")))
                 ? "WEDNESDAY_PT"
                 : null;
     if (activity != null

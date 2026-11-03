@@ -154,19 +154,23 @@ public class AcademicController {
   }
 
   @GetMapping("/api/v1/schools/{s}/teaching-assignments")
-  Object assignments(@PathVariable UUID s, @RequestParam(required = false) UUID classId) {
+  Object assignments(
+      @PathVariable UUID s,
+      @RequestParam(required = false) UUID classId,
+      @RequestParam(defaultValue = "false") boolean includeInactive) {
     var a = Actor.current();
     var c = a.school(s, "PRINCIPAL", "SCHOOL_OFFICE", "TEACHER");
     UUID teacher = "TEACHER".equals(c.role()) ? c.subjectId() : null;
     return Api.map(
         "items",
         school.db.queryForList(
-            "select t.id,t.class_id as \"classId\",t.subject_id as \"subjectId\",su.name as \"subjectName\",t.teacher_id as \"teacherId\",st.full_name as \"teacherName\",t.department,t.weekly_periods as \"weeklyPeriods\",t.version from teaching_assignments t join subjects su on su.id=t.subject_id join staff st on st.id=t.teacher_id where t.school_id=? and (?::uuid is null or t.class_id=?::uuid) and (?::uuid is null or t.teacher_id=?::uuid) order by su.name,t.id",
+            "select t.id,t.class_id as \"classId\",t.subject_id as \"subjectId\",su.name as \"subjectName\",t.teacher_id as \"teacherId\",st.full_name as \"teacherName\",t.department,t.required,t.choice_group as \"choiceGroup\",t.active,t.weekly_periods as \"weeklyPeriods\",t.version from teaching_assignments t join subjects su on su.id=t.subject_id join staff st on st.id=t.teacher_id where t.school_id=? and (?::uuid is null or t.class_id=?::uuid) and (?::uuid is null or t.teacher_id=?::uuid) and (? or t.active) order by su.name,t.id",
             s,
             classId,
             classId,
             teacher,
-            teacher),
+            teacher,
+            includeInactive && teacher == null),
         "hasMore",
         false);
   }

@@ -302,6 +302,25 @@ public class TimetableService {
         s.db.queryForList(
             "select l.id as \"lessonId\",case when not t.active or not st.active or l.teacher_id<>t.teacher_id or l.required<>t.required or l.choice_group is distinct from t.choice_group then 'TEACHER_OR_ASSIGNMENT_CHANGED' else 'TEACHER_UNAVAILABLE' end as issue from lessons l join teaching_assignments t on t.id=l.assignment_id join staff st on st.id=t.teacher_id where l.plan_id=? and (not t.active or not st.active or l.teacher_id<>t.teacher_id or l.required<>t.required or l.choice_group is distinct from t.choice_group or exists(select 1 from teacher_availability av where av.teacher_id=l.teacher_id and av.weekday=l.weekday and av.start_min<l.end_min and av.end_min>l.start_min))",
             plan);
+    for (var lesson : lessons(plan, null, null, null)) {
+      try {
+        SchoolRules.lesson(
+            ((Number) lesson.get("weekday")).intValue(),
+            ((Number) lesson.get("startMinute")).intValue(),
+            ((Number) lesson.get("endMinute")).intValue()
+                - ((Number) lesson.get("startMinute")).intValue(),
+            Boolean.TRUE.equals(p.get("wednesday_pt")));
+      } catch (Api.Failure ex) {
+        invalid.add(
+            map(
+                "lessonId",
+                lesson.get("id"),
+                "issue",
+                "FIXED_ACTIVITY_CONFLICT",
+                "detail",
+                ex.getMessage()));
+      }
+    }
     invalid.addAll(exams.conflictsForTimetable(school, p));
     boolean complete =
         invalid.isEmpty()

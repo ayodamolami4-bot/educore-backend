@@ -468,6 +468,13 @@ public class SchoolService {
           "A common or matching-department teaching assignment already covers this subject; use the reasoned handover action.");
     if (b.weeklyPeriods() < 1 || b.weeklyPeriods() > 10)
       throw fail(422, "INVALID_WEEKLY_TARGET", "Weekly periods must be between 1 and 10.");
+    if (db.queryForObject(
+            "select count(*) from assessment_cycles where class_id=?", Integer.class, b.classId())
+        > 0)
+      throw fail(
+          409,
+          "ASSESSMENT_SCOPE_EXISTS",
+          "This class already has frozen assessment subjects. Use teacher handover for an existing subject; prepare new subjects before assessment cycles.");
     UUID id = UUID.randomUUID();
     db.update(
         "insert into teaching_assignments(id,school_id,class_id,subject_id,teacher_id,department,weekly_periods) values (?,?,?,?,?,?,?)",
@@ -481,14 +488,44 @@ public class SchoolService {
     return id;
   }
 
-  public Object teachers(Actor a, UUID school, UUID cursor, int limit) {
+  String search(String value) {
+    String q = value == null ? "" : value.strip();
+    if (q.length() > 80) throw fail(422, "SEARCH_TOO_LONG", "Use at most 80 search characters.");
+    return q;
+  }
+
+  public Object teachers(
+      Actor a,
+      UUID school,
+      UUID cursor,
+      int limit,
+      String search,
+      String level,
+      UUID subject,
+      UUID classId,
+      Boolean active) {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    if (level != null && !Set.of("JSS1", "JSS2", "JSS3", "SSS1", "SSS2", "SSS3").contains(level))
+      throw fail(422, "INVALID_LEVEL", "Choose a secondary-school level.");
+    String q = search(search);
     var rows =
         db.queryForList(
-            "select id,full_name as \"fullName\",phone,email,active,version from staff where school_id=? and (?::uuid is null or id>?::uuid) order by id limit ?",
+            "select st.id,st.full_name as \"fullName\",st.staff_number as \"staffNumber\",st.phone,st.email,st.active,st.version from staff st where st.school_id=? and st.staff_role='TEACHER' and (?::uuid is null or st.id>?::uuid) and (st.full_name ilike ? or st.staff_number ilike ?) and (?::boolean is null or st.active=?::boolean) and ((?::text is null and ?::uuid is null) or exists(select 1 from staff_qualifications q where q.staff_id=st.id and (?::text is null or q.level=?::text) and (?::uuid is null or q.subject_id=?::uuid))) and (?::uuid is null or exists(select 1 from teaching_assignments ta where ta.teacher_id=st.id and ta.active and ta.class_id=?::uuid)) order by st.id limit ?",
             school,
             cursor,
             cursor,
+            "%" + q + "%",
+            "%" + q + "%",
+            active,
+            active,
+            level,
+            subject,
+            level,
+            level,
+            subject,
+            subject,
+            classId,
+            classId,
             limit + 1);
     return page(rows, limit, r -> r.get("id").toString());
   }
@@ -906,7 +943,7 @@ public class SchoolService {
     if ("TEACHER".equals(c.role())) {
       if (classId == null
           || db.queryForObject(
-                  "select count(*) from classes c left join teaching_assignments t on t.class_id=c.id where c.school_id=? and c.id=? and (c.attendance_teacher_id=? or t.teacher_id=?)",
+                  "select count(*) from classes c left join teaching_assignments t on t.class_id=c.id and t.active where c.school_id=? and c.id=? and (c.attendance_teacher_id=? or t.teacher_id=?)",
                   Integer.class,
                   school,
                   classId,

@@ -1092,10 +1092,12 @@ public class IdentityService {
     if (principal
         && (!active || !"PRINCIPAL".equals(role))
         && db.queryForObject(
-                "select count(*) from memberships where school_id=? and role='PRINCIPAL' and active",
+                "select count(*) from memberships m join accounts a on a.id=m.account_id where m.school_id=? and m.role='PRINCIPAL' and m.active and a.status='ACTIVE' and m.subject_id<>?",
                 Integer.class,
-                school)
-            <= 1) throw fail(409, "LAST_PRINCIPAL", "The school must retain an active principal.");
+                school,
+                subject)
+            == 0)
+      throw fail(409, "LAST_PRINCIPAL", "The school must retain an activated principal.");
     db.update(
         "update memberships set active=false where school_id=? and subject_id=? and role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER')",
         school,
@@ -1136,6 +1138,16 @@ public class IdentityService {
         child,
         guardian,
         version);
+  }
+
+  public Object activePrincipals(UUID school) {
+    Actor.internalOnly("academics");
+    return map(
+        "subjectIds",
+        db.queryForList(
+            "select distinct m.subject_id from memberships m join accounts a on a.id=m.account_id where m.school_id=? and m.role='PRINCIPAL' and m.active and a.status='ACTIVE'",
+            UUID.class,
+            school));
   }
 
   private void membership(

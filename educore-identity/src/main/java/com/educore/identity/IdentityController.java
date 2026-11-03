@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.*;
 public class IdentityController {
   public record SchoolAudience(UUID schoolId) {}
 
+  @PostMapping("/internal/active-principals")
+  Object activePrincipals(@RequestBody SchoolAudience b) {
+    return service.activePrincipals(b.schoolId());
+  }
+
   @PostMapping("/internal/school-audience")
   Object schoolAudience(@RequestBody SchoolAudience b) {
     return service.schoolAudience(b.schoolId());

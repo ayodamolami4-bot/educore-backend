@@ -5,14 +5,20 @@ import static com.educore.platform.Api.*;
 import com.educore.platform.*;
 import java.time.*;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AdministrationService {
   private final SchoolService s;
+  private final ServiceHttp http;
+  private final String identity;
 
-  public AdministrationService(SchoolService s) {
+  public AdministrationService(
+      SchoolService s, ServiceHttp http, @Value("${educore.identity-url}") String identity) {
     this.s = s;
+    this.http = http;
+    this.identity = identity;
   }
 
   private Object command(
@@ -125,14 +131,24 @@ public class AdministrationService {
     return event;
   }
 
-  public Object staffList(Actor a, UUID school, UUID cursor, int limit) {
+  public Object staffList(
+      Actor a, UUID school, UUID cursor, int limit, String search, String role, Boolean active) {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    if (role != null && !Set.of("PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS", "TEACHER").contains(role))
+      throw fail(422, "INVALID_PRESET", "Choose a supported staff preset.");
+    String q = s.search(search);
     return page(
         s.db.queryForList(
-            "select st.id,st.full_name as \"fullName\",st.staff_number as \"staffNumber\",st.staff_role as role,st.active,st.version,case when o.id is null then 'PROVISIONED' when o.delivered_at is null then 'PENDING' else 'PROVISIONED' end as \"accessStatus\" from staff st left join outbox o on o.id=st.access_event_id where st.school_id=? and (?::uuid is null or st.id>?::uuid) order by st.id limit ?",
+            "select st.id,st.full_name as \"fullName\",st.staff_number as \"staffNumber\",st.staff_role as role,st.active,st.version,case when o.id is null then 'PROVISIONED' when o.delivered_at is null then 'PENDING' else 'PROVISIONED' end as \"accessStatus\" from staff st left join outbox o on o.id=st.access_event_id where st.school_id=? and (?::uuid is null or st.id>?::uuid) and (st.full_name ilike ? or st.staff_number ilike ?) and (?::text is null or st.staff_role=?::text) and (?::boolean is null or st.active=?::boolean) order by st.id limit ?",
             school,
             cursor,
             cursor,
+            "%" + q + "%",
+            "%" + q + "%",
+            role,
+            role,
+            active,
+            active,
             limit + 1),
         limit,
         r -> r.get("id").toString());
@@ -224,6 +240,26 @@ public class AdministrationService {
 
   public record AccessInput(String role, boolean active, String reason) {}
 
+  private boolean anotherActivatedPrincipal(UUID school, UUID subject) {
+    var reply =
+        http.post(
+            identity,
+            "/internal/active-principals",
+            map("schoolId", school),
+            com.fasterxml.jackson.databind.JsonNode.class);
+    Set<UUID> live = new HashSet<>();
+    for (var id : reply.path("subjectIds")) live.add(UUID.fromString(id.asText()));
+    return s
+        .db
+        .queryForList(
+            "select id from staff where school_id=? and active and staff_role='PRINCIPAL' and id<>?",
+            UUID.class,
+            school,
+            subject)
+        .stream()
+        .anyMatch(live::contains);
+  }
+
   public Object access(Actor a, UUID school, UUID id, AccessInput b, long version, String key) {
     a.school(school, "PRINCIPAL");
     if (b.role() == null
@@ -242,15 +278,11 @@ public class AdministrationService {
           if ("PRINCIPAL".equals(p.get("staff_role"))
               && Boolean.TRUE.equals(p.get("active"))
               && (!b.active() || !"PRINCIPAL".equals(b.role()))
-              && s.db.queryForObject(
-                      "select count(*) from staff where school_id=? and active and staff_role='PRINCIPAL'",
-                      Integer.class,
-                      school)
-                  <= 1)
+              && !anotherActivatedPrincipal(school, id))
             throw fail(
                 409,
                 "LAST_PRINCIPAL",
-                "Add and provision another active principal before removing this access.");
+                "Another principal must activate their account before removing this access.");
           if (!b.active() || !"TEACHER".equals(b.role())) {
             int work =
                 s.db.queryForObject(

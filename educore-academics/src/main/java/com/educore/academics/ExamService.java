@@ -140,7 +140,7 @@ public class ExamService {
             || (start < 720 && end > 690)
             || (day == 5 && start < 780 && end > 720)
             || (day == 3
-                && Boolean.TRUE.equals(s.school(school).get("wednesday_pt"))
+                && ptForDate(school, (UUID) x.get("term_id"), b.onDate())
                 && start < 510
                 && end > 480);
     if (reserved) {
@@ -158,11 +158,12 @@ public class ExamService {
       throw fail(
           409, "INVIGILATOR_UNAVAILABLE", "Choose an available invigilator for this period.");
     if (s.db.queryForObject(
-            "select count(*) from activity_supervisors where school_id=? and term_id=? and teacher_id=? and ((activity='WEDNESDAY_PT' and ?=3 and ?<510 and ?>480) or (activity='FRIDAY_SPORTS' and ?=5 and ?<780 and ?>720))",
+            "select count(*) from activity_supervisors where school_id=? and term_id=? and teacher_id=? and ((activity='WEDNESDAY_PT' and ? and ?=3 and ?<510 and ?>480) or (activity='FRIDAY_SPORTS' and ?=5 and ?<780 and ?>720))",
             Integer.class,
             school,
             x.get("term_id"),
             b.invigilatorId(),
+            ptForDate(school, (UUID) x.get("term_id"), b.onDate()),
             day,
             start,
             end,
@@ -185,6 +186,17 @@ public class ExamService {
     } catch (RuntimeException ex) {
       throw fail(422, "INVALID_TIME", "Use a whole-minute time such as 09:00.");
     }
+  }
+
+  boolean ptForDate(UUID school, UUID term, LocalDate on) {
+    var plans =
+        s.db.queryForList(
+            "select wednesday_pt from timetable_plans where school_id=? and term_id=? and status='PUBLISHED' and effective_from<=? order by effective_from desc,revision desc limit 1",
+            school,
+            term,
+            on);
+    return Boolean.TRUE.equals(
+        plans.isEmpty() ? s.school(school).get("wednesday_pt") : plans.get(0).get("wednesday_pt"));
   }
 
   private Set<UUID> pupils(
@@ -292,6 +304,21 @@ public class ExamService {
       }
       int start = ((Number) e.get("startMinute")).intValue(),
           end = ((Number) e.get("endMinute")).intValue();
+      if (proposed != null
+          && Boolean.TRUE.equals(proposed.get("wednesday_pt"))
+          && on.getDayOfWeek() == DayOfWeek.WEDNESDAY
+          && start < 510
+          && end > 480
+          && (e.get("exceptionReason") == null
+              || e.get("exceptionReason").toString().strip().length() < 10))
+        issues.add(
+            map(
+                "eventId",
+                e.get("id"),
+                "code",
+                "EXAM_ACTIVITY_OVERRIDE_REQUIRED",
+                "detail",
+                "Record a principal exception on the examination before introducing PT during its time."));
       var lessons =
           s.db.queryForList(
               "select id,class_id as \"classId\",subject_id as \"subjectId\",department,required,start_min as \"startMinute\",end_min as \"endMinute\",teacher_id as \"teacherId\",room from lessons where plan_id=? and weekday=? and start_min<? and end_min>? and (teacher_id=? or room=?)",
