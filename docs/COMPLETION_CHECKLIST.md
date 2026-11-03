@@ -1,22 +1,22 @@
 # Backend completion checklist
 
-Completion requires an implemented workflow, current school/role checks, failure states, history and meaningful PostgreSQL tests. The latest verified evidence is in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+Each implemented item requires permissions, failure states, history and real-database evidence. Read [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the verified checkpoint and [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) for each page.
 
-- [x] Shared account flows, selected school/role/child and service isolation.
-- [x] Office/accounts onboarding, core staff/student/guardian administration and permission versions.
-- [x] Curriculum choices, timetable draft editor/cloning and calendar/exam publication.
-- [ ] Final cross-schedule conflicts, date-specific exam overrides and optional-subject timetable snapshots.
-- [x] Marks chain, class-teacher review, principal report publication/revisions and report PDF/CSV.
-- [ ] Late admission/transfer synchronisation after assessment-roster snapshots.
-- [x] Promotion/repeat execution, explicit JSS3 pathways, SSS3 school completion and stale-source checks.
-- [x] Assignments, private drafts, accepted response/review history, family reads and protected files.
-- [x] Fee plans/batches, independent approvals, confirmed refunds, settlement matching and receipts.
-- [x] Scoped notices, current parent/class-teacher/office participation, attachments and owned complaints.
-- [x] Configured delivery workers with leases/retries/receipts and truthful disabled states.
-- [x] Reviewed academic CSV imports/resume, opening balances, authorised exports and service-owned activity endpoints.
-- [x] Source-derived endpoint/request catalogue and local Docker startup instructions.
-- [ ] Full role-screen contract review, remaining directory filters and final response adapters.
-- [ ] Lost-all-proofs assisted recovery and independent release/security review.
-- [ ] Actual provider/native-device validation, hosting and operational setup.
+- [x] Shared account flows, server context and service isolation.
+- [x] Staff/student/guardian administration, directory filters, setting/form versions and activated-principal protection.
+- [x] Curriculum choices, weekly editor/cloning and calendar/exam publication.
+- [x] Dated normal/exam replacement, resource/activity conflicts, optional-subject snapshots and daily schedule.
+- [x] Subject marks → class-lead package submission/return → principal publication, immutable report revisions and PDF/CSV.
+- [x] Late admission/transfer/withdrawal roster synchronisation without deleting marks or inventing zeros.
+- [x] Promotion/repeat, explicit JSS3 pathways, SSS3 completion and stale-source protection.
+- [x] App assignments/submissions/feedback and protected attachments.
+- [x] Fee plans/batches, independent approvals, confirmed refunds, settlement review and receipts.
+- [x] Scoped communication/complaints and leased configured delivery.
+- [x] Reviewed CSV imports/resume, opening balances, scoped exports and service-owned activity.
+- [x] Review all 94 pages and validate the 224-operation request catalogue against current controllers.
+- [ ] Implement the remaining controls in the 27 PARTIAL screen rows.
+- [ ] Adopt and implement an assisted-recovery policy beyond the agreed SH09 help-only boundary.
+- [ ] Complete actual provider/device validation, hosting, backup/restore and independent release/security review.
+- [ ] Build/connect and test the React Native role screens with the frontend team.
 
-A checked implementation item does not imply every associated frontend screen, external provider or production operation has been validated. Read the specific limits in the implementation status.
+A checked backend item is not a completed frontend page or evidence of a live provider/deployment.

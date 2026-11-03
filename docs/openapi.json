@@ -3,7 +3,7 @@
   "info": {
     "title": "EduCore implemented request API",
     "version": "0.1.0",
-    "description": "Generated from the controller annotations and Java request records at 3f7bbd716932b3a550ab2877156943130a2b1148. This request catalogue is not a production-readiness claim. See IMPLEMENTATION_STATUS.md for remaining work and API.md for workflow permissions and actual response shapes."
+    "description": "Controller-backed request contract, reviewed 3 November 2026. Read API.md for business validation and SCREEN_CONNECTIONS.md for role pages and remaining gaps. Response maps are not fully described by these request schemas."
   },
   "servers": [
     {
@@ -1333,6 +1333,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "x-controller": "AcademicController",
@@ -2125,6 +2134,30 @@
               "type": "integer",
               "format": "int32",
               "default": 30
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -8496,6 +8529,48 @@
               "format": "int32",
               "default": 30
             }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "classId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "x-controller": "SchoolController",
@@ -8885,6 +8960,31 @@
               "type": "integer",
               "format": "int32",
               "default": 30
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "childId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "activeLink",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -15643,6 +15743,339 @@
           }
         }
       }
+    },
+    "/schools/{school}/schedule/day": {
+      "get": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "GET /schools/{school}/schedule/day",
+        "operationId": "get_schools_school_schedule_day",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "classId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "on",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "x-controller": "DailyScheduleController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/DailyScheduleController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/assessment-cycles/{cycleId}/roster/sync": {
+      "post": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "POST /schools/{school}/assessment-cycles/{cycleId}/roster/sync",
+        "operationId": "post_schools_school_assessment_cycles_cycleId_roster_sync",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cycleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Retain the same key, body and version when retrying the same command."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"v[1-9][0-9]*\"$"
+            },
+            "description": "The returned record version, quoted as \"v3\"."
+          }
+        ],
+        "x-controller": "AssessmentController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/AssessmentController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentService_RosterSync"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schools/{school}/assessment-cycles/{cycleId}/submit-review": {
+      "post": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "POST /schools/{school}/assessment-cycles/{cycleId}/submit-review",
+        "operationId": "post_schools_school_assessment_cycles_cycleId_submit_review",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cycleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Retain the same key, body and version when retrying the same command."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"v[1-9][0-9]*\"$"
+            },
+            "description": "The returned record version, quoted as \"v3\"."
+          }
+        ],
+        "x-controller": "AssessmentController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/AssessmentController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/assessment-cycles/{cycleId}/return-review": {
+      "post": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "POST /schools/{school}/assessment-cycles/{cycleId}/return-review",
+        "operationId": "post_schools_school_assessment_cycles_cycleId_return_review",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cycleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Retain the same key, body and version when retrying the same command."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"v[1-9][0-9]*\"$"
+            },
+            "description": "The returned record version, quoted as \"v3\"."
+          }
+        ],
+        "x-controller": "AssessmentController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/AssessmentController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentService_Reason"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -18060,6 +18493,17 @@
             "items": {
               "type": "object"
             }
+          }
+        }
+      },
+      "AssessmentService_RosterSync": {
+        "type": "object",
+        "description": "Declared request fields. Required, conditional and cross-record validation is enforced by the service; follow the workflow notes in API.md.",
+        "x-java-record": "AssessmentService.RosterSync",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "x-java-type": "String"
           }
         }
       }

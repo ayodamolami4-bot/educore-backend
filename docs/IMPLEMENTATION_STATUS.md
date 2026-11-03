@@ -1,53 +1,62 @@
-# Implementation status — 2 November 2026
+# Implementation status — 3 November 2026
 
-The backend has progressed beyond the original foundation. The saved code on `backend/complete-workflows` implements the workflows below. **The complete agreed application is not yet finished.** Final scheduling/assessment edge cases, screen-by-screen contract review and release work remain.
+The expanded backend is on `backend/complete-workflows`. **The full agreed application is still unfinished.** The core workflows below are implemented and exercised. The completed screen review records exact remaining contracts in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md).
 
 ## Implemented and exercised
 
 | Area | Current implementation |
 | --- | --- |
-| Shared access | Activation, login, password setup/change, verified-email and saved-code recovery, rotating opaque sessions, allowed school/role/child selection, recent reauthentication, sessions/preferences |
-| School isolation | Server-checked current context, school-scoped SQL and child/payer checks, separate databases/logins, distinct sender-to-receiver keys, no trusted client identity headers |
-| Administration | Office/accounts onboarding, staff presets and lifecycle checks, teacher eligibility/availability and handover, school contacts/forms, student edits/transfers/withdrawals, guardian contacts and versioned permissions |
-| Enrolment | Generated fresh admission numbers, explicit legacy migration, verified guardian linking, outbox account provisioning, private pending-account activation slips |
-| Planning | Versioned curriculum choices; weekly timetable drafts, editing/removal/cloning, required-period review and publication; calendar draft/publication; dated examination schedules with intra-exam conflicts |
-| Attendance | Assigned-teacher registers, drafts/submission, submitted-only office overview and corrections, reviewed absence alerts, own-child history, three-in-ten teaching-day follow-up query |
-| Assessment/reporting | Subject sheets and submission/return; class-teacher remarks/five ratings; principal publication and correction revisions; child-scoped report PDFs and class CSV broadsheets |
-| Promotion/graduation | Evidence-based preview, reasoned exceptions, stale-source checks, JSS3 pathways, principal confirmation, repeat-safe placement and SSS3 school completion; fees remain separate |
-| Learning work/files | Assignment drafts/publication, private student drafts, accepted submission revisions, return/extension/grading, family visibility, private encrypted PDF/JPG/PNG uploads/downloads and attachment scope checks |
-| Fees | Immutable invoice lines, partial payments, cash/verified-bank records, hosted test checkout, signed webhooks/authoritative verification, fee plans and repeat-safe bulk issue, independently approved adjustments, verified refund confirmation, PDF invoices/receipts |
-| Reconciliation | Bank statements and provider settlement matching, gross/fee/net differences, permanent references, exception review and financial overview |
-| Communication | Scoped notice drafts/publication, child-linked parent/class-teacher/office conversations, attachments, read/close actions, current-participant checks |
-| Complaints | Parent/walk-in/phone intake, category/owner restrictions, private notes/files, teaching-day first-response target, resolution and parent acceptance/review, history |
-| Delivery | Leased SMTP and Expo push preparation/delivery/receipt workers, current preferences, retries, expiry, invalid-device suppression and visible unconfigured states |
-| Imports/exports/history | Reviewed CSV previews and mapping, row correction, asynchronous resume without repeating successes, verified sibling groups, teacher assignments, independently reviewed opening balances, scoped CSV/PDF exports and service-owned activity history |
+| Shared access | Activation, login, password setup/change, verified-email and saved-code recovery, rotating opaque sessions, selected school/role/child, recent authentication, sessions/preferences |
+| Isolation | Current server-checked permissions, school-scoped SQL and child/payer checks, four separately owned databases/logins, separate sender-to-receiver keys |
+| Administration | Staff presets/onboarding and activated-principal protection, teacher eligibility/availability and handover, versioned settings/forms, student corrections/transfers/withdrawal, guardian contacts and permissions, scoped directory filters |
+| Enrolment | Generated fresh admission numbers, explicit legacy migration, verified guardian links, repeat-safe provisioning and private pending-account activation slips |
+| Planning | Curriculum alternatives and weekly timetable drafts/editing/cloning; dated publication, calendar revisions, exam schedules, normal/exam resource conflicts, optional-subject snapshots, activity-supervisor conflicts and a scoped daily schedule projection |
+| Attendance | Assigned-teacher registers, complete submit, submitted-only office overview, corrections/absence alerts, own-child history and three confirmed absences in ten teaching days with missing-register coverage |
+| Assessment | Frozen subject scopes, subject-sheet entry/return/submission, class-lead remarks/five ratings, explicit class-package submit/return, principal publication, correction revisions, PDF reports and CSV broadsheets |
+| Roster changes | Principal review/synchronisation after late admission, transfer or withdrawal; blank new marks, archived read-only rows, teacher confirmation, preserved issued snapshots and class-scoped report history |
+| Promotion/graduation | Published-evidence preview, documented exceptions, stale-source checks, JSS3 pathways, ended-year principal confirmation, repeat-safe placements and SSS3 school completion |
+| Learning/files | Assignments, private app drafts, accepted submission revisions, deadline/return/grading actions, family reads and protected encrypted PDF/JPG/PNG attachments |
+| Fees | Immutable invoice lines, partial payments, cash/verified-bank records, test hosted checkout, signed webhook intake/verification, fee plans/batches, independent adjustment approval, confirmed refunds and invoice/receipt PDFs |
+| Reconciliation | Statement/provider settlement review, gross/fee/net differences, permanent references, reviewed exceptions and finance overview |
+| Communication | School/class/department notices, child-linked parent/class-lead/office threads, current-participant checks and private attachments |
+| Complaints | Parent/walk-in/phone intake, category/owner limits, private notes, teaching-day response target, resolution/parent acceptance or review, visible history |
+| Delivery | Leased SMTP/Expo workers, preference checks, retries/expiry, provider receipt handling, invalid-device suppression and truthful unconfigured states |
+| Imports/history | Reviewed CSV previews/mapping, row correction, asynchronous resume without repeating successes, verified sibling groups, teacher assignments, independent opening-balance approval, scoped exports and service-owned activity history |
 
 ## Verified evidence
 
-[GitHub Actions run 41453457869](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41453457869), source commit `3f7bbd716932b3a550ab2877156943130a2b1148`, passed:
+[GitHub Actions run 41587719319](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41587719319), code commit `cccb5b04256dc974c89913f256e704b99e5053b3`, passed:
 
-- **33 unit tests**, with none skipped.
-- **42 integration scenario groups**, using real PostgreSQL and HTTP between all five Java programs.
-- All five Docker image builds and both container startup checks: school bootstrap/activation/gateway sign-in, and truthful unconfigured-email behaviour.
+- **33 unit tests**, none skipped.
+- **51 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
+- All five Docker image builds and both container startup checks.
 
-Paystack, SMTP and Expo were local test doubles. No live money moved, no external mailbox/device delivery was demonstrated, and no cloud API or app-store build was deployed.
+The added scenarios exercise cross-schedule replacement/conflicts, family optional-subject scope, roster changes and report privacy, class-package submission/return, directory/settings/form versions, activated-principal protection, activity duties, repeated-absence coverage and failed recovery boundaries.
 
-## Remaining work
+Paystack, SMTP and Expo are local test doubles. Actual provider accounts, external mailboxes/native devices and a hosted API have not been demonstrated. Local Docker startup is verified.
 
-1. Finish the dated interaction between normal timetables, examinations, departments and optional subject groups. Current weekly and examination schedules validate their own conflicts; do not claim complete cross-schedule replacement/conflict handling.
-2. Finish assessment-roster handling for late admissions/transfers after a cycle snapshot, then test those changes and the school-settings/activity/follow-up edge cases. Source-result corrections already flag affected promotion outcomes for review.
-3. Review every agreed role screen against the implemented contract, including remaining directory filters and consistent response adapters. The source-derived request catalogue is supplied; it is not proof that 94 frontend screens are connected.
-4. Implement the assisted-recovery path when all private proofs are lost, and complete independent access/retry/security review before real school data.
-5. Configure and validate actual payment/email/push providers, native devices, HTTPS hosting, backups/restore and operational monitoring.
+## Screen review and remaining work
 
-The local coding environment became unavailable during the final scheduling work. Those uncommitted changes have **not** been presented as passing or merged into `main`. The branch contains the saved tested checkpoint; `main` still contains the earlier foundation until the remaining work is reviewed.
+The review covers **94 agreed pages**: **66 MAPPED**, **27 PARTIAL**, and **1 POLICY_DEFERRED**. MAPPED describes core API coverage; the frontend role screens still require implementation and connection by the frontend team. Every PARTIAL row states its missing planned controls.
+
+Remaining contracts include:
+
+1. Standalone class/subject materials, physical-work receipt, admission-document attachments and historical paper-report import.
+2. Formal teacher attendance-correction requests/declines, saved follow-up records and a broader delivery administration/retry screen.
+3. Provisioning diagnostics/retry controls, existing session/term date editing, subject lifecycle and a room catalogue.
+4. Broader report/export controls, a school-wide checkout-attempt list and the School Office fee-only read preset.
+5. An adopted policy for recovery when all private proofs are lost. SH09 is deliberately contact/help only; staff cannot reset an active global identity. Existing verified-email/saved-code recovery and failure boundaries are tested.
+6. Actual provider/device validation, HTTPS hosting, backup/restore, operational monitoring and independent access/load/security review.
+
+The earlier local-environment interruption is resolved. Tested code is saved remotely. `main` still contains the earlier foundation; use the expanded branch for review and local development. Do not describe the whole backend or all 94 screens as complete.
 
 ## Handoff
 
+- [Page-to-endpoint connections and precise gaps](SCREEN_CONNECTIONS.md)
 - [API workflow guide](API.md)
-- [All implemented endpoints and request fields](FRONTEND_ENDPOINTS.md)
+- [All 224 implemented endpoints and 105 request record types](FRONTEND_ENDPOINTS.md)
 - [OpenAPI request catalogue](openapi.json)
 - [Endpoint CSV](ENDPOINT_CATALOGUE.csv)
 - [Local setup](SETUP.md)
 
-Only endpoints backed by current controllers are included. Internal service routes are intentionally excluded from the frontend catalogue. Paystack live mode is rejected by configuration in this build.
+Internal service routes are excluded from the frontend catalogue. Official grades/money/promotion decisions stay on Java; frontend Models adapt response names, Presenters coordinate screen actions and Views render them.

@@ -6,9 +6,9 @@ Java 17+, Spring Boot 3.5.16 and PostgreSQL 17. This repository is the first bac
 | --- | --- | --- |
 | api-gateway | One public `/api/v1` entry; fixed service routing and explicit CORS | 8080 |
 | educore-identity | Accounts, activation/recovery, rotating sessions, school/role/child access | 8091 |
-| educore-academics | School records, metadata, enrolment, guardians, teachers, timetable and attendance | 8092 |
-| educore-finance | Invoices, cash/verified-bank records, Paystack test checkout and verification | 8093 |
-| educore-communication | Private notifications, school notices, complaints and configured SMTP mail | 8094 |
+| educore-academics | School records, metadata, enrolment, guardians, teachers, timetable, attendance, assessments, reports, promotion and assignments | 8092 |
+| educore-finance | Invoices, cash/verified-bank records, Paystack test checkout, adjustments and settlement reconciliation | 8093 |
+| educore-communication | Private notifications, school notices, complaints, private threads and configured SMTP/Expo delivery | 8094 |
 
 Each business service owns a separate SQL database and login. No service queries another service's tables. `platform` is a shared Java library for transport, security, encryption and transaction helpers, not another server.
 
@@ -41,11 +41,11 @@ On Windows PowerShell use `./mvnw.cmd verify`. Use a **JDK**, which includes the
 
 The expanded backend is saved on [backend/complete-workflows](https://github.com/ayodamolami4-bot/educore-backend/tree/backend/complete-workflows). It includes school/staff/student/guardian administration, calendars/curriculum, timetable and examination drafts, attendance, marks/report publication, promotion/graduation, assignments/files, fee plans and reconciliation, parent communication/complaints, delivery workers and reviewed imports/exports.
 
-The latest verified code passed **33 unit tests, 42 PostgreSQL integration groups, all five Docker builds and two container startup checks**. Some final scheduling/assessment edge cases and release work remain; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
+The latest verified code passed **33 unit tests, 51 PostgreSQL integration groups, all five Docker builds and two container startup checks**. The complete screen design still has missing contracts and release work; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
 
 ## Frontend handoff
 
-Start with [API.md](docs/API.md). [FRONTEND_ENDPOINTS.md](docs/FRONTEND_ENDPOINTS.md) lists all **220 implemented gateway operations** and **104 request record types**. There is also an [OpenAPI request catalogue](docs/openapi.json) and a [filterable endpoint CSV](docs/ENDPOINT_CATALOGUE.csv).
+Start with [SCREEN_CONNECTIONS.md](docs/SCREEN_CONNECTIONS.md): all 94 agreed pages are mapped to real endpoints, with remaining controls labelled. Then read [API.md](docs/API.md). [FRONTEND_ENDPOINTS.md](docs/FRONTEND_ENDPOINTS.md) lists all **224 implemented gateway operations** and **105 request record types**. There is also an [OpenAPI request catalogue](docs/openapi.json) and a [filterable endpoint CSV](docs/ENDPOINT_CATALOGUE.csv).
 
 The frontend Model owns API calls and response mapping, the Presenter owns screen state/actions, and the View owns rendering. School/role/child permissions and official calculations are enforced on Java.
 
@@ -60,6 +60,6 @@ git checkout backend/complete-workflows
 
 Four business services own separate PostgreSQL databases. Enrollment/account provisioning and notifications use encrypted outbox events, receiver deduplication and retries. Financial commands use stable references, row locks, idempotency keys and explicit version checks. Delivery jobs use database leases. Kafka and Kubernetes are not prerequisites for this local development setup.
 
-Run `./mvnw -B spotless:check verify` for formatting and unit checks. The [Backend checks workflow](.github/workflows/backend.yml) starts real PostgreSQL, runs all five programs and the integration suite, builds Docker images and verifies container startup. Provider HTTP/email/push integrations are tested with local doubles; no live funds or real external deliveries are involved.
+Run `./mvnw -B spotless:check verify` for formatting and unit checks and `python3 scripts/check-api-catalogue.py` to validate controller/catalogue/page connections. The [Backend checks workflow](.github/workflows/backend.yml) starts real PostgreSQL, runs all five programs and the integration suite, builds Docker images and verifies container startup. Provider HTTP/email/push integrations are tested with local doubles; no live funds or real external deliveries are involved.
 
 [Completion checklist](docs/COMPLETION_CHECKLIST.md) · [Frontend repository](https://github.com/ayodamolami4-bot/educore-frontend)

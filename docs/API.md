@@ -2,7 +2,7 @@
 
 Use **`http://localhost:8080/api/v1`** in local web development. The GitHub repository URL is source code, not a running API. A physical phone needs the development computer's reachable address.
 
-The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOINTS.md): **220 gateway operations and 104 request record types**. Import [openapi.json](openapi.json) into an API client, or filter [ENDPOINT_CATALOGUE.csv](ENDPOINT_CATALOGUE.csv). [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) identifies remaining work. Earlier proposal PDFs are not the runtime contract.
+The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOINTS.md): **224 gateway operations and 105 request record types**. Import [openapi.json](openapi.json) into an API client, or filter [ENDPOINT_CATALOGUE.csv](ENDPOINT_CATALOGUE.csv). [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) identifies remaining work. Earlier proposal PDFs are not the runtime contract.
 
 ## Shared rules
 
@@ -20,6 +20,8 @@ The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOIN
 The admin interface contains three server presets: **PRINCIPAL**, **SCHOOL_OFFICE** and **ACCOUNTS**. Teacher, student and parent contexts use **TEACHER**, **STUDENT** and **PARENT**. There is no generic `ADMIN` API permission.
 
 ## Which frontend pages use which APIs
+
+[SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) maps all 94 agreed pages to current routes and marks each remaining planned control. The table here groups the main workflows. Frontend page coverage is not the same as an implemented React Native screen.
 
 All paths below are relative to the base URL. Placeholder names stand for returned UUIDs.
 
@@ -42,7 +44,7 @@ All paths below are relative to the base URL. Placeholder names stand for return
 | Admin examinations | `/exam-schedules`, events, review and publication | Dated exam schedules; see current scheduling limitations in implementation status |
 | Teacher marks and subject reports | `/assessment-cycles`, `/{cycleId}/sheets/{assignmentId}`, mark-save and submit actions | Only the responsible subject teacher writes marks |
 | Class-teacher review and remarks | Cycle review, remarks and sheet-return actions | Class-teacher duty is separate from teaching a subject in that class |
-| Principal report approval | `/assessment-cycles/{cycleId}/publish`, `/reopen` | Complete reviewed class reports; corrections preserve old publications |
+| Principal report approval | `/assessment-cycles/{cycleId}/publish`, `/reopen` | Only a class-lead-submitted REVIEW package; corrections preserve old publications |
 | Student/parent report cards | `/students/{studentId}/reports`, `/reports/{reportId}`, report PDF | Published versions only; authorised child |
 | Admin promotion/graduation | `/promotion-batches`, row decisions, confirm and CSV export | Three published terms, source checks, JSS3 pathway decisions and principal approval |
 | Assignments | `/assignments`, assignment publication/change actions | Actual subject teacher creates; eligible learners read after publication |
@@ -78,9 +80,11 @@ Normal lessons use 30/60-minute periods inside 08:00–13:00, with 11:30–12:00
 
 For daily attendance, open the dated class register, save its complete marks, then submit. Admin absence counts use submitted registers. A missing register stays incomplete coverage. Office corrections and parent absence alerts require a reviewed reason. `/attendance/follow-ups` flags three confirmed absences in ten teaching days.
 
-Assessment flow is: prepare cycle → principal opens window → subject teacher saves/submits sheet → class teacher reviews, returns incomplete sheets and adds remarks/five ratings → principal publishes. A class teacher who also teaches a subject uses the normal subject-teacher action for that own sheet.
+Assessment flow is: prepare cycle → principal opens window → subject teacher saves/submits sheet → class teacher reviews, returns incomplete sheets and adds remarks/five ratings → class teacher submits the complete package with `POST /assessment-cycles/{cycleId}/submit-review` → principal publishes. A class teacher who also teaches a subject uses the normal subject-teacher action for that own sheet.
 
 CA1 is /20, CA2 /20 and examination /60, with at most one decimal place. Pending make-up, evidenced absent-zero and actual zero are distinct. Teachers cannot silently replace published results. Reopen with a reason, correct, review and publish a new report revision. Earlier PDFs/snapshots remain available.
+
+A submitted class package is `REVIEW` and locked for mark/remark edits. Principal/School Office can return it with a reason using `POST /assessment-cycles/{cycleId}/return-review`. Returning a subject sheet also reopens a submitted package; its class lead must submit the package again before principal publication.
 
 Use the sheet version for marks/submission, the student's remark version for remarks, and the latest cycle version for publication. Initial remarks use version 1 when no remark exists. Reload review after other teachers change sheets.
 
@@ -141,3 +145,33 @@ Requests use the exact camelCase record names shown in the catalogue. Some detai
 The **Model** calls these endpoints and maps wire data; the **Presenter** coordinates loading, errors, selection and actions; the **View** renders the page. Keep access/refresh and generic API handling in the shared frontend area. Official calculations remain on Java.
 
 Internal service endpoints and their keys never belong in frontend code. Use the protected gateway APIs above. See the implementation status before treating a prototype page or declared database table as a completed workflow.
+
+## Dated schedules, roster changes and directory filters
+
+`GET /schedule/day?on=2026-11-03` combines the effective weekly timetable, latest published exam revision and fixed activities for that date. Optional `classId` is allowed only inside the caller's scope. Families see their selected child's dated class, department and chosen alternatives; a teacher sees their continuing lessons, invigilation and supervised activities. Closed calendar dates return `teachingDay:false` and no activities.
+
+An exam removes only the affected lesson segment for that date; it does not edit the published weekly plan. Publication checks both directions: an invigilator/room cannot overlap a normal lesson unless the affected lesson's pupils are fully covered by exams. Alternative subjects in the same choice group may run together with separate teachers/rooms. Activity-supervisor duties also block overlapping invigilation. Older draft revisions cannot replace newer already-published revisions.
+
+Wednesday PT settings select the default for new timetable drafts. A settings response with `timetableReviewRequired:true` means the principal must publish a reviewed timetable revision. Existing published weekly plans retain their PT setting; cloning rechecks fixed-activity conflicts. The daily view uses the effective plan's setting.
+
+Late admission, class-arm transfer or withdrawal can change a prepared assessment scope. Review returns `rosterSyncRequired` and `rosterIssues`, and publication is blocked. Principal reviews the changes and sends `POST /assessment-cycles/{cycleId}/roster/sync` with `{ "reason": "Reviewed the dated admission or placement evidence" }`, K and the latest cycle V. A published cycle must first be reopened through its correction action.
+
+Synchronisation adds eligible new rows with blank marks, preserves existing marks, archives departed rows with a reason and returns active sheets for teacher review. Historical sheet rows return `active:false` and are read-only. Empty optional-subject sheets are inactive and do not require an impossible empty submission. After teacher confirmation and class-lead package submission, principal can publish a new revision. No marks are silently copied to another class, and old issued report snapshots remain unchanged. A class lead's report access is limited to their own class publications.
+
+Directory parameters are optional and combine with cursor/limit pagination:
+
+| Directory | Filters |
+| --- | --- |
+| `GET /staff` | `search`, `role`, `active` |
+| `GET /teachers` | `search`, `level`, `subjectId`, `classId`, `active` |
+| `GET /guardians` | `search`, `childId`, `activeLink`; search also matches child name/admission number |
+| `GET /students` | `search`, `classId` |
+| `GET /teaching-assignments` | `classId`, `includeInactive=false`; only office staff can include inactive history |
+
+Teacher directory rows contain teachers only. Eligibility filters search qualifications; actual class filters search active teaching assignments. The app must not treat eligibility as a work assignment. Searches are limited to 80 characters and remain school-scoped. School guardian contact edits never change the parent's global login contact. Another principal must have activated their account before the last activated principal can be removed.
+
+## Explicitly unfinished controls
+
+Use the PARTIAL rows in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) as the remaining contract backlog. Standalone materials, physical-work receipt, historical/admission attachments, formal attendance correction requests/follow-up records, provisioning diagnostics, broader session/subject/room administration, report/export controls and delivery administration are not provided by invented routes. Keep their frontend actions unavailable until the corresponding backend contract is implemented.
+
+SH09 remains contact/help only: no staff-assisted global password reset is adopted. Failed or missing recovery proofs cannot consume an active account's school activation slip or reveal whether an account has verified email. Actual provider/device validation and deployment remain separate from local test doubles.

@@ -7,11 +7,11 @@ Install Git, Node.js 24 and Docker with the Compose plugin. Start Docker before 
 Clone the backend into its own working folder:
 
 ```sh
-git clone https://github.com/ayodamolami4-bot/educore-backend.git
+git clone --branch backend/complete-workflows https://github.com/ayodamolami4-bot/educore-backend.git
 cd educore-backend
 ```
 
-Keep your React Native frontend in its separate folder. The backend repository is private, so the lead must give each teammate GitHub access before they can clone it.
+Keep your React Native frontend in its separate folder. This command selects the expanded implementation branch. The default main branch still contains the earlier foundation until the remaining work is reviewed. Give contributors their own GitHub access when they need to push changes.
 
 ## 2. Generate your local configuration
 
@@ -79,7 +79,7 @@ Use the implemented APIs in [API.md](API.md), in this order:
 7. Build the weekly timetable, review every assignment target, then publish it.
 8. Activate the teacher and parent accounts to test their permitted attendance, child, timetable, invoice and complaint views.
 
-Creating a class/teacher/student record does not mean its role screen has already been implemented by the frontend team. Office and accounts presets are recognised by permissions, but staff onboarding and role management for those presets are still to build. Use the principal account for currently supported office/finance demonstration operations.
+Creating a class/teacher/student record does not mean its role screen has already been implemented by the frontend team. Principal can register School Office/Accounts staff through `POST /staff`, issue their `STAFF` activation slips, then sign in under each staff preset. The principal must retain another activated principal before removing their own school access. Use [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) for covered pages and remaining controls.
 
 ## 7. Payments and email
 

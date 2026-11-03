@@ -51,6 +51,7 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw -B spotless:check verify
+          python3 scripts/check-api-catalogue.py
       - name: Run five-service PostgreSQL integration tests
         env:
           EDUCORE_TEST_CONFIG: .dev/local-runtime.json

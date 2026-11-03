@@ -1,272 +1,252 @@
-# Implemented endpoint and request catalogue
+# Implemented endpoints and request fields
 
-Source checkpoint: `3f7bbd716932b3a550ab2877156943130a2b1148`. This file lists 220 public gateway operations and 104 request record types. Start with [API.md](API.md) for shared rules, permissions and workflows. [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) lists remaining work.
+Reviewed 3 November 2026. These 224 public operations exist in the Java controllers. Use `/api/v1` before every path. Internal service routes are excluded.
 
-Paths are relative to `http://localhost:8080/api/v1`. Path placeholder names are standardised here; replace them with the returned UUIDs. **K** = stable UUID `Idempotency-Key`. **V** = quoted `If-Match` version. Protected routes also need the account's bearer token and current school/role/child context. A header or hidden button cannot grant access.
+Start with [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) for the page mapping and remaining gaps, then [API.md](API.md) for workflow rules. A path in this catalogue does not mean its frontend page is built.
 
-[OpenAPI request catalogue](openapi.json) · [Filterable endpoint CSV](ENDPOINT_CATALOGUE.csv)
+Every protected request needs `Authorization: Bearer <accessToken>`. Keep the same command body, `Idempotency-Key` and `If-Match` when retrying a command. Replace every path placeholder with its resource ID; the name of a placeholder does not change the URL. `If-Match` uses a returned version, for example `"v3"`.
 
-The OpenAPI file describes request fields and transport. Required/conditional business rules remain in the service. Responses that the implementation builds dynamically are not assigned invented strict schemas. For example, fee-plan details and adjustment details currently retain some snake_case database column names; the frontend Model should map those responses explicitly.
-
-## Shared identity and sign-in
-
-| Method | Path | Input record | Query | Headers |
-| --- | --- | --- | --- | --- |
-| POST | `/auth/login` | [IdentityController.Login](#identitycontrollerlogin) | — | Public |
-| POST | `/auth/refresh` | [IdentityController.Token](#identitycontrollertoken) | — | Public |
-| POST | `/auth/logout` | [IdentityController.Token](#identitycontrollertoken) | — | Public |
-| POST | `/auth/activation/review` | [IdentityController.Activation](#identitycontrolleractivation) | — | Public |
-| POST | `/auth/recovery/email` | [IdentityController.Identifier](#identitycontrolleridentifier) | — | Public |
-| POST | `/auth/recovery/email/review` | [IdentityController.Proof](#identitycontrollerproof) | — | Public |
-| POST | `/auth/recovery/code/review` | [IdentityController.Recovery](#identitycontrollerrecovery) | — | Public |
-| POST | `/auth/password/setup` | [IdentityController.Setup](#identitycontrollersetup) | — | Public |
-| POST | `/me/password/change` | [IdentityController.ChangePassword](#identitycontrollerchangepassword) | — | Bearer |
-| GET | `/me` | — | — | Bearer |
-| PATCH | `/me` | [IdentityController.Phone](#identitycontrollerphone) | — | Bearer, V |
-| GET | `/me/contexts` | — | — | Bearer |
-| PUT | `/me/context` | [IdentityController.Preference](#identitycontrollerpreference) | — | Bearer |
-| POST | `/me/reauthenticate` | [IdentityController.Password](#identitycontrollerpassword) | — | Bearer |
-| POST | `/me/recovery-code/rotate` | [IdentityController.Recent](#identitycontrollerrecent) | — | Bearer |
-| POST | `/me/sessions/revoke-others` | [IdentityController.Recent](#identitycontrollerrecent) | — | Bearer, K |
-| GET | `/me/sessions` | — | `cursor?`, `limit?` | Bearer |
-| GET | `/me/notification-preferences` | — | — | Bearer |
-| PATCH | `/me/notification-preferences` | [IdentityController.Preferences](#identitycontrollerpreferences) | — | Bearer |
-| POST | `/me/email-change-requests` | [IdentityController.Email](#identitycontrolleremail) | — | Bearer, K |
-| POST | `/me/email-change-requests/resend` | [IdentityController.Resend](#identitycontrollerresend) | — | Bearer, K |
-| POST | `/auth/email-verifications/confirm` | [IdentityController.Proof](#identitycontrollerproof) | — | Public |
-| POST | `/me/push-devices` | [IdentityController.Push](#identitycontrollerpush) | — | Bearer, K |
-| DELETE | `/me/push-devices/{deviceId}` | — | — | Bearer |
-| POST | `/schools/{school}/onboarding/{type}/{subjectId}/activation-slips` | — | — | Bearer, K |
-| GET | `/public/access-help` | — | — | Public |
-
-## School records and learning
-
-| Method | Path | Input record | Query | Headers |
-| --- | --- | --- | --- | --- |
-| POST | `/schools/{school}/timetable-plans` | [TimetableService.PlanInput](#timetableserviceplaninput) | — | Bearer, K |
-| POST | `/schools/{school}/timetable-plans/{planId}/lessons` | [TimetableService.LessonInput](#timetableservicelessoninput) | — | Bearer, K, V |
-| GET | `/schools/{school}/timetable-plans` | — | `termId?` | Bearer |
-| PUT | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}` | [TimetableService.LessonInput](#timetableservicelessoninput) | — | Bearer, K, V |
-| POST | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}/remove` | — | — | Bearer, K, V |
-| GET | `/schools/{school}/timetable-plans/{planId}/review` | — | — | Bearer |
-| POST | `/schools/{school}/timetable-plans/{planId}/publish` | — | — | Bearer, K, V |
-| GET | `/schools/{school}/timetable` | — | `classId?`, `on?` | Bearer |
-| POST | `/schools/{school}/attendance/registers` | [AttendanceService.RegisterInput](#attendanceserviceregisterinput) | — | Bearer, K |
-| GET | `/schools/{school}/attendance/registers/{registerId}` | — | — | Bearer |
-| PUT | `/schools/{school}/attendance/registers/{registerId}/marks` | [AttendanceService.Marks](#attendanceservicemarks) | — | Bearer, K, V |
-| POST | `/schools/{school}/attendance/registers/{registerId}/submit` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/attendance/registers/{registerId}/corrections` | [AttendanceService.Mark](#attendanceservicemark) | — | Bearer, K, V |
-| GET | `/schools/{school}/attendance/overview` | — | `on?` | Bearer |
-| GET | `/schools/{school}/students/{studentId}/attendance` | — | `from`, `to` | Bearer |
-| GET | `/schools/{school}/terms` | — | `sessionId` | Bearer |
-| GET | `/schools/{school}/teaching-assignments` | — | `classId?` | Bearer |
-| POST | `/schools/{school}/attendance/registers/{registerId}/absence-alerts` | [AcademicController.AttendanceTeacherAlert](#academiccontrollerattendanceteacheralert) | — | Bearer, K |
-| POST | `/schools/{school}/calendar-exceptions` | [AcademicController.CalendarInput](#academiccontrollercalendarinput) | — | Bearer, K |
-| GET | `/schools/{school}/imports/templates/{kind}` | — | — | Bearer |
-| GET | `/schools/{school}/imports` | — | — | Bearer |
-| POST | `/schools/{school}/imports` | [AcademicImportService.Preview](#academicimportservicepreview) | — | Bearer, K |
-| GET | `/schools/{school}/imports/{jobId}` | — | — | Bearer |
-| PUT | `/schools/{school}/imports/{jobId}/rows/{rowId}` | [AcademicImportService.Correction](#academicimportservicecorrection) | — | Bearer, K, V |
-| POST | `/schools/{school}/imports/{jobId}/confirm` | [AcademicImportService.Confirmation](#academicimportserviceconfirmation) | — | Bearer, K, V |
-| GET | `/schools/{school}/imports/{jobId}/errors.csv` | — | — | Bearer |
-| GET | `/schools/{school}/staff` | — | `cursor?`, `limit?` | Bearer |
-| POST | `/schools/{school}/staff` | [AdministrationService.StaffInput](#administrationservicestaffinput) | — | Bearer, K |
-| GET | `/schools/{school}/staff/{staffId}` | — | — | Bearer |
-| PATCH | `/schools/{school}/staff/{staffId}` | [AdministrationService.StaffEdit](#administrationservicestaffedit) | — | Bearer, K, V |
-| POST | `/schools/{school}/staff/{staffId}/access` | [AdministrationService.AccessInput](#administrationserviceaccessinput) | — | Bearer, K, V |
-| PUT | `/schools/{school}/teaching-assignments/{id}` | [AdministrationService.AssignmentEdit](#administrationserviceassignmentedit) | — | Bearer, K, V |
-| PATCH | `/schools/{school}/students/{studentId}` | [AdministrationService.StudentEdit](#administrationservicestudentedit) | — | Bearer, K, V |
-| POST | `/schools/{school}/students/{studentId}/transfers` | [AdministrationService.Transfer](#administrationservicetransfer) | — | Bearer, K, V |
-| POST | `/schools/{school}/students/{studentId}/withdrawal` | [AdministrationService.Withdrawal](#administrationservicewithdrawal) | — | Bearer, K, V |
-| POST | `/schools/{school}/students/{studentId}/guardians` | [AdministrationService.GuardianLink](#administrationserviceguardianlink) | — | Bearer, K, V |
-| POST | `/schools/{school}/assessment-cycles` | [AssessmentService.CycleInput](#assessmentservicecycleinput) | — | Bearer, K |
-| GET | `/schools/{school}/assessment-cycles` | — | `termId?`, `classId?` | Bearer |
-| GET | `/schools/{school}/assessment-cycles/{cycleId}` | — | — | Bearer |
-| POST | `/schools/{school}/assessment-cycles/{cycleId}/open` | [AssessmentService.Window](#assessmentservicewindow) | — | Bearer, K, V |
-| GET | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}` | — | — | Bearer |
-| PUT | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/marks` | [AssessmentService.Marks](#assessmentservicemarks) | — | Bearer, K, V |
-| POST | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/submit` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/return` | [AssessmentService.Reason](#assessmentservicereason) | — | Bearer, K, V |
-| PUT | `/schools/{school}/assessment-cycles/{cycleId}/remarks/{student}` | [AssessmentService.Remark](#assessmentserviceremark) | — | Bearer, K, V |
-| GET | `/schools/{school}/assessment-cycles/{cycleId}/review` | — | — | Bearer |
-| POST | `/schools/{school}/assessment-cycles/{cycleId}/publish` | [AssessmentService.Publication](#assessmentservicepublication) | — | Bearer, K, V |
-| POST | `/schools/{school}/assessment-cycles/{cycleId}/reopen` | [AssessmentService.Reopen](#assessmentservicereopen) | — | Bearer, K, V |
-| GET | `/schools/{school}/students/{studentId}/reports` | — | — | Bearer |
-| GET | `/schools/{school}/reports/{reportId}` | — | — | Bearer |
-| GET | `/schools/{school}/reports/{reportId}/pdf` | — | — | Bearer |
-| GET | `/schools/{school}/assessment-cycles/{cycleId}/broadsheet.csv` | — | — | Bearer |
-| POST | `/schools/{school}/assignments` | [AssignmentService.Input](#assignmentserviceinput) | — | Bearer, K |
-| GET | `/schools/{school}/assignments` | — | `classId?`, `termId?`, `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/assignments/{assignmentId}` | — | — | Bearer |
-| PUT | `/schools/{school}/assignments/{assignmentId}` | [AssignmentService.Input](#assignmentserviceinput) | — | Bearer, K, V |
-| POST | `/schools/{school}/assignments/{assignmentId}/publish` | — | — | Bearer, K, V |
-| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}` | — | — | Bearer |
-| POST | `/schools/{school}/assignments/{assignmentId}/changes` | [AssignmentService.Change](#assignmentservicechange) | — | Bearer, K, V |
-| GET | `/schools/{school}/assignments/{assignmentId}/submissions` | — | — | Bearer |
-| PUT | `/schools/{school}/assignments/{assignmentId}/my-submission` | [AssignmentService.Draft](#assignmentservicedraft) | — | Bearer, K, V |
-| POST | `/schools/{school}/assignments/{assignmentId}/submit` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/feedback` | [AssignmentService.Feedback](#assignmentservicefeedback) | — | Bearer, K, V |
-| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history` | — | — | Bearer |
-| POST | `/schools/{school}/exam-schedules` | [ExamService.Schedule](#examserviceschedule) | — | Bearer, K |
-| GET | `/schools/{school}/exam-schedules` | — | `termId?` | Bearer |
-| GET | `/schools/{school}/exam-schedules/{scheduleId}/review` | — | — | Bearer |
-| POST | `/schools/{school}/exam-schedules/{scheduleId}/events` | [ExamService.Event](#examserviceevent) | — | Bearer, K, V |
-| PUT | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}` | [ExamService.Event](#examserviceevent) | — | Bearer, K, V |
-| POST | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}/remove` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/exam-schedules/{scheduleId}/publish` | — | — | Bearer, K, V |
-| GET | `/schools/{school}/examinations` | — | `termId` | Bearer |
-| POST | `/schools/{school}/students/{studentId}/external-results` | [ExamService.External](#examserviceexternal) | — | Bearer, K |
-| GET | `/schools/{school}/students/{studentId}/external-results` | — | — | Bearer |
-| POST | `/schools/{school}/files` | [FileService.Metadata](#fileservicemetadata) | — | Bearer, K |
-| GET | `/schools/{school}/files` | — | — | Bearer |
-| GET | `/schools/{school}/files/{fileId}` | — | — | Bearer |
-| PUT | `/schools/{school}/files/{fileId}/content` | Raw bytes | — | Bearer, V |
-| GET | `/schools/{school}/files/{fileId}/content` | — | — | Bearer |
-| GET | `/schools/{school}/classes/{classId}/workspace` | — | `on?` | Bearer |
-| PATCH | `/schools/{school}/classes/{classId}` | [PlanningService.ClassEdit](#planningserviceclassedit) | — | Bearer, K, V |
-| POST | `/schools/{school}/curricula` | [PlanningService.Curriculum](#planningservicecurriculum) | — | Bearer, K |
-| GET | `/schools/{school}/curricula` | — | `sessionId?` | Bearer |
-| GET | `/schools/{school}/curricula/{curriculumId}` | — | — | Bearer |
-| POST | `/schools/{school}/curricula/{curriculumId}/publish` | — | — | Bearer, K, V |
-| PUT | `/schools/{school}/classes/{classId}/curriculum` | [PlanningService.CurriculumApply](#planningservicecurriculumapply) | — | Bearer, K, V |
-| GET | `/schools/{school}/students/{studentId}/subject-choices` | — | `sessionId` | Bearer |
-| PUT | `/schools/{school}/students/{studentId}/subject-choices` | [PlanningService.Choices](#planningservicechoices) | — | Bearer, K, V |
-| PUT | `/schools/{school}/staff/{staffId}/teaching-scope` | [PlanningService.TeacherScope](#planningserviceteacherscope) | — | Bearer, K, V |
-| GET | `/schools/{school}/calendar` | — | `sessionId` | Bearer |
-| GET | `/schools/{school}/calendar-plans` | — | `sessionId` | Bearer |
-| POST | `/schools/{school}/calendar-plans` | [PlanningService.CalendarInput](#planningservicecalendarinput) | — | Bearer, K |
-| POST | `/schools/{school}/calendar-plans/{id}/publish` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/promotion-batches` | [PromotionService.Preview](#promotionservicepreview) | — | Bearer, K |
-| GET | `/schools/{school}/promotion-batches` | — | — | Bearer |
-| GET | `/schools/{school}/promotion-batches/{batchId}` | — | — | Bearer |
-| PUT | `/schools/{school}/promotion-batches/{batchId}/students/{studentId}` | [PromotionService.Decision](#promotionservicedecision) | — | Bearer, K, V |
-| POST | `/schools/{school}/promotion-batches/{batchId}/confirm` | — | — | Bearer, K, V |
-| GET | `/schools/{school}/promotion-batches/{batchId}/outcomes.csv` | — | — | Bearer |
-| GET | `/schools/{school}/students/{studentId}/academic-history` | — | — | Bearer |
-| GET | `/schools/{school}/metadata` | — | — | Bearer |
-| POST | `/schools/{school}/academic-sessions` | [SchoolService.SessionInput](#schoolservicesessioninput) | — | Bearer, K |
-| GET | `/schools/{school}/academic-sessions` | — | — | Bearer |
-| POST | `/schools/{school}/terms` | [SchoolService.TermInput](#schoolserviceterminput) | — | Bearer, K |
-| POST | `/schools/{school}/classes` | [SchoolService.ClassInput](#schoolserviceclassinput) | — | Bearer, K |
-| GET | `/schools/{school}/classes` | — | `sessionId?` | Bearer |
-| PUT | `/schools/{school}/classes/{classId}/attendance-teacher` | [SchoolController.AttendanceTeacher](#schoolcontrollerattendanceteacher) | — | Bearer, K, V |
-| POST | `/schools/{school}/subjects` | [SchoolService.SubjectInput](#schoolservicesubjectinput) | — | Bearer, K |
-| GET | `/schools/{school}/subjects` | — | — | Bearer |
-| POST | `/schools/{school}/teachers` | [SchoolService.TeacherInput](#schoolserviceteacherinput) | — | Bearer, K |
-| GET | `/schools/{school}/teachers` | — | `cursor?`, `limit?` | Bearer |
-| POST | `/schools/{school}/students` | [SchoolService.EnrolInput](#schoolserviceenrolinput) | — | Bearer, K |
-| GET | `/schools/{school}/students` | — | `classId?`, `cursor?`, `search?`, `limit?` | Bearer |
-| GET | `/schools/{school}/students/{studentId}` | — | — | Bearer |
-| POST | `/schools/{school}/students/{studentId}/guardians/{guardianId}/revoke` | [SchoolController.Reason](#schoolcontrollerreason) | — | Bearer, K |
-| GET | `/schools/{school}/audit` | — | `cursor?`, `limit?` | Bearer |
-| PUT | `/schools/{school}/metadata` | [SchoolController.MetadataInput](#schoolcontrollermetadatainput) | — | Bearer, K, V |
-| GET | `/schools/{school}/guardians` | — | `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/settings` | — | — | Bearer |
-| PUT | `/schools/{school}/settings` | [SchoolWorkspaceService.Settings](#schoolworkspaceservicesettings) | — | Bearer, K, V |
-| POST | `/schools/{school}/metadata-versions` | [SchoolWorkspaceService.Metadata](#schoolworkspaceservicemetadata) | — | Bearer, K, V |
-| GET | `/schools/{school}/guardians/{guardianId}` | — | — | Bearer |
-| PATCH | `/schools/{school}/guardians/{guardianId}` | [SchoolWorkspaceService.GuardianEdit](#schoolworkspaceserviceguardianedit) | — | Bearer, K, V |
-| POST | `/schools/{school}/teaching-assignments` | [SchoolWorkspaceService.Teaching](#schoolworkspaceserviceteaching) | — | Bearer, K |
-| GET | `/schools/{school}/terms/{termId}/activities` | — | — | Bearer |
-| PUT | `/schools/{school}/terms/{termId}/activities` | [SchoolWorkspaceService.Activity](#schoolworkspaceserviceactivity) | — | Bearer, K, V |
-| GET | `/schools/{school}/my-classes` | — | `sessionId?` | Bearer |
-| GET | `/schools/{school}/dashboard` | — | — | Bearer |
-| GET | `/schools/{school}/attendance/follow-ups` | — | `on?` | Bearer |
-| GET | `/schools/{school}/students/export.csv` | — | `classId?` | Bearer |
-| GET | `/schools/{school}/teachers/export.csv` | — | — | Bearer |
-
-## Fees and reconciliation
-
-| Method | Path | Input record | Query | Headers |
-| --- | --- | --- | --- | --- |
-| POST | `/schools/{school}/fee-plans` | [FeeAdministrationService.Plan](#feeadministrationserviceplan) | — | Bearer, K |
-| PUT | `/schools/{school}/fee-plans/{planId}` | [FeeAdministrationService.Plan](#feeadministrationserviceplan) | — | Bearer, K, V |
-| GET | `/schools/{school}/fee-plans` | — | `termId?` | Bearer |
-| GET | `/schools/{school}/fee-plans/{planId}` | — | — | Bearer |
-| POST | `/schools/{school}/fee-plans/{planId}/publish` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/fee-plans/{planId}/batches` | [FeeAdministrationService.Preview](#feeadministrationservicepreview) | — | Bearer, K |
-| GET | `/schools/{school}/fee-batches/{batchId}` | — | — | Bearer |
-| POST | `/schools/{school}/fee-batches/{batchId}/confirm` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/invoices/{invoiceId}/adjustments` | [FeeAdministrationService.Adjustment](#feeadministrationserviceadjustment) | — | Bearer, K |
-| GET | `/schools/{school}/fee-adjustments` | — | `invoiceId?` | Bearer |
-| GET | `/schools/{school}/fee-adjustments/{adjustmentId}` | — | — | Bearer |
-| POST | `/schools/{school}/fee-adjustments/{adjustmentId}/decision` | [FeeAdministrationService.Decision](#feeadministrationservicedecision) | — | Bearer, K, V |
-| POST | `/schools/{school}/fee-adjustments/{adjustmentId}/confirm-refund` | [FeeAdministrationService.RefundConfirmation](#feeadministrationservicerefundconfirmation) | — | Bearer, K, V |
-| GET | `/schools/{school}/payments` | — | `studentId?`, `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/invoices/{invoiceId}/pdf` | — | — | Bearer |
-| GET | `/schools/{school}/payments/{paymentId}/receipt` | — | — | Bearer |
-| GET | `/schools/{school}/invoices/export.csv` | — | — | Bearer |
-| POST | `/schools/{school}/invoices` | [FinanceService.InvoiceInput](#financeserviceinvoiceinput) | — | Bearer, K |
-| GET | `/schools/{school}/invoices` | — | `studentId?`, `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/invoices/{invoiceId}` | — | — | Bearer |
-| POST | `/schools/{school}/invoices/{invoiceId}/manual-payments` | [FinanceService.Manual](#financeservicemanual) | — | Bearer, K, V |
-| POST | `/schools/{school}/invoices/payment-settings` | [FinanceController.Settlement](#financecontrollersettlement) | — | Bearer, K |
-| POST | `/schools/{school}/invoices/{invoiceId}/checkout` | [FinanceService.Checkout](#financeservicecheckout) | — | Bearer, K |
-| GET | `/schools/{school}/payment-intents/{intentId}` | — | — | Bearer |
-| POST | `/schools/{school}/payment-intents/{intentId}/verify` | — | — | Bearer |
-| GET | `/schools/{school}/reconciliation/exceptions` | — | — | Bearer |
-| POST | `/webhooks/paystack` | Raw bytes | — | Provider signature |
-| POST | `/schools/{school}/invoices/opening-balances` | [OpeningBalanceService.Preview](#openingbalanceservicepreview) | — | Bearer, K |
-| GET | `/schools/{school}/invoices/opening-balances/{batchId}` | — | — | Bearer |
-| POST | `/schools/{school}/invoices/opening-balances/{batchId}/confirm` | [OpeningBalanceService.Confirm](#openingbalanceserviceconfirm) | — | Bearer |
-| POST | `/schools/{school}/reconciliation/statements` | [ReconciliationService.Statement](#reconciliationservicestatement) | — | Bearer, K |
-| POST | `/schools/{school}/reconciliation/paystack-sync` | [ReconciliationService.Period](#reconciliationserviceperiod) | — | Bearer, K |
-| GET | `/schools/{school}/reconciliation/settlements` | — | `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/reconciliation/settlements/{settlementId}` | — | — | Bearer |
-| POST | `/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution` | [ReconciliationService.Resolution](#reconciliationserviceresolution) | — | Bearer |
-| GET | `/schools/{school}/reconciliation/overview` | — | — | Bearer |
-
-## Notices, parent conversations and complaints
-
-| Method | Path | Input record | Query | Headers |
-| --- | --- | --- | --- | --- |
-| GET | `/me/notifications` | — | `schoolId`, `category?`, `unread?`, `cursor?`, `limit?` | Bearer |
-| PUT | `/me/notifications/{notificationId}/read` | — | — | Bearer |
-| GET | `/me/notifications/{notificationId}/delivery` | — | — | Bearer |
-| POST | `/schools/{school}/notices` | [CommunicationWorkService.Notice](#communicationworkservicenotice) | — | Bearer, K |
-| GET | `/schools/{school}/notices` | — | `cursor?`, `limit?` | Bearer |
-| POST | `/schools/{school}/complaints` | [CommunicationWorkService.Complaint](#communicationworkservicecomplaint) | — | Bearer, K |
-| GET | `/schools/{school}/complaints` | — | `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/complaints/{caseId}` | — | — | Bearer |
-| POST | `/schools/{school}/complaints/{caseId}/replies` | [CommunicationWorkService.Reply](#communicationworkservicereply) | — | Bearer, K, V |
-| POST | `/schools/{school}/complaints/{caseId}/close` | [CommunicationController.Close](#communicationcontrollerclose) | — | Bearer, K, V |
-| GET | `/schools/{school}/notices/{id}` | — | — | Bearer |
-| PUT | `/schools/{school}/notices/{id}` | [CommunicationWorkService.Notice](#communicationworkservicenotice) | — | Bearer, K, V |
-| POST | `/schools/{school}/notices/{id}/publish` | — | — | Bearer, K, V |
-| POST | `/schools/{school}/notices/{id}/archive` | [CommunicationWorkController.Reason](#communicationworkcontrollerreason) | — | Bearer, K, V |
-| GET | `/schools/{school}/threads/contacts` | — | `studentId` | Bearer |
-| POST | `/schools/{school}/threads` | [CommunicationWorkService.ThreadInput](#communicationworkservicethreadinput) | — | Bearer, K |
-| GET | `/schools/{school}/threads` | — | `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/threads/{threadId}` | — | — | Bearer |
-| POST | `/schools/{school}/threads/{threadId}/messages` | [CommunicationWorkService.Message](#communicationworkservicemessage) | — | Bearer, K, V |
-| POST | `/schools/{school}/threads/{threadId}/close` | [CommunicationWorkController.Reason](#communicationworkcontrollerreason) | — | Bearer, K, V |
-| PUT | `/schools/{school}/threads/{threadId}/read` | — | — | Bearer |
-| POST | `/schools/{school}/complaints/{caseId}/status` | [CommunicationWorkService.StateChange](#communicationworkservicestatechange) | — | Bearer, K, V |
-| PUT | `/schools/{school}/complaints/{caseId}/owner` | [CommunicationWorkService.Owner](#communicationworkserviceowner) | — | Bearer, K, V |
-| GET | `/schools/{school}/complaints/{caseId}/history` | — | — | Bearer |
-
-## Service-owned activity and account history
-
-| Method | Path | Input record | Query | Headers |
-| --- | --- | --- | --- | --- |
-| GET | `/schools/{school}/activity/{domain}` | — | `from?`, `to?`, `cursor?`, `limit?` | Bearer |
-| GET | `/schools/{school}/activity/{domain}/export.csv` | — | `from?`, `to?` | Bearer |
-| GET | `/me/security-history` | — | `cursor?`, `limit?` | Bearer |
+| Method | Path | Request record | Idempotency-Key | If-Match | Query fields |
+| --- | --- | --- | --- | --- | --- |
+| POST | `/schools/{school}/timetable-plans` | TimetableService.PlanInput | required | — | — |
+| GET | `/schools/{school}/timetable-plans` | — | — | — | termId |
+| POST | `/schools/{school}/timetable-plans/{planId}/lessons` | TimetableService.LessonInput | required | required | — |
+| PUT | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}` | TimetableService.LessonInput | required | required | — |
+| POST | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}/remove` | — | required | required | — |
+| GET | `/schools/{school}/timetable-plans/{planId}/review` | — | — | — | — |
+| POST | `/schools/{school}/timetable-plans/{planId}/publish` | — | required | required | — |
+| GET | `/schools/{school}/timetable` | — | — | — | classId, on |
+| POST | `/schools/{school}/attendance/registers` | AttendanceService.RegisterInput | required | — | — |
+| GET | `/schools/{school}/attendance/registers/{registerId}` | — | — | — | — |
+| PUT | `/schools/{school}/attendance/registers/{registerId}/marks` | AttendanceService.Marks | required | required | — |
+| POST | `/schools/{school}/attendance/registers/{registerId}/submit` | — | required | required | — |
+| POST | `/schools/{school}/attendance/registers/{registerId}/corrections` | AttendanceService.Mark | required | required | — |
+| GET | `/schools/{school}/attendance/overview` | — | — | — | on |
+| GET | `/schools/{school}/students/{studentId}/attendance` | — | — | — | from, to |
+| GET | `/schools/{school}/terms` | — | — | — | sessionId |
+| POST | `/schools/{school}/terms` | SchoolService.TermInput | required | — | — |
+| GET | `/schools/{school}/teaching-assignments` | — | — | — | classId, includeInactive |
+| POST | `/schools/{school}/teaching-assignments` | SchoolWorkspaceService.Teaching | required | — | — |
+| POST | `/schools/{school}/attendance/registers/{registerId}/absence-alerts` | AcademicController.AttendanceTeacherAlert | required | — | — |
+| POST | `/schools/{school}/calendar-exceptions` | AcademicController.CalendarInput | required | — | — |
+| GET | `/schools/{school}/imports/templates/{kind}` | — | — | — | — |
+| GET | `/schools/{school}/imports` | — | — | — | — |
+| POST | `/schools/{school}/imports` | AcademicImportService.Preview | required | — | — |
+| GET | `/schools/{school}/imports/{jobId}` | — | — | — | — |
+| PUT | `/schools/{school}/imports/{jobId}/rows/{rowId}` | AcademicImportService.Correction | required | required | — |
+| POST | `/schools/{school}/imports/{jobId}/confirm` | AcademicImportService.Confirmation | required | required | — |
+| GET | `/schools/{school}/imports/{jobId}/errors.csv` | — | — | — | — |
+| GET | `/schools/{school}/staff` | — | — | — | cursor, limit, search, role, active |
+| POST | `/schools/{school}/staff` | AdministrationService.StaffInput | required | — | — |
+| GET | `/schools/{school}/staff/{staffId}` | — | — | — | — |
+| PATCH | `/schools/{school}/staff/{staffId}` | AdministrationService.StaffEdit | required | required | — |
+| POST | `/schools/{school}/staff/{staffId}/access` | AdministrationService.AccessInput | required | required | — |
+| PUT | `/schools/{school}/teaching-assignments/{id}` | AdministrationService.AssignmentEdit | required | required | — |
+| PATCH | `/schools/{school}/students/{studentId}` | AdministrationService.StudentEdit | required | required | — |
+| GET | `/schools/{school}/students/{studentId}` | — | — | — | — |
+| POST | `/schools/{school}/students/{studentId}/transfers` | AdministrationService.Transfer | required | required | — |
+| POST | `/schools/{school}/students/{studentId}/withdrawal` | AdministrationService.Withdrawal | required | required | — |
+| POST | `/schools/{school}/students/{studentId}/guardians` | AdministrationService.GuardianLink | required | conditional | — |
+| POST | `/schools/{school}/assessment-cycles` | AssessmentService.CycleInput | required | — | — |
+| GET | `/schools/{school}/assessment-cycles` | — | — | — | termId, classId |
+| GET | `/schools/{school}/assessment-cycles/{cycleId}` | — | — | — | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/open` | AssessmentService.Window | required | required | — |
+| GET | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}` | — | — | — | — |
+| PUT | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/marks` | AssessmentService.Marks | required | required | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/submit` | — | required | required | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/return` | AssessmentService.Reason | required | required | — |
+| PUT | `/schools/{school}/assessment-cycles/{cycleId}/remarks/{student}` | AssessmentService.Remark | required | required | — |
+| GET | `/schools/{school}/assessment-cycles/{cycleId}/review` | — | — | — | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/publish` | AssessmentService.Publication | required | required | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/reopen` | AssessmentService.Reopen | required | required | — |
+| GET | `/schools/{school}/students/{studentId}/reports` | — | — | — | — |
+| GET | `/schools/{school}/reports/{reportId}` | — | — | — | — |
+| GET | `/schools/{school}/reports/{reportId}/pdf` | — | — | — | — |
+| GET | `/schools/{school}/assessment-cycles/{cycleId}/broadsheet.csv` | — | — | — | — |
+| POST | `/schools/{school}/assignments` | AssignmentService.Input | required | — | — |
+| GET | `/schools/{school}/assignments` | — | — | — | classId, termId, cursor, limit |
+| GET | `/schools/{school}/assignments/{assignmentId}` | — | — | — | — |
+| PUT | `/schools/{school}/assignments/{assignmentId}` | AssignmentService.Input | required | required | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/publish` | — | required | required | — |
+| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}` | — | — | — | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/changes` | AssignmentService.Change | required | required | — |
+| GET | `/schools/{school}/assignments/{assignmentId}/submissions` | — | — | — | — |
+| PUT | `/schools/{school}/assignments/{assignmentId}/my-submission` | AssignmentService.Draft | required | required | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/submit` | — | required | required | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/feedback` | AssignmentService.Feedback | required | required | — |
+| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history` | — | — | — | — |
+| POST | `/schools/{school}/exam-schedules` | ExamService.Schedule | required | — | — |
+| GET | `/schools/{school}/exam-schedules` | — | — | — | termId |
+| GET | `/schools/{school}/exam-schedules/{scheduleId}/review` | — | — | — | — |
+| POST | `/schools/{school}/exam-schedules/{scheduleId}/events` | ExamService.Event | required | required | — |
+| PUT | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}` | ExamService.Event | required | required | — |
+| POST | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}/remove` | — | required | required | — |
+| POST | `/schools/{school}/exam-schedules/{scheduleId}/publish` | — | required | required | — |
+| GET | `/schools/{school}/examinations` | — | — | — | termId |
+| POST | `/schools/{school}/students/{studentId}/external-results` | ExamService.External | required | — | — |
+| GET | `/schools/{school}/students/{studentId}/external-results` | — | — | — | — |
+| POST | `/schools/{school}/files` | FileService.Metadata | required | — | — |
+| GET | `/schools/{school}/files` | — | — | — | — |
+| GET | `/schools/{school}/files/{fileId}` | — | — | — | — |
+| PUT | `/schools/{school}/files/{fileId}/content` | — | — | required | — |
+| GET | `/schools/{school}/files/{fileId}/content` | — | — | — | — |
+| GET | `/schools/{school}/classes/{classId}/workspace` | — | — | — | on |
+| PATCH | `/schools/{school}/classes/{classId}` | PlanningService.ClassEdit | required | required | — |
+| POST | `/schools/{school}/curricula` | PlanningService.Curriculum | required | — | — |
+| GET | `/schools/{school}/curricula` | — | — | — | sessionId |
+| GET | `/schools/{school}/curricula/{curriculumId}` | — | — | — | — |
+| POST | `/schools/{school}/curricula/{curriculumId}/publish` | — | required | required | — |
+| PUT | `/schools/{school}/classes/{classId}/curriculum` | PlanningService.CurriculumApply | required | required | — |
+| GET | `/schools/{school}/students/{studentId}/subject-choices` | — | — | — | sessionId |
+| PUT | `/schools/{school}/students/{studentId}/subject-choices` | PlanningService.Choices | required | required | — |
+| PUT | `/schools/{school}/staff/{staffId}/teaching-scope` | PlanningService.TeacherScope | required | required | — |
+| GET | `/schools/{school}/calendar` | — | — | — | sessionId |
+| GET | `/schools/{school}/calendar-plans` | — | — | — | sessionId |
+| POST | `/schools/{school}/calendar-plans` | PlanningService.CalendarInput | required | — | — |
+| POST | `/schools/{school}/calendar-plans/{id}/publish` | — | required | required | — |
+| POST | `/schools/{school}/promotion-batches` | PromotionService.Preview | required | — | — |
+| GET | `/schools/{school}/promotion-batches` | — | — | — | — |
+| GET | `/schools/{school}/promotion-batches/{batchId}` | — | — | — | — |
+| PUT | `/schools/{school}/promotion-batches/{batchId}/students/{studentId}` | PromotionService.Decision | required | required | — |
+| POST | `/schools/{school}/promotion-batches/{batchId}/confirm` | — | required | required | — |
+| GET | `/schools/{school}/promotion-batches/{batchId}/outcomes.csv` | — | — | — | — |
+| GET | `/schools/{school}/students/{studentId}/academic-history` | — | — | — | — |
+| GET | `/schools/{school}/metadata` | — | — | — | — |
+| PUT | `/schools/{school}/metadata` | SchoolController.MetadataInput | required | required | — |
+| POST | `/schools/{school}/academic-sessions` | SchoolService.SessionInput | required | — | — |
+| GET | `/schools/{school}/academic-sessions` | — | — | — | — |
+| POST | `/schools/{school}/classes` | SchoolService.ClassInput | required | — | — |
+| GET | `/schools/{school}/classes` | — | — | — | sessionId |
+| PUT | `/schools/{school}/classes/{classId}/attendance-teacher` | SchoolController.AttendanceTeacher | required | required | — |
+| POST | `/schools/{school}/subjects` | SchoolService.SubjectInput | required | — | — |
+| GET | `/schools/{school}/subjects` | — | — | — | — |
+| POST | `/schools/{school}/teachers` | SchoolService.TeacherInput | required | — | — |
+| GET | `/schools/{school}/teachers` | — | — | — | cursor, limit, search, level, subjectId, classId, active |
+| POST | `/schools/{school}/students` | SchoolService.EnrolInput | required | — | — |
+| GET | `/schools/{school}/students` | — | — | — | classId, cursor, search, limit |
+| POST | `/schools/{school}/students/{studentId}/guardians/{guardianId}/revoke` | SchoolController.Reason | required | — | — |
+| GET | `/schools/{school}/audit` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/guardians` | — | — | — | cursor, limit, search, childId, activeLink |
+| GET | `/schools/{school}/settings` | — | — | — | — |
+| PUT | `/schools/{school}/settings` | SchoolWorkspaceService.Settings | required | required | — |
+| POST | `/schools/{school}/metadata-versions` | SchoolWorkspaceService.Metadata | required | required | — |
+| GET | `/schools/{school}/guardians/{guardianId}` | — | — | — | — |
+| PATCH | `/schools/{school}/guardians/{guardianId}` | SchoolWorkspaceService.GuardianEdit | required | required | — |
+| GET | `/schools/{school}/terms/{termId}/activities` | — | — | — | — |
+| PUT | `/schools/{school}/terms/{termId}/activities` | SchoolWorkspaceService.Activity | required | required | — |
+| GET | `/schools/{school}/my-classes` | — | — | — | sessionId |
+| GET | `/schools/{school}/dashboard` | — | — | — | — |
+| GET | `/schools/{school}/attendance/follow-ups` | — | — | — | on |
+| GET | `/schools/{school}/students/export.csv` | — | — | — | classId |
+| GET | `/schools/{school}/teachers/export.csv` | — | — | — | — |
+| GET | `/me/notifications` | — | — | — | schoolId, category, unread, cursor, limit |
+| PUT | `/me/notifications/{notificationId}/read` | — | — | — | — |
+| GET | `/me/notifications/{notificationId}/delivery` | — | — | — | — |
+| POST | `/schools/{school}/notices` | CommunicationWorkService.Notice | required | — | — |
+| GET | `/schools/{school}/notices` | — | — | — | cursor, limit |
+| POST | `/schools/{school}/complaints` | CommunicationWorkService.Complaint | required | — | — |
+| GET | `/schools/{school}/complaints` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/complaints/{caseId}` | — | — | — | — |
+| POST | `/schools/{school}/complaints/{caseId}/replies` | CommunicationWorkService.Reply | required | required | — |
+| POST | `/schools/{school}/complaints/{caseId}/close` | CommunicationController.Close | required | required | — |
+| GET | `/schools/{school}/notices/{id}` | — | — | — | — |
+| PUT | `/schools/{school}/notices/{id}` | CommunicationWorkService.Notice | required | required | — |
+| POST | `/schools/{school}/notices/{id}/publish` | — | required | required | — |
+| POST | `/schools/{school}/notices/{id}/archive` | CommunicationWorkController.Reason | required | required | — |
+| GET | `/schools/{school}/threads/contacts` | — | — | — | studentId |
+| POST | `/schools/{school}/threads` | CommunicationWorkService.ThreadInput | required | — | — |
+| GET | `/schools/{school}/threads` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/threads/{threadId}` | — | — | — | — |
+| POST | `/schools/{school}/threads/{threadId}/messages` | CommunicationWorkService.Message | required | required | — |
+| POST | `/schools/{school}/threads/{threadId}/close` | CommunicationWorkController.Reason | required | required | — |
+| PUT | `/schools/{school}/threads/{threadId}/read` | — | — | — | — |
+| POST | `/schools/{school}/complaints/{caseId}/status` | CommunicationWorkService.StateChange | required | required | — |
+| PUT | `/schools/{school}/complaints/{caseId}/owner` | CommunicationWorkService.Owner | required | required | — |
+| GET | `/schools/{school}/complaints/{caseId}/history` | — | — | — | — |
+| POST | `/schools/{school}/fee-plans` | FeeAdministrationService.Plan | required | — | — |
+| GET | `/schools/{school}/fee-plans` | — | — | — | termId |
+| PUT | `/schools/{school}/fee-plans/{planId}` | FeeAdministrationService.Plan | required | required | — |
+| GET | `/schools/{school}/fee-plans/{planId}` | — | — | — | — |
+| POST | `/schools/{school}/fee-plans/{planId}/publish` | — | required | required | — |
+| POST | `/schools/{school}/fee-plans/{planId}/batches` | FeeAdministrationService.Preview | required | — | — |
+| GET | `/schools/{school}/fee-batches/{batchId}` | — | — | — | — |
+| POST | `/schools/{school}/fee-batches/{batchId}/confirm` | — | required | required | — |
+| POST | `/schools/{school}/invoices/{invoiceId}/adjustments` | FeeAdministrationService.Adjustment | required | — | — |
+| GET | `/schools/{school}/fee-adjustments` | — | — | — | invoiceId |
+| GET | `/schools/{school}/fee-adjustments/{adjustmentId}` | — | — | — | — |
+| POST | `/schools/{school}/fee-adjustments/{adjustmentId}/decision` | FeeAdministrationService.Decision | required | required | — |
+| POST | `/schools/{school}/fee-adjustments/{adjustmentId}/confirm-refund` | FeeAdministrationService.RefundConfirmation | required | required | — |
+| GET | `/schools/{school}/payments` | — | — | — | studentId, cursor, limit |
+| GET | `/schools/{school}/invoices/{invoiceId}/pdf` | — | — | — | — |
+| GET | `/schools/{school}/payments/{paymentId}/receipt` | — | — | — | — |
+| GET | `/schools/{school}/invoices/export.csv` | — | — | — | — |
+| POST | `/schools/{school}/invoices` | FinanceService.InvoiceInput | required | — | — |
+| GET | `/schools/{school}/invoices` | — | — | — | studentId, cursor, limit |
+| GET | `/schools/{school}/invoices/{invoiceId}` | — | — | — | — |
+| POST | `/schools/{school}/invoices/{invoiceId}/manual-payments` | FinanceService.Manual | required | required | — |
+| POST | `/schools/{school}/invoices/payment-settings` | FinanceController.Settlement | required | — | — |
+| POST | `/schools/{school}/invoices/{invoiceId}/checkout` | FinanceService.Checkout | required | — | — |
+| GET | `/schools/{school}/payment-intents/{intentId}` | — | — | — | — |
+| POST | `/schools/{school}/payment-intents/{intentId}/verify` | — | — | — | — |
+| GET | `/schools/{school}/reconciliation/exceptions` | — | — | — | — |
+| POST | `/webhooks/paystack` | — | — | — | — |
+| POST | `/schools/{school}/invoices/opening-balances` | OpeningBalanceService.Preview | required | — | — |
+| GET | `/schools/{school}/invoices/opening-balances/{batchId}` | — | — | — | — |
+| POST | `/schools/{school}/invoices/opening-balances/{batchId}/confirm` | OpeningBalanceService.Confirm | — | — | — |
+| POST | `/schools/{school}/reconciliation/statements` | ReconciliationService.Statement | required | — | — |
+| POST | `/schools/{school}/reconciliation/paystack-sync` | ReconciliationService.Period | required | — | — |
+| GET | `/schools/{school}/reconciliation/settlements` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/reconciliation/settlements/{settlementId}` | — | — | — | — |
+| POST | `/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution` | ReconciliationService.Resolution | — | — | — |
+| GET | `/schools/{school}/reconciliation/overview` | — | — | — | — |
+| POST | `/auth/login` | IdentityController.Login | — | — | — |
+| POST | `/auth/refresh` | IdentityController.Token | — | — | — |
+| POST | `/auth/logout` | IdentityController.Token | — | — | — |
+| POST | `/auth/activation/review` | IdentityController.Activation | — | — | — |
+| POST | `/auth/recovery/email` | IdentityController.Identifier | — | — | — |
+| POST | `/auth/recovery/email/review` | IdentityController.Proof | — | — | — |
+| POST | `/auth/recovery/code/review` | IdentityController.Recovery | — | — | — |
+| POST | `/auth/password/setup` | IdentityController.Setup | — | — | — |
+| POST | `/me/password/change` | IdentityController.ChangePassword | — | — | — |
+| GET | `/me` | — | — | — | — |
+| PATCH | `/me` | IdentityController.Phone | — | required | — |
+| GET | `/me/contexts` | — | — | — | — |
+| PUT | `/me/context` | IdentityController.Preference | — | — | — |
+| POST | `/me/reauthenticate` | IdentityController.Password | — | — | — |
+| POST | `/me/recovery-code/rotate` | IdentityController.Recent | — | — | — |
+| POST | `/me/sessions/revoke-others` | IdentityController.Recent | required | — | — |
+| GET | `/me/sessions` | — | — | — | cursor, limit |
+| GET | `/me/notification-preferences` | — | — | — | — |
+| PATCH | `/me/notification-preferences` | IdentityController.Preferences | — | — | — |
+| POST | `/me/email-change-requests` | IdentityController.Email | required | — | — |
+| POST | `/me/email-change-requests/resend` | IdentityController.Resend | required | — | — |
+| POST | `/auth/email-verifications/confirm` | IdentityController.Proof | — | — | — |
+| POST | `/me/push-devices` | IdentityController.Push | required | — | — |
+| DELETE | `/me/push-devices/{deviceId}` | — | — | — | — |
+| POST | `/schools/{school}/onboarding/{type}/{subjectId}/activation-slips` | — | required | — | — |
+| GET | `/public/access-help` | — | — | — | — |
+| GET | `/schools/{school}/activity/{domain}` | — | — | — | from, to, cursor, limit |
+| GET | `/schools/{school}/activity/{domain}/export.csv` | — | — | — | from, to |
+| GET | `/me/security-history` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/schedule/day` | — | — | — | classId, on |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/roster/sync` | AssessmentService.RosterSync | required | required | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/submit-review` | — | required | required | — |
+| POST | `/schools/{school}/assessment-cycles/{cycleId}/return-review` | AssessmentService.Reason | required | required | — |
 
 ## Request fields
 
-Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-DD` for dates, `HH:mm` for lesson/exam start times and ISO timestamps for deadlines. Amounts ending in `Minor` are **integer kobo**. Score limits and one-decimal rules are enforced by the backend. Optional fields can be omitted; do not fill unused UUID properties with empty strings.
+These are the exact declared JSON property names and Java types. Required fields, valid choices and cross-record checks are enforced by services and described in API.md. `List<T>` is a JSON array, `Map<K,V>` is an object and UUID is a string ID. Money is integer kobo; scores allow one decimal place. Use ISO dates (`2026-11-03`) and date-times with a timezone (`2026-11-03T09:00:00Z`).
 
 ### AcademicController.AttendanceTeacherAlert
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentId` | `UUID` |
 | `reviewReason` | `String` |
 
 ### AcademicController.CalendarInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `onDate` | `LocalDate` |
 | `title` | `String` |
@@ -275,7 +255,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AcademicImportService.Confirmation
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `relationshipsVerified` | `boolean` |
 | `duplicatesReviewed` | `boolean` |
@@ -283,14 +263,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AcademicImportService.Correction
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `fields` | `Map<String, String>` |
 | `reason` | `String` |
 
 ### AcademicImportService.Preview
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `kind` | `String` |
 | `sessionId` | `UUID` |
@@ -299,7 +279,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.AccessInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `role` | `String` |
 | `active` | `boolean` |
@@ -307,7 +287,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.AssignmentEdit
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `teacherId` | `UUID` |
 | `weeklyPeriods` | `int` |
@@ -315,7 +295,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.GuardianLink
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `guardianId` | `UUID` |
 | `guardian` | `SchoolService.GuardianInput` |
@@ -327,7 +307,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.StaffEdit
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `fullName` | `String` |
 | `phone` | `String` |
@@ -338,7 +318,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.StaffInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `fullName` | `String` |
 | `phone` | `String` |
@@ -351,7 +331,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.StudentEdit
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `fullName` | `String` |
 | `dateOfBirth` | `LocalDate` |
@@ -362,7 +342,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.Transfer
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `classId` | `UUID` |
 | `effectiveOn` | `LocalDate` |
@@ -371,14 +351,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AdministrationService.Withdrawal
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `effectiveOn` | `LocalDate` |
 | `reason` | `String` |
 
 ### AssessmentService.CycleInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `termId` | `UUID` |
 | `classId` | `UUID` |
@@ -387,26 +367,26 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AssessmentService.Marks
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `rows` | `List<Score>` |
 
 ### AssessmentService.Publication
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `principalRemark` | `String` |
 | `nextResumptionOn` | `LocalDate` |
 
 ### AssessmentService.Reason
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reason` | `String` |
 
 ### AssessmentService.Remark
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `remark` | `String` |
 | `conduct` | `int` |
@@ -417,15 +397,21 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AssessmentService.Reopen
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `assignmentId` | `UUID` |
 | `reason` | `String` |
 | `closesAt` | `Instant` |
 
+### AssessmentService.RosterSync
+
+| Field | Type |
+| --- | --- |
+| `reason` | `String` |
+
 ### AssessmentService.Score
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentId` | `UUID` |
 | `ca1` | `BigDecimal` |
@@ -436,7 +422,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AssessmentService.Window
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `opensAt` | `Instant` |
 | `closesAt` | `Instant` |
@@ -444,7 +430,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AssignmentService.Change
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `action` | `String` |
 | `dueAt` | `Instant` |
@@ -452,14 +438,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AssignmentService.Draft
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `responseText` | `String` |
 | `fileIds` | `List<UUID>` |
 
 ### AssignmentService.Feedback
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `action` | `String` |
 | `score` | `BigDecimal` |
@@ -469,7 +455,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AssignmentService.Input
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `teachingAssignmentId` | `UUID` |
 | `termId` | `UUID` |
@@ -481,7 +467,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AttendanceService.Mark
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentId` | `UUID` |
 | `status` | `String` |
@@ -489,32 +475,32 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### AttendanceService.Marks
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `rows` | `List<Mark>` |
 
 ### AttendanceService.RegisterInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `classId` | `UUID` |
 | `onDate` | `LocalDate` |
 
 ### CommunicationController.Close
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reason` | `String` |
 
 ### CommunicationWorkController.Reason
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reason` | `String` |
 
 ### CommunicationWorkService.Complaint
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentId` | `UUID` |
 | `guardianId` | `UUID` |
@@ -526,14 +512,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### CommunicationWorkService.Message
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `body` | `String` |
 | `fileIds` | `List<UUID>` |
 
 ### CommunicationWorkService.Notice
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `title` | `String` |
 | `body` | `String` |
@@ -544,14 +530,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### CommunicationWorkService.Owner
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `staffId` | `UUID` |
 | `reason` | `String` |
 
 ### CommunicationWorkService.Reply
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `body` | `String` |
 | `internal` | `boolean` |
@@ -559,14 +545,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### CommunicationWorkService.StateChange
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `action` | `String` |
 | `reason` | `String` |
 
 ### CommunicationWorkService.ThreadInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentId` | `UUID` |
 | `guardianId` | `UUID` |
@@ -577,7 +563,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### ExamService.Event
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `classId` | `UUID` |
 | `subjectId` | `UUID` |
@@ -591,7 +577,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### ExamService.External
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `board` | `String` |
 | `examYear` | `int` |
@@ -601,13 +587,13 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### ExamService.Schedule
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `termId` | `UUID` |
 
 ### FeeAdministrationService.Adjustment
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `kind` | `String` |
 | `amountMinor` | `long` |
@@ -617,14 +603,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### FeeAdministrationService.Decision
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `approve` | `boolean` |
 | `reason` | `String` |
 
 ### FeeAdministrationService.Plan
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `termId` | `UUID` |
 | `name` | `String` |
@@ -635,20 +621,20 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### FeeAdministrationService.Preview
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `classIds` | `List<UUID>` |
 
 ### FeeAdministrationService.RefundConfirmation
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reference` | `String` |
 | `verificationReference` | `String` |
 
 ### FileService.Metadata
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `purpose` | `String` |
 | `studentId` | `UUID` |
@@ -661,20 +647,20 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### FinanceController.Settlement
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `subaccount` | `String` |
 
 ### FinanceService.Checkout
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `amountMinor` | `long` |
 | `email` | `String` |
 
 ### FinanceService.InvoiceInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentId` | `UUID` |
 | `termId` | `UUID` |
@@ -685,7 +671,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### FinanceService.Line
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `description` | `String` |
 | `amountMinor` | `long` |
@@ -693,7 +679,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### FinanceService.Manual
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `amountMinor` | `long` |
 | `method` | `String` |
@@ -703,7 +689,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### IdentityController.Activation
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `loginId` | `String` |
 | `activationCode` | `String` |
@@ -711,27 +697,27 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### IdentityController.ChangePassword
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `currentPassword` | `String` |
 | `newPassword` | `String` |
 
 ### IdentityController.Email
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `email` | `String` |
 | `recentAuthToken` | `String` |
 
 ### IdentityController.Identifier
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `identifier` | `String` |
 
 ### IdentityController.Login
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `identifier` | `String` |
 | `password` | `String` |
@@ -740,19 +726,19 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### IdentityController.Password
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `currentPassword` | `String` |
 
 ### IdentityController.Phone
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `phone` | `String` |
 
 ### IdentityController.Preference
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `schoolId` | `UUID` |
 | `role` | `String` |
@@ -760,7 +746,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### IdentityController.Preferences
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `pushEnabled` | `boolean` |
 | `emailOptionalEnabled` | `boolean` |
@@ -768,13 +754,13 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### IdentityController.Proof
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `token` | `String` |
 
 ### IdentityController.Push
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `installationId` | `String` |
 | `platform` | `String` |
@@ -782,45 +768,45 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### IdentityController.Recent
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `recentAuthToken` | `String` |
 
 ### IdentityController.Recovery
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `loginId` | `String` |
 | `recoveryCode` | `String` |
 
 ### IdentityController.Resend
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `requestId` | `UUID` |
 
 ### IdentityController.Setup
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `flowToken` | `String` |
 | `newPassword` | `String` |
 
 ### IdentityController.Token
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `refreshToken` | `String` |
 
 ### OpeningBalanceService.Confirm
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reason` | `String` |
 
 ### OpeningBalanceService.Preview
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `termId` | `UUID` |
 | `csv` | `String` |
@@ -828,7 +814,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.Availability
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `weekday` | `int` |
 | `startMinute` | `int` |
@@ -837,7 +823,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.CalendarChange
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `onDate` | `LocalDate` |
 | `title` | `String` |
@@ -846,14 +832,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.CalendarInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `sessionId` | `UUID` |
 | `changes` | `List<CalendarChange>` |
 
 ### PlanningService.Choices
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `sessionId` | `UUID` |
 | `subjectIds` | `List<UUID>` |
@@ -861,7 +847,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.ClassEdit
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `capacity` | `Integer` |
 | `room` | `String` |
@@ -869,7 +855,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.Curriculum
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `sessionId` | `UUID` |
 | `level` | `String` |
@@ -879,7 +865,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.CurriculumApply
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `curriculumId` | `UUID` |
 | `teachers` | `Map<UUID, UUID>` |
@@ -887,7 +873,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.SubjectRule
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `subjectId` | `UUID` |
 | `required` | `boolean` |
@@ -896,7 +882,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PlanningService.TeacherScope
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `eligibleLevels` | `List<String>` |
 | `subjectIds` | `List<UUID>` |
@@ -905,7 +891,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PromotionService.Decision
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `decision` | `String` |
 | `targetClassId` | `UUID` |
@@ -915,7 +901,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### PromotionService.Preview
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `sourceSessionId` | `UUID` |
 | `targetSessionId` | `UUID` |
@@ -923,21 +909,21 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### ReconciliationService.Period
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `from` | `LocalDate` |
 | `to` | `LocalDate` |
 
 ### ReconciliationService.Resolution
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `resolution` | `String` |
 | `reason` | `String` |
 
 ### ReconciliationService.Row
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reference` | `String` |
 | `amountMinor` | `long` |
@@ -946,20 +932,20 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### ReconciliationService.Statement
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reference` | `String` |
 | `rows` | `List<Row>` |
 
 ### SchoolController.AttendanceTeacher
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `teacherId` | `UUID` |
 
 ### SchoolController.FieldDefinition
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `key` | `String` |
 | `required` | `boolean` |
@@ -967,20 +953,20 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolController.MetadataInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentFields` | `List<FieldDefinition>` |
 | `wednesdayPtEnabled` | `Boolean` |
 
 ### SchoolController.Reason
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `reason` | `String` |
 
 ### SchoolService.AssignmentInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `classId` | `UUID` |
 | `subjectId` | `UUID` |
@@ -989,7 +975,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.ClassInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `sessionId` | `UUID` |
 | `level` | `String` |
@@ -998,7 +984,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.EnrolInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `admissionNumber` | `String` |
 | `fullName` | `String` |
@@ -1016,7 +1002,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.GuardianInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `existingGuardianId` | `UUID` |
 | `fullName` | `String` |
@@ -1029,7 +1015,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.SessionInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `name` | `String` |
 | `startsOn` | `LocalDate` |
@@ -1037,7 +1023,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.SubjectInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `code` | `String` |
 | `name` | `String` |
@@ -1045,7 +1031,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.TeacherInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `fullName` | `String` |
 | `phone` | `String` |
@@ -1058,7 +1044,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolService.TermInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `sessionId` | `UUID` |
 | `number` | `int` |
@@ -1067,7 +1053,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolWorkspaceService.Activity
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `activity` | `String` |
 | `teacherIds` | `List<UUID>` |
@@ -1075,7 +1061,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolWorkspaceService.FormField
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `key` | `String` |
 | `label` | `String` |
@@ -1084,7 +1070,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolWorkspaceService.GuardianEdit
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `fullName` | `String` |
 | `phone` | `String` |
@@ -1093,14 +1079,14 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolWorkspaceService.Metadata
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `studentFields` | `List<FormField>` |
 | `reason` | `String` |
 
 ### SchoolWorkspaceService.Settings
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `phone` | `String` |
 | `email` | `String` |
@@ -1110,7 +1096,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### SchoolWorkspaceService.Teaching
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `teacherId` | `UUID` |
 | `assignment` | `SchoolService.AssignmentInput` |
@@ -1118,7 +1104,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### TimetableService.LessonInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `assignmentId` | `UUID` |
 | `weekday` | `int` |
@@ -1128,7 +1114,7 @@ Names below are exact JSON property names. Use JSON arrays for lists, `YYYY-MM-D
 
 ### TimetableService.PlanInput
 
-| Field | Java/wire type |
+| Field | Type |
 | --- | --- |
 | `termId` | `UUID` |
 | `effectiveFrom` | `LocalDate` |
