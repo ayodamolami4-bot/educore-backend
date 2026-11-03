@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class TimetableService {
   private final SchoolService s;
+  private final ExamService exams;
 
-  public TimetableService(SchoolService s) {
+  public TimetableService(SchoolService s, ExamService exams) {
+    this.exams = exams;
     this.s = s;
   }
 
@@ -64,7 +66,7 @@ public class TimetableService {
                 b.sourcePlanId(),
                 term.get("session_id"));
             s.db.update(
-                "insert into lessons(id,school_id,plan_id,assignment_id,class_id,teacher_id,subject_id,department,room,weekday,start_min,end_min) select gen_random_uuid(),l.school_id,?,l.assignment_id,l.class_id,t.teacher_id,l.subject_id,l.department,l.room,l.weekday,l.start_min,l.end_min from lessons l join teaching_assignments t on t.id=l.assignment_id where l.plan_id=? and t.active",
+                "insert into lessons(id,school_id,plan_id,assignment_id,class_id,teacher_id,subject_id,department,room,weekday,start_min,end_min,required,choice_group) select gen_random_uuid(),l.school_id,?,l.assignment_id,l.class_id,t.teacher_id,l.subject_id,l.department,l.room,l.weekday,l.start_min,l.end_min,t.required,t.choice_group from lessons l join teaching_assignments t on t.id=l.assignment_id where l.plan_id=? and t.active",
                 id,
                 b.sourcePlanId());
           }
@@ -147,7 +149,7 @@ public class TimetableService {
     // The locked plan serialises common versus department class-overlap checks.
     var conflicts =
         s.db.queryForList(
-            "select l.id from lessons l join teaching_assignments ta on ta.id=l.assignment_id where l.plan_id=? and l.weekday=? and l.start_min<? and l.end_min>? and (l.teacher_id=? or (?::text is not null and l.room=?::text) or (l.class_id=? and (l.department is null or ?::text is null or l.department=?::text) and not (ta.choice_group is not null and ta.choice_group is not distinct from ?::text)))",
+            "select l.id from lessons l where l.plan_id=? and l.weekday=? and l.start_min<? and l.end_min>? and (l.teacher_id=? or (?::text is not null and l.room=?::text) or (l.class_id=? and (l.department is null or ?::text is null or l.department=?::text) and not (l.choice_group is not null and l.choice_group is not distinct from ?::text and l.subject_id<>?)))",
             plan,
             b.weekday(),
             minute + b.durationMinutes(),
@@ -158,13 +160,14 @@ public class TimetableService {
             assignment.get("class_id"),
             assignment.get("department"),
             assignment.get("department"),
-            assignment.get("choice_group"));
+            assignment.get("choice_group"),
+            assignment.get("subject_id"));
     if (!conflicts.isEmpty())
       throw fail(
           409, "TIMETABLE_CONFLICT", "The class, teacher or room overlaps an existing lesson.");
     UUID id = requestedId == null ? UUID.randomUUID() : requestedId;
     s.db.update(
-        "insert into lessons(id,school_id,plan_id,assignment_id,class_id,teacher_id,subject_id,department,room,weekday,start_min,end_min) values (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "insert into lessons(id,school_id,plan_id,assignment_id,class_id,teacher_id,subject_id,department,room,weekday,start_min,end_min,required,choice_group) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         id,
         school,
         plan,
@@ -176,7 +179,9 @@ public class TimetableService {
         room,
         b.weekday(),
         minute,
-        minute + b.durationMinutes());
+        minute + b.durationMinutes(),
+        assignment.get("required"),
+        assignment.get("choice_group"));
     s.db.update("update timetable_plans set version=version+1 where id=?", plan);
     return map("id", id, "version", 1, "planVersion", ((Number) p.get("version")).longValue() + 1);
   }
@@ -295,8 +300,9 @@ public class TimetableService {
             p.get("session_id"));
     var invalid =
         s.db.queryForList(
-            "select l.id as \"lessonId\",case when not t.active or not st.active or l.teacher_id<>t.teacher_id then 'TEACHER_OR_ASSIGNMENT_CHANGED' else 'TEACHER_UNAVAILABLE' end as issue from lessons l join teaching_assignments t on t.id=l.assignment_id join staff st on st.id=t.teacher_id where l.plan_id=? and (not t.active or not st.active or l.teacher_id<>t.teacher_id or exists(select 1 from teacher_availability av where av.teacher_id=l.teacher_id and av.weekday=l.weekday and av.start_min<l.end_min and av.end_min>l.start_min))",
+            "select l.id as \"lessonId\",case when not t.active or not st.active or l.teacher_id<>t.teacher_id or l.required<>t.required or l.choice_group is distinct from t.choice_group then 'TEACHER_OR_ASSIGNMENT_CHANGED' else 'TEACHER_UNAVAILABLE' end as issue from lessons l join teaching_assignments t on t.id=l.assignment_id join staff st on st.id=t.teacher_id where l.plan_id=? and (not t.active or not st.active or l.teacher_id<>t.teacher_id or l.required<>t.required or l.choice_group is distinct from t.choice_group or exists(select 1 from teacher_availability av where av.teacher_id=l.teacher_id and av.weekday=l.weekday and av.start_min<l.end_min and av.end_min>l.start_min))",
             plan);
+    invalid.addAll(exams.conflictsForTimetable(school, p));
     boolean complete =
         invalid.isEmpty()
             && !targets.isEmpty()
@@ -342,6 +348,17 @@ public class TimetableService {
           expectVersion(version, ((Number) p.get("version")).longValue());
           if (!"DRAFT".equals(p.get("status")))
             throw fail(409, "ALREADY_PUBLISHED", "This timetable is already published.");
+          if (s.db.queryForObject(
+                  "select count(*) from timetable_plans where term_id=? and effective_from=? and status='PUBLISHED' and revision>?",
+                  Integer.class,
+                  p.get("term_id"),
+                  p.get("effective_from"),
+                  p.get("revision"))
+              > 0)
+            throw fail(
+                409,
+                "SUPERSEDED_DRAFT",
+                "A newer revision for this effective date is already published. Clone that revision instead.");
           @SuppressWarnings("unchecked")
           var review = (Map<String, Object>) review(a, school, plan);
           if (!Boolean.TRUE.equals(review.get("readyToPublish")))
@@ -384,26 +401,34 @@ public class TimetableService {
 
   private List<Map<String, Object>> lessons(
       UUID plan, UUID classId, UUID teacher, String department) {
+    return lessons(plan, classId, teacher, department, null);
+  }
+
+  private List<Map<String, Object>> lessons(
+      UUID plan, UUID classId, UUID teacher, String department, UUID student) {
     return s.db.queryForList(
-        "select l.id,l.class_id as \"classId\",l.subject_id as \"subjectId\",su.name as \"subjectName\",l.teacher_id as \"teacherId\",st.full_name as \"teacherName\",l.weekday,l.start_min as \"startMinute\",l.end_min as \"endMinute\",l.department,l.room,l.version from lessons l join subjects su on su.id=l.subject_id join staff st on st.id=l.teacher_id where l.plan_id=? and (?::uuid is null or l.class_id=?::uuid) and (?::uuid is null or l.teacher_id=?::uuid) and (?::text is null or l.department is null or l.department=?::text) order by l.weekday,l.start_min,l.id",
+        "select l.id,l.class_id as \"classId\",l.subject_id as \"subjectId\",su.name as \"subjectName\",l.teacher_id as \"teacherId\",st.full_name as \"teacherName\",l.weekday,l.start_min as \"startMinute\",l.end_min as \"endMinute\",l.department,l.required,l.choice_group as \"choiceGroup\",l.room,l.version from lessons l join subjects su on su.id=l.subject_id join staff st on st.id=l.teacher_id where l.plan_id=? and (?::uuid is null or l.class_id=?::uuid) and (?::uuid is null or l.teacher_id=?::uuid) and (?::text is null or l.department is null or l.department=?::text) and (?::uuid is null or l.required or exists(select 1 from student_subject_choices ch join terms term on term.session_id=ch.session_id join timetable_plans p on p.term_id=term.id where ch.student_id=?::uuid and ch.subject_id=l.subject_id and p.id=l.plan_id)) order by l.weekday,l.start_min,l.id",
         plan,
         classId,
         classId,
         teacher,
         teacher,
         department,
-        department);
+        department,
+        student,
+        student);
   }
 
   public Object published(Actor a, UUID school, UUID requestedClass, LocalDate on) {
     var context = a.school(school);
     if (on == null) on = LocalDate.now(ZoneId.of("Africa/Lagos"));
-    UUID classId = requestedClass, teacher = null;
+    UUID classId = requestedClass, teacher = null, learnerId = null;
     String department = null;
     switch (context.role()) {
       case "PARENT", "STUDENT" -> {
         UUID student = "PARENT".equals(context.role()) ? context.childId() : context.subjectId();
         s.learning(a, school, student);
+        learnerId = student;
         var e =
             s.one(
                 "select * from enrolments where school_id=? and student_id=? and starts_on<=? and (ends_on is null or ends_on>=?) order by starts_on desc limit 1",
@@ -431,7 +456,7 @@ public class TimetableService {
     var p = plans.get(0);
     return map(
         "items",
-        lessons((UUID) p.get("id"), classId, teacher, department),
+        lessons((UUID) p.get("id"), classId, teacher, department, learnerId),
         "published",
         true,
         "version",

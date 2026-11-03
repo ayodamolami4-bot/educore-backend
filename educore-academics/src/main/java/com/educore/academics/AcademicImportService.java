@@ -357,12 +357,12 @@ public class AcademicImportService {
                     "select count(*) from guardians where school_id=? and phone=?",
                     Integer.class,
                     school,
-                    b.guardian().phone())
+                    phone(b.guardian().phone()))
                 > 0)
           return new Validation(
               "READY", null, null, List.of("POSSIBLE_EXISTING_GUARDIAN_REQUIRES_EXPLICIT_REVIEW"));
       } else if (s.db.queryForObject(
-              "select count(*) from staff where school_id=? and staff_number=?",
+              "select count(*) from staff where school_id=? and upper(staff_number)=upper(?)",
               Integer.class,
               school,
               required(row, "staff_number"))
@@ -747,7 +747,7 @@ public class AcademicImportService {
                     var r = (Map<String, Object>) out;
                     s.db.update(
                         "update staff set staff_number=? where school_id=? and id=?",
-                        required(fields, "staff_number"),
+                        required(fields, "staff_number").toUpperCase(Locale.ROOT),
                         school,
                         uuid(r.get("id").toString()));
                   }

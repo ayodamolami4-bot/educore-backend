@@ -271,6 +271,20 @@ public class SchoolWorkspaceService {
                   409,
                   "SUPERVISOR_UNAVAILABLE",
                   "Choose a supervisor available during the activity period.");
+            if (s.db.queryForObject(
+                    "select count(*) from exam_events e join exam_schedules x on x.id=e.schedule_id where e.school_id=? and x.term_id=? and x.state='PUBLISHED' and e.invigilator_id=? and extract(isodow from e.on_date)=? and e.start_min<? and e.end_min>? and not exists(select 1 from exam_schedules newer where newer.term_id=x.term_id and newer.state='PUBLISHED' and newer.revision>x.revision)",
+                    Integer.class,
+                    school,
+                    term,
+                    teacher,
+                    day,
+                    end,
+                    start)
+                > 0)
+              throw fail(
+                  409,
+                  "SUPERVISOR_EXAM_CONFLICT",
+                  "This supervisor invigilates a published examination during the activity. Choose another teacher.");
           }
           s.db.update(
               "delete from activity_supervisors where term_id=? and activity=?",

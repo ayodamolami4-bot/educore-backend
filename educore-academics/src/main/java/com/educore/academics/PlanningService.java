@@ -295,6 +295,18 @@ public class PlanningService {
           for (var r : rules) {
             UUID subject = UUID.fromString(r.path("subjectId").asText());
             subjects.add(subject);
+            if (s.db.queryForObject(
+                    "select count(*) from teaching_assignments where class_id=? and subject_id=? and active and department is distinct from ?::text and (department is null or ?::text is null)",
+                    Integer.class,
+                    classId,
+                    subject,
+                    template.get("department"),
+                    template.get("department"))
+                > 0)
+              throw fail(
+                  409,
+                  "SUBJECT_SCOPE_OVERLAP",
+                  "A common subject cannot also have a separate department assignment. Review its existing scope first.");
             UUID teacher = b.teachers() == null ? null : b.teachers().get(subject);
             var existing =
                 s.db.queryForList(
@@ -697,7 +709,7 @@ public class PlanningService {
                   "Correct submitted attendance before closing this teaching day.");
             if (!teaching
                 && s.db.queryForObject(
-                        "select count(*) from exam_events e join exam_schedules x on x.id=e.schedule_id where e.school_id=? and e.on_date=? and x.state='PUBLISHED'",
+                        "select count(*) from exam_events e join exam_schedules x on x.id=e.schedule_id where e.school_id=? and e.on_date=? and x.state='PUBLISHED' and not exists(select 1 from exam_schedules newer where newer.term_id=x.term_id and newer.state='PUBLISHED' and newer.revision>x.revision)",
                         Integer.class,
                         school,
                         d)

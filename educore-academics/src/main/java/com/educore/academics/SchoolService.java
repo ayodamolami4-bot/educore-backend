@@ -436,7 +436,8 @@ public class SchoolService {
   }
 
   UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
-    var c = one("select level from classes where school_id=? and id=?", school, b.classId());
+    var c =
+        one("select level from classes where school_id=? and id=? for update", school, b.classId());
     String department = b.department();
     if (department != null) {
       department = SchoolRules.department((String) c.get("level"), department);
@@ -453,6 +454,18 @@ public class SchoolService {
           422,
           "TEACHER_NOT_ELIGIBLE",
           "This teacher is not eligible for the selected subject and level.");
+    if (db.queryForObject(
+            "select count(*) from teaching_assignments where class_id=? and subject_id=? and active and (department is null or ?::text is null or department=?::text)",
+            Integer.class,
+            b.classId(),
+            b.subjectId(),
+            department,
+            department)
+        > 0)
+      throw fail(
+          409,
+          "SUBJECT_SCOPE_OVERLAP",
+          "A common or matching-department teaching assignment already covers this subject; use the reasoned handover action.");
     if (b.weeklyPeriods() < 1 || b.weeklyPeriods() > 10)
       throw fail(422, "INVALID_WEEKLY_TARGET", "Weekly periods must be between 1 and 10.");
     UUID id = UUID.randomUUID();
