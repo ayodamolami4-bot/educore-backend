@@ -65,6 +65,22 @@ export async function rosterTests(u, f) {
  const targetEnglish=assignments.find(x=>x.classId===classB.id&&x.subjectId===english.id);
  const newSheet=await get(`/assessment-cycles/${target.id}/sheets/${targetEnglish.id}`,teacher.accessToken);assert.equal(newSheet.rows.find(x=>x.studentId===children[0].id).exam,null);
  const oldReport=await get('/reports/'+historic,parent.accessToken);assert.ok(oldReport.subjects.some(x=>x.subjectId===english.id&&x.exam===50));
+ const bWorkspace=await get(`/classes/${classB.id}/workspace`);const mathTeacher=assignments.find(x=>x.classId===classA.id&&x.subjectId===f.math.id).teacherId;
+ await call('PUT',`/classes/${classB.id}/attendance-teacher`,{teacherId:mathTeacher},bWorkspace.class.version);
+ targetReview=await get(`/assessment-cycles/${target.id}/review`);await call('POST',`/assessment-cycles/${target.id}/open`,{...window,reason:'Principal opens the reviewed target-class assessment window'},targetReview.version);
+ for(const sh of targetReview.sheets.filter(x=>x.active)){
+  const token=teachers.get(sh.teacherId).accessToken;let current=await get(`/assessment-cycles/${target.id}/sheets/${sh.assignmentId}`,token);
+  current=await call('PUT',`/assessment-cycles/${target.id}/sheets/${sh.assignmentId}/marks`,{rows:current.rows.filter(x=>x.active).map(x=>({studentId:x.studentId,ca1:18,ca2:19,exam:40,examState:'COMPLETE'}))},current.version,200,token);
+  await call('POST',`/assessment-cycles/${target.id}/sheets/${sh.assignmentId}/submit`,undefined,current.version,200,token);
+ }
+ targetReview=await get(`/assessment-cycles/${target.id}/review`);
+ for(const row of targetReview.students)await call('PUT',`/assessment-cycles/${target.id}/remarks/${row.studentId}`,{remark:'New class teacher reviewed this independently entered report.',conduct:4,punctuality:4,cooperation:4,handwriting:4,practicalSkills:4},row.remarkVersion??1,200,otherTeacher.accessToken);
+ targetReview=await get(`/assessment-cycles/${target.id}/review`);const newReports=await call('POST',`/assessment-cycles/${target.id}/publish`,{principalRemark:'Principal approved the new class reports after separate teacher review.',nextResumptionOn:day(70)},targetReview.version);
+ const newReport=newReports.reports.find(x=>x.studentId===children[0].id).id;
+ assert.ok(!(await get(`/students/${children[0].id}/reports`,teacher.accessToken)).items.some(x=>x.id===newReport));
+ await call('GET','/reports/'+newReport,undefined,undefined,404,teacher.accessToken);assert.ok((await get('/reports/'+newReport,otherTeacher.accessToken)).subjects.some(x=>x.exam===40));
+ assert.ok((await get('/reports/'+historic,parent.accessToken)).subjects.some(x=>x.exam===50));
+ passed('a former class lead can read their own class publication but cannot use that history to read a transferred pupil’s new class report');
  const lateProfile=await get('/students/'+late.id);await call('POST',`/students/${late.id}/withdrawal`,{effectiveOn:day(0),reason:'Family completed the verified school withdrawal procedure'},lateProfile.version);
  review=await get(`/assessment-cycles/${cycle.id}/review`);await call('POST',`/assessment-cycles/${cycle.id}/roster/sync`,{reason:'Principal archived the withdrawn pupil after reviewing the school record'},review.version);
  review=await get(`/assessment-cycles/${cycle.id}/review`);assert.equal(review.students.length,0);assert.equal(review.readyToPublish,false);assert.ok(review.sheets.every(x=>!x.active));

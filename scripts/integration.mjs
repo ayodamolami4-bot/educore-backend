@@ -215,7 +215,7 @@ async function test(){
  const help=(await request('/api/v1/public/access-help')).body;assert.equal(help.assistedRecoveryAvailable,false);
  await request('/api/v1/auth/recovery/code/review',{method:'POST',body:{loginId:parentSlip.loginId,recoveryCode:'SYNTHETIC-LOST-OR-INCORRECT-PROOF'},expected:401});
  const knownRecovery=(await request('/api/v1/auth/recovery/email',{method:'POST',body:{identifier:parentSlip.loginId}})).body;
- const unknownRecovery=(await request('/api/v1/auth/recovery/email',{method:'POST',body:{identifier:'missing-'+key()+'@example.invalid'}})).body;assert.deepEqual(knownRecovery,unknownRecovery);
+ const unknownRecovery=(await request('/api/v1/auth/recovery/email',{method:'POST',body:{identifier:'missing-'+key()+'@example.invalid'}})).body;const {requestId:knownRequestId,...knownMessage}=knownRecovery,{requestId:unknownRequestId,...unknownMessage}=unknownRecovery;assert.ok(knownRequestId&&unknownRequestId);assert.deepEqual(knownMessage,unknownMessage);
  await schoolPost(admin,school,`/onboarding/GUARDIAN/${student.guardianId}/activation-slips`,{},{expected:409});
  await request('/api/v1/me',{token:parent.accessToken});await login(parentSlip.loginId);
  passed('lost private proofs leave access help available without disclosing account existence or allowing a school activation slip to reset an active global account');

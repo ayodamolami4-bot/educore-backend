@@ -1139,6 +1139,7 @@ public class AssessmentService {
 
   public Object reports(Actor a, UUID school, UUID student) {
     a.school(school);
+    UUID teacher = "TEACHER".equals(a.context().role()) ? a.context().subjectId() : null;
     if ("TEACHER".equals(a.context().role())) {
       a.school(school, "TEACHER");
       if (s.db.queryForObject(
@@ -1152,9 +1153,11 @@ public class AssessmentService {
     return map(
         "items",
         s.db.queryForList(
-            "select id,cycle_id as \"cycleId\",term_id as \"termId\",revision,published_at as \"publishedAt\" from report_versions where school_id=? and student_id=? order by published_at desc,id",
+            "select r.id,r.cycle_id as \"cycleId\",r.term_id as \"termId\",r.revision,r.published_at as \"publishedAt\" from report_versions r where r.school_id=? and r.student_id=? and (?::uuid is null or exists(select 1 from assessment_cycles ac join classes cl on cl.id=ac.class_id where ac.id=r.cycle_id and cl.attendance_teacher_id=?::uuid)) order by r.published_at desc,r.id",
             school,
-            student),
+            student,
+            teacher,
+            teacher),
         "hasMore",
         false);
   }
@@ -1162,10 +1165,12 @@ public class AssessmentService {
   public Object report(Actor a, UUID school, UUID report) {
     var row =
         s.one(
-            "select student_id,snapshot from report_versions where school_id=? and id=?",
+            "select student_id,cycle_id,snapshot from report_versions where school_id=? and id=?",
             school,
             report);
-    reports(a, school, (UUID) row.get("student_id"));
+    if ("TEACHER".equals(a.school(school).role()))
+      cycle(a, school, (UUID) row.get("cycle_id"), false, true);
+    else s.learning(a, school, (UUID) row.get("student_id"));
     return s.json.value(row.get("snapshot").toString());
   }
 
