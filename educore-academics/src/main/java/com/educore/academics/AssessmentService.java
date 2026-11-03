@@ -693,6 +693,8 @@ public class AssessmentService {
               why,
               id,
               assignment);
+          if ("REVIEW".equals(c.get("state")))
+            s.db.update("update assessment_cycles set state='OPEN' where id=?", id);
           touch(id);
           s.commands.audit(
               school,
@@ -857,6 +859,75 @@ public class AssessmentService {
 
   public record Publication(String principalRemark, LocalDate nextResumptionOn) {}
 
+  public Object submitReview(Actor a, UUID school, UUID id, long version, String key) {
+    var before = cycle(a, school, id, false, true);
+    if (!classTeacher(a, before))
+      throw fail(
+          403,
+          "CLASS_TEACHER_REQUIRED",
+          "The assigned class teacher submits the reviewed class package.");
+    return command(
+        a,
+        school,
+        "assessment-cycles/" + id + "/submit-review",
+        key,
+        map("version", version),
+        () -> {
+          s.lockPlacements(school);
+          var c = cycle(a, school, id, true, true);
+          expectVersion(version, ((Number) c.get("version")).longValue());
+          editable(c, false);
+          @SuppressWarnings("unchecked")
+          var reviewed = (Map<String, Object>) review(a, school, id);
+          if (!Boolean.TRUE.equals(reviewed.get("readyToPublish")))
+            throw fail(
+                422,
+                "CLASS_PACKAGE_INCOMPLETE",
+                "Review the roster, submitted subject sheets, marks, remarks and all five ratings first.");
+          s.db.update(
+              "update assessment_cycles set state='REVIEW',version=version+1 where id=?", id);
+          s.commands.audit(
+              school,
+              a.accountId(),
+              "CLASS_PACKAGE_SUBMITTED",
+              "ASSESSMENT_CYCLE",
+              id,
+              null,
+              map("subjectSheetsReviewed", true));
+          return map("id", id, "version", version + 1, "state", "REVIEW");
+        });
+  }
+
+  public Object returnReview(Actor a, UUID school, UUID id, Reason b, long version, String key) {
+    a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    return command(
+        a,
+        school,
+        "assessment-cycles/" + id + "/return-review",
+        key,
+        map("input", b, "version", version),
+        () -> {
+          var c = cycle(a, school, id, true, true);
+          expectVersion(version, ((Number) c.get("version")).longValue());
+          if (!"REVIEW".equals(c.get("state")))
+            throw fail(
+                409,
+                "CLASS_PACKAGE_NOT_SUBMITTED",
+                "Only a submitted class package can be returned.");
+          String reason = text(b.reason(), 5, 500, "Class package return reason");
+          s.db.update("update assessment_cycles set state='OPEN',version=version+1 where id=?", id);
+          s.commands.audit(
+              school,
+              a.accountId(),
+              "CLASS_PACKAGE_RETURNED",
+              "ASSESSMENT_CYCLE",
+              id,
+              reason,
+              Map.of());
+          return map("id", id, "version", version + 1, "state", "OPEN", "reason", reason);
+        });
+  }
+
   public Object publish(Actor a, UUID school, UUID id, Publication b, long version, String key) {
     a.school(school, "PRINCIPAL");
     return command(
@@ -869,9 +940,11 @@ public class AssessmentService {
           s.lockPlacements(school);
           var c = cycle(a, school, id, true, true);
           expectVersion(version, ((Number) c.get("version")).longValue());
-          if (!Set.of("OPEN", "REVIEW").contains(c.get("state")))
+          if (!"REVIEW".equals(c.get("state")))
             throw fail(
-                409, "INVALID_ASSESSMENT_STATE", "Open and review the cycle before publication.");
+                409,
+                "INVALID_ASSESSMENT_STATE",
+                "The class teacher must submit the reviewed class package before principal publication.");
           @SuppressWarnings("unchecked")
           var review = (Map<String, Object>) review(a, school, id);
           if (!Boolean.TRUE.equals(review.get("readyToPublish")))

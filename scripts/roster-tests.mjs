@@ -46,6 +46,11 @@ export async function rosterTests(u, f) {
  assert.ok(review.sheets.some(x=>!x.active));
  for(const row of review.students)await call('PUT',`/assessment-cycles/${cycle.id}/remarks/${row.studentId}`,{remark:'The class teacher reviewed this pupil and all submitted subjects.',conduct:4,punctuality:4,cooperation:4,handwriting:4,practicalSkills:4},row.remarkVersion??1,200,teacher.accessToken);
  review=await get(`/assessment-cycles/${cycle.id}/review`);assert.equal(review.rosterSyncRequired,false);assert.equal(review.readyToPublish,true);
+ await call('POST',`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Principal cannot skip the class teacher review submission.',nextResumptionOn:day(70)},review.version,409);
+ let submitted=await call('POST',`/assessment-cycles/${cycle.id}/submit-review`,undefined,review.version,200,teacher.accessToken);assert.equal(submitted.state,'REVIEW');
+ await call('PUT',`/assessment-cycles/${cycle.id}/remarks/${children[0].id}`,{remark:'Attempt to change a submitted package without returning it.',conduct:4,punctuality:4,cooperation:4,handwriting:4,practicalSkills:4},2,409,teacher.accessToken);
+ const returnedPackage=await call('POST',`/assessment-cycles/${cycle.id}/return-review`,{reason:'Principal requested the class teacher to recheck the complete package'},submitted.version);assert.equal(returnedPackage.state,'OPEN');
+ review=await get(`/assessment-cycles/${cycle.id}/review`);await call('POST',`/assessment-cycles/${cycle.id}/submit-review`,undefined,review.version,200,teacher.accessToken);review=await get(`/assessment-cycles/${cycle.id}/review`);
  const publication=await call('POST',`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Principal approved the complete reviewed class reports.',nextResumptionOn:day(70)},review.version);
  assert.equal(publication.reports.length,2);
  const historic=publication.reports.find(x=>x.studentId===children[0].id).id;
@@ -75,7 +80,7 @@ export async function rosterTests(u, f) {
  }
  targetReview=await get(`/assessment-cycles/${target.id}/review`);
  for(const row of targetReview.students)await call('PUT',`/assessment-cycles/${target.id}/remarks/${row.studentId}`,{remark:'New class teacher reviewed this independently entered report.',conduct:4,punctuality:4,cooperation:4,handwriting:4,practicalSkills:4},row.remarkVersion??1,200,otherTeacher.accessToken);
- targetReview=await get(`/assessment-cycles/${target.id}/review`);const newReports=await call('POST',`/assessment-cycles/${target.id}/publish`,{principalRemark:'Principal approved the new class reports after separate teacher review.',nextResumptionOn:day(70)},targetReview.version);
+ targetReview=await get(`/assessment-cycles/${target.id}/review`);await call('POST',`/assessment-cycles/${target.id}/submit-review`,undefined,targetReview.version,200,otherTeacher.accessToken);targetReview=await get(`/assessment-cycles/${target.id}/review`);const newReports=await call('POST',`/assessment-cycles/${target.id}/publish`,{principalRemark:'Principal approved the new class reports after separate teacher review.',nextResumptionOn:day(70)},targetReview.version);
  const newReport=newReports.reports.find(x=>x.studentId===children[0].id).id;
  assert.ok(!(await get(`/students/${children[0].id}/reports`,teacher.accessToken)).items.some(x=>x.id===newReport));
  await call('GET','/reports/'+newReport,undefined,undefined,404,teacher.accessToken);assert.ok((await get('/reports/'+newReport,otherTeacher.accessToken)).subjects.some(x=>x.exam===40));

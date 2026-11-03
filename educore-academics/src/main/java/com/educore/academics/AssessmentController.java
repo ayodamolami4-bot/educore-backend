@@ -119,6 +119,21 @@ public class AssessmentController {
     return s.publish(Actor.current(), school, id, b, version(h), key(h));
   }
 
+  @PostMapping("/assessment-cycles/{id}/submit-review")
+  Object submitReview(
+      @PathVariable UUID school, @PathVariable UUID id, @RequestHeader HttpHeaders h) {
+    return s.submitReview(Actor.current(), school, id, version(h), key(h));
+  }
+
+  @PostMapping("/assessment-cycles/{id}/return-review")
+  Object returnReview(
+      @PathVariable UUID school,
+      @PathVariable UUID id,
+      @RequestBody AssessmentService.Reason b,
+      @RequestHeader HttpHeaders h) {
+    return s.returnReview(Actor.current(), school, id, b, version(h), key(h));
+  }
+
   @PostMapping("/assessment-cycles/{id}/reopen")
   Object reopen(
       @PathVariable UUID school,

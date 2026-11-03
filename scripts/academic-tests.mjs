@@ -49,10 +49,11 @@ export async function academicTests(u) {
        if(first&&subject.id===english.id)await call('PUT',`/assessment-cycles/${cycle.id}/sheets/${assignment.id}/marks`,{rows},teacher.accessToken,sheet.version,409);
      }
      let review=await get(`/assessment-cycles/${cycle.id}/review`);
-     if(first){assert.equal(review.readyToPublish,false);await post(`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Keep developing your knowledge and skills.',nextResumptionOn:day(10)},{headers:{'If-Match':`"v${review.version}"`},expected:422});}
+     if(first){assert.equal(review.readyToPublish,false);await post(`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Keep developing your knowledge and skills.',nextResumptionOn:day(10)},{headers:{'If-Match':`"v${review.version}"`},expected:409});}
      for(const student of review.students)await call('PUT',`/assessment-cycles/${cycle.id}/remarks/${student.studentId}`,{remark:'Consistent participation and progress during this term.',conduct:4,punctuality:4,cooperation:4,handwriting:4,practicalSkills:4},t1.accessToken,1);
      review=await get(`/assessment-cycles/${cycle.id}/review`);assert.equal(review.readyToPublish,true);
      if(first)await call('POST',`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Keep developing your knowledge and skills.',nextResumptionOn:day(10)},t1.accessToken,review.version,403);
+     await call('POST',`/assessment-cycles/${cycle.id}/submit-review`,undefined,t1.accessToken,review.version);review=await get(`/assessment-cycles/${cycle.id}/review`);
      const publicationKey=key();const published=await post(`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Keep developing your knowledge and skills.',nextResumptionOn:day(10)},{headers:{'If-Match':`"v${review.version}"`,'Idempotency-Key':publicationKey}});
      const retry=await post(`/assessment-cycles/${cycle.id}/publish`,{principalRemark:'Keep developing your knowledge and skills.',nextResumptionOn:day(10)},{headers:{'If-Match':`"v${review.version}"`,'Idempotency-Key':publicationKey}});assert.deepEqual(retry.reports,published.reports);
      if(first){cycle.firstReport=published.reports.find(r=>r.studentId===children[0].id).id;const report=await get(`/reports/${cycle.firstReport}`,parent.accessToken);assert.equal(report.average,77.5);assert.equal(report.attendance.coverageComplete,false);assert.ok(!('presentPercent'in report.attendance));}
@@ -73,7 +74,7 @@ export async function academicTests(u) {
  let sheet=await get(`/assessment-cycles/${firstCycle.id}/sheets/${firstEnglish.id}`,t1.accessToken);
  sheet=await call('PUT',`/assessment-cycles/${firstCycle.id}/sheets/${firstEnglish.id}/marks`,{rows:sheet.rows.map(r=>({studentId:r.studentId,ca1:r.ca1,ca2:r.ca2,exam:r.studentId===children[0].id?55:r.exam,examState:r.examState,note:r.note}))},t1.accessToken,sheet.version);
  await call('POST',`/assessment-cycles/${firstCycle.id}/sheets/${firstEnglish.id}/submit`,undefined,t1.accessToken,sheet.version);
- review=await get(`/assessment-cycles/${firstCycle.id}/review`);const correction=await post(`/assessment-cycles/${firstCycle.id}/publish`,{principalRemark:'The reviewed correction is approved for publication.',nextResumptionOn:day(10)},{headers:{'If-Match':`"v${review.version}"`}});
+ review=await get(`/assessment-cycles/${firstCycle.id}/review`);await call('POST',`/assessment-cycles/${firstCycle.id}/submit-review`,undefined,t1.accessToken,review.version);review=await get(`/assessment-cycles/${firstCycle.id}/review`);const correction=await post(`/assessment-cycles/${firstCycle.id}/publish`,{principalRemark:'The reviewed correction is approved for publication.',nextResumptionOn:day(10)},{headers:{'If-Match':`"v${review.version}"`}});
  const correctedId=correction.reports.find(r=>r.studentId===children[0].id).id;assert.equal((await get(`/reports/${correctedId}`,parent.accessToken)).average,85);assert.equal((await get(`/reports/${firstCycle.firstReport}`,parent.accessToken)).average,77.5);
  await post(`/promotion-batches/${stale.id}/confirm`,undefined,{headers:{'If-Match':`"v${stale.version}"`},expected:412});
  assert.equal((await get(`/students/${children[0].id}`)).enrolments.length,1);
