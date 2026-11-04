@@ -1,6 +1,6 @@
-# Implementation status — 4 November 2026
+# Backend implementation status — 4 November 2026
 
-The expanded backend is on `backend/complete-workflows`. **The full agreed application is still unfinished.** The core workflows below are implemented and exercised. The completed screen review records exact remaining contracts in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md).
+**The agreed core backend is ready for code review.** It is saved on `backend/complete-workflows` in PR #1. Frontend role-screen implementation, actual provider/device validation and production release remain separate. Read [REVIEW_HANDOVER.md](REVIEW_HANDOVER.md) for the concrete next steps and your private account inputs.
 
 ## Implemented and exercised
 
@@ -23,54 +23,40 @@ The expanded backend is on `backend/complete-workflows`. **The full agreed appli
 | Complaints | Parent/walk-in/phone intake, category/owner limits, private notes, teaching-day response target, resolution/parent acceptance or review, visible history |
 | Delivery | Leased SMTP/Expo workers, preference checks, retries/expiry, provider receipt handling, invalid-device suppression and truthful unconfigured states |
 | Imports/history | Reviewed CSV previews/mapping, row correction, asynchronous resume without repeating successes, verified sibling groups, teacher assignments, independent opening-balance approval, scoped exports and service-owned activity history |
+| Final administration controls | Provisioning status/retry and reviewed unapplied account repair; invitation history/replacement/revocation; versioned session/term edits, active-session preference, subjects and room catalogue |
+| Reports/delivery | Role-scoped catalogues, coherent bounded JSON/PDF/CSV reports, accepted broadsheets and own subject sheets; safe delivery console, notice summaries and reasoned eligibility-checked retries |
+| Grading approval | Readable adopted fixed policy, explicit Principal approval or approval at mark opening, frozen cycle policy and retained publication history |
 
 ## Verified evidence
 
-[GitHub Actions run 41837711741](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41837711741), code commit `fee70d527a897196022c947143d6189350332178`, passed:
+[GitHub Actions run 41888279723](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41888279723), code commit `5eb8d421c2407f3f3791ecff164f434973a2f89f`, passed:
 
-- **34 unit tests**, none skipped.
-- **67 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
-- Controller/catalogue/page and scenario-runner wiring checks, all five Docker image builds and both container startup checks.
+- **35 unit tests**, none skipped and no failures/errors.
+- **80 real-PostgreSQL integration scenario groups**, exercising HTTP between all five Java programs.
+- API/catalogue/page validation and all **16 scenario modules** imported and awaited.
+- All five Docker image builds and both container startup checks (school activation/sign-in and truthful unconfigured mail).
 
-The latest scenarios exercise School Office fee-summary privacy and blocked financial actions, current school/pupil/term scopes, Principal-only versioned settings and immutable history, paused checkout with continuing verification, permanent and concurrent school subaccount binding, checkout-state/filter/pagination and snapshot preservation, historical settlement reconciliation and malformed provider responses that retain one stable unknown payment reference. Earlier enrolment, schedule, attendance, assessment, learning, finance, communication and recovery checks also pass.
+New evidence covers invitation invalidation after activation review; pending-only global identity boundaries; provisioning retry and reviewed account-match replacement with cancellation/late-replay protection; stale/invalid date edits; subject/room lifecycle and legacy case-insensitive room conflicts; report preset/teacher/class/child isolation; accepted published report revisions and Unicode PDF/CSV; fixed policy approval; safe versioned delivery retry; confirmed/pending-receipt/unregistered-device no-replay boundaries; and notice summaries. Existing payments, calendars, learning, recovery, communication and imports continue through the same run.
 
-Paystack, SMTP and Expo are local test doubles. Actual provider accounts, external mailboxes/native devices and a hosted API have not been demonstrated. Local Docker startup is verified.
+Paystack, SMTP and Expo are local provider doubles. Actual provider accounts/mailboxes/native devices and a hosted gateway have not been demonstrated. Fresh PostgreSQL migrations and a targeted legacy-room fixture were exercised; that is not an upgrade/restore trial on a deployed school's dataset.
 
-## Screen review and remaining work
+## Screen/API review
 
-The review covers **94 agreed pages**: **78 MAPPED**, **15 PARTIAL**, and **1 POLICY_DEFERRED**. MAPPED describes core API coverage; the frontend role screens still require implementation and connection by the frontend team. Every PARTIAL row states its missing planned controls.
+The map covers **94 pages: 93 MAPPED, 0 PARTIAL, 1 POLICY_DEFERRED**. There are **285 controller-backed gateway operations and 126 catalogued request record types**. These counts describe core backend contracts; they do not mean the React Native role screens are complete.
 
-Remaining contracts include:
+SH09 remains help/contact only. Email/saved-code recovery is implemented and tested; a school cannot reset an active global identity. Assisted recovery after all private proofs are lost needs a separate adopted policy. The fixed 20/20/60 policy and externally executed/confirmed refund workflow follow the preserved administrator specification. Reports supply the supported catalogues/formats and synchronous READY previews, not arbitrary queries or a background export-job product.
 
-1. Provisioning diagnostics/retry and pending-invitation status/revoke controls; active global accounts still use their private recovery proofs.
-2. Existing session/term date editing and an active-session preference; subject lifecycle and a room catalogue.
-3. Broader report/export controls. The School Office fee summary, versioned payment-settings editor/history and school-wide checkout-attempt list are now implemented.
-4. Staff delivery troubleshooting/retry controls. Background delivery workers already retry under leases and respect access/preferences.
-5. Scope decisions called out in the screen map: the presentation school's grading policy is currently fixed; approved refunds are executed externally and confirmed with evidence, not sent automatically by this API.
-6. An adopted policy for recovery when all private proofs are lost. SH09 is deliberately contact/help only; staff cannot reset an active global identity. Existing verified-email/saved-code recovery and failure boundaries are tested.
-7. Actual provider/device validation, HTTPS hosting, backup/restore, operational monitoring, dependency/static security scanning and independent access/load/security review.
+## Remaining release work and ownership
 
-Tested code and the endpoint handoff are saved remotely. `main` still contains the earlier foundation; use the expanded branch for review and local development. Do not describe the whole backend or all 94 screens as complete.
+1. Your Paystack Test account/secret/approved school subaccount, authorized email sender settings and actual phone access; exact steps are in the handover. Backend secrets are entered privately.
+2. Frontend developers build/connect their role screens through the single gateway, use real activated accounts and exercise role/child/context changes. The existing shared API client already supports idempotency, versions and protected binary downloads.
+3. Actual Paystack Test checkout/webhook/verification, mailbox and native Expo/app-link checks with your environment. No live key or funds are enabled by this build.
+4. Review/merge after Ayo's walkthrough. `main` is preserved; this work is unhosted.
+5. HTTPS/private networking, durable secret/storage setup, monitoring, backup/restore drills, representative upgrade/load/security checks and independent review before real-school release.
+6. CodeQL/dependency update configuration is included for ongoing review; actual scan results/findings are recorded separately in [QUALITY_REVIEW.md](QUALITY_REVIEW.md). A configured/passing scan is not a complete security audit.
 
-## Handoff
+## Records and handoff
 
-The agreed target is preserved in [the final administrator specification](product/FINAL_ADMIN_SPEC_v1.md). [ARCHITECTURE.md](ARCHITECTURE.md) records implemented patterns; [QUALITY_REVIEW.md](QUALITY_REVIEW.md) records the researched review controls, the scenario-runner guard and remaining security evidence.
+[Preserved final administrator specification](product/FINAL_ADMIN_SPEC_v1.md) · [School rules](NIGERIAN_RULES.md) · [Architecture/patterns](ARCHITECTURE.md) · [Completion checklist](COMPLETION_CHECKLIST.md) · [Review handover](REVIEW_HANDOVER.md)
 
-- [Page-to-endpoint connections and precise gaps](SCREEN_CONNECTIONS.md)
-- [API workflow guide](API.md)
-- [All 261 implemented endpoints and 117 request record types](FRONTEND_ENDPOINTS.md)
-- [OpenAPI request catalogue](openapi.json)
-- [Endpoint CSV](ENDPOINT_CATALOGUE.csv)
-- [Local setup](SETUP.md)
-
-Internal service routes are excluded from the frontend catalogue. Official grades/money/promotion decisions stay on Java; frontend Models adapt response names, Presenters coordinate screen actions and Views render them.
-
-### Administration controls being verified
-
-The review branch now adds provisioning status/retry, invitation history/revocation (including invalidation after activation review), versioned unused-date edits, the active-session display preference, subject lifecycle and a room catalogue. Java compilation/unit checks and catalogue validation pass locally. New PostgreSQL scenarios are wired into the runner; their runtime result is not yet recorded. The verified checkpoint above remains the last completed full run until those checks finish.
-
-### Later checkpoint
-
-[Run 41884167986](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41884167986), commit `d3b135aecacd94c5d476a10b5c01a2fab97cd4eb`, passed 34 unit tests, 72 PostgreSQL scenario groups, all five Docker builds and both startup checks. This verifies provisioning retry, invitation replacement/revocation and school setup controls.
-
-Further local changes add reviewed unapplied-account repair, scoped delivery operations, bounded report catalogues/PDF/CSV downloads and explicit approval of the adopted fixed grading policy. Their new PostgreSQL scenarios are wired in; the earlier run does not verify these later changes. The full suite must pass before the final review handover is declared ready.
+[Page connections](SCREEN_CONNECTIONS.md) · [API workflows](API.md) · [Endpoint/request catalogue](FRONTEND_ENDPOINTS.md) · [OpenAPI](openapi.json) · [Endpoint CSV](ENDPOINT_CATALOGUE.csv) · [Local setup](SETUP.md)

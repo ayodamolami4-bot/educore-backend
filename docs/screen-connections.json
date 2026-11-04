@@ -1,7 +1,7 @@
 {
   "reviewedOn": "2026-11-04",
   "screenCount": 94,
-  "meaning": "MAPPED describes reviewed core API coverage, not a completed or tested frontend. PARTIAL includes a remaining planned control.",
+  "meaning": "MAPPED describes core backend contract coverage, not completed React Native screens or production readiness. SH09 retains its POLICY_DEFERRED help/contact boundary.",
   "sharedFiles": [
     {
       "method": "POST",
@@ -73,7 +73,7 @@
       "id": "AD03",
       "title": "Register or edit a student",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -134,10 +134,30 @@
         {
           "method": "POST",
           "path": "/schools/{school}/documents/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
         }
       ],
-      "notes": "",
-      "remaining": "A provisioning-error/retry screen remains to build. Enrol first, then attach admission documents to the accepted student ID."
+      "notes": "Enrol once, then use the saved event for provisioning status/retry. A reviewed replacement can correct only an unapplied staff/guardian account match; pupil identity and enrolment stay stable. Attach documents to the accepted pupil ID. Invitations are pending-account access, never an active global password reset.",
+      "remaining": ""
     },
     {
       "id": "AD04",
@@ -231,7 +251,7 @@
       "id": "AD06",
       "title": "Guardian profile and child links",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -252,10 +272,30 @@
         {
           "method": "POST",
           "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
         }
       ],
-      "notes": "",
-      "remaining": "Slips are for PENDING accounts only. Active global accounts use verified email/saved-code recovery; invitation-status/revoke controls are not exposed."
+      "notes": "Read invitation/account state before issuing private activation instructions. Replacement/revocation invalidates reviewed activation flows too. Accepted global accounts keep their private recovery proofs. A failed unapplied guardian account match has a reviewed replacement action; child-link revocation remains separate.",
+      "remaining": ""
     },
     {
       "id": "AD07",
@@ -279,7 +319,7 @@
       "id": "AD08",
       "title": "Register or edit a teacher",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "POST",
@@ -340,10 +380,30 @@
         {
           "method": "POST",
           "path": "/schools/{school}/documents/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
         }
       ],
-      "notes": "",
-      "remaining": "An explicit provisioning-error/retry action remains to build. Staff credentials have their own private document purpose and explicit teacher visibility."
+      "notes": "Registration returns the saved provisioning event; status/retry and reviewed unapplied-account repair retain the staff ID. Office manages teacher records; Principal manages administrator access. Credentials have private document purpose and explicit self visibility.",
+      "remaining": ""
     },
     {
       "id": "AD09",
@@ -448,16 +508,36 @@
         {
           "method": "GET",
           "path": "/schools/{school}/invoices/payment-settings/history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
         }
       ],
-      "notes": "Principal creates the initial approved test settlement configuration, then edits with its latest version and a reason. Accounts can read settings/history. Pausing new checkout does not stop existing payment verification. Server secrets are never entered in this form.",
+      "notes": "Principal manages administrator provisioning/invitations and versioned settlement settings; Accounts reads payment settings/history. Pausing checkout preserves existing verification. A settings/subaccount format check is not bank-ownership verification. Secrets remain backend configuration.",
       "remaining": ""
     },
     {
       "id": "AD11",
       "title": "School calendar and daily times",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -498,16 +578,28 @@
         {
           "method": "PUT",
           "path": "/schools/{school}/terms/{termId}/activities"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/academic-sessions/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/terms/{id}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/active-academic-session"
         }
       ],
-      "notes": "",
-      "remaining": "Existing session/term date editing and an active-session switch are not supplied. Dates select the applicable session. Calendar revisions are new drafts, not edits to published history."
+      "notes": "Existing unused term/session dates use reviewed versions and reasons. Terms with dated school work keep their boundaries; published calendar revisions handle exceptions. Principal selects activeSessionId using the school-settings version; it is a display default and cannot override dated placement or permissions.",
+      "remaining": ""
     },
     {
       "id": "AD12",
       "title": "Classes, subjects and departments",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -552,10 +644,26 @@
         {
           "method": "PUT",
           "path": "/schools/{school}/students/{studentId}/subject-choices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/rooms"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/rooms"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/rooms/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/subjects/{id}"
         }
       ],
-      "notes": "",
-      "remaining": "Subject rename/deactivation and a room catalogue are not supplied. Current room fields are text labels; class arms and SSS department rules are implemented."
+      "notes": "Subjects support versioned rename/deactivation while immutable codes and historical reports remain stable. Current/future assignment/curriculum use blocks retirement. Rooms have stable uppercase codes, display names, capacity, active state and versions. New uses reject inactive resources; legacy room labels retain their spelling with canonical conflict matching.",
+      "remaining": ""
     },
     {
       "id": "AD13",
@@ -583,7 +691,7 @@
       "id": "AD14",
       "title": "Build the weekly timetable",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -616,10 +724,14 @@
         {
           "method": "GET",
           "path": "/schools/{school}/timetable-plans/{planId}/review"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/rooms"
         }
       ],
-      "notes": "",
-      "remaining": "No room-catalogue endpoint. Use the agreed room labels consistently. Eligible teacher search is separate from an actual teaching assignment."
+      "notes": "Choose an active room catalogue code. Legacy text saves create a matching catalogue record. Canonical room conflicts and review checks prevent case variants or cloned inactive rooms from bypassing scheduling rules. Eligibility remains separate from actual teaching assignments.",
+      "remaining": ""
     },
     {
       "id": "AD15",
@@ -655,7 +767,7 @@
       "id": "AD16",
       "title": "Attendance and absence follow-up",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -716,16 +828,28 @@
         {
           "method": "PATCH",
           "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
         }
       ],
-      "notes": "",
-      "remaining": "A staff delivery troubleshooting/retry console remains to build. Register lists, correction requests/decisions, reviewed correction alerts and saved follow-up cases are implemented."
+      "notes": "Submitted-only attendance, teacher requests, stale-source office decisions, reviewed family alerts and private follow-up notes have explicit workflows. Staff use child/category/resource delivery filters and a separate delivery-command version. Retry rechecks current recipient/device/preferences and cannot replay confirmed, expired, invalid-device or pending-receipt sends.",
+      "remaining": ""
     },
     {
       "id": "AD17",
       "title": "View or correct a class register",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -782,16 +906,28 @@
         {
           "method": "PATCH",
           "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
         }
       ],
-      "notes": "",
-      "remaining": "A staff delivery troubleshooting/retry console remains to build. Register lists, correction requests/decisions, reviewed correction alerts and saved follow-up cases are implemented."
+      "notes": "Submitted-only attendance, teacher requests, stale-source office decisions, reviewed family alerts and private follow-up notes have explicit workflows. Staff use child/category/resource delivery filters and a separate delivery-command version. Retry rechecks current recipient/device/preferences and cannot replay confirmed, expired, invalid-device or pending-receipt sends.",
+      "remaining": ""
     },
     {
       "id": "AD18",
       "title": "Set exams and grading rules",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -840,10 +976,18 @@
         {
           "method": "POST",
           "path": "/schools/{school}/exam-schedules/{scheduleId}/publish"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/grading-policy"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{id}/approve-policy"
         }
       ],
-      "notes": "",
-      "remaining": "The approved 20/20/60 policy and A–F bands are fixed and returned by the cycle. A configurable grading-policy builder is not implemented."
+      "notes": "The adopted 20/20/60, one-decimal, A-F and no-rank policy is read-only and frozen per cycle. Principal explicitly approves it in DRAFT or records approval when opening marks. A configurable rule builder is outside the adopted presentation-school policy; no setting can rewrite accepted reports.",
+      "remaining": ""
     },
     {
       "id": "AD19",
@@ -887,7 +1031,7 @@
       "id": "AD20",
       "title": "Reports",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -916,10 +1060,34 @@
         {
           "method": "GET",
           "path": "/schools/{school}/promotion-batches/{batchId}/outcomes.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/{kind}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/{kind}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/{kind}"
         }
       ],
-      "notes": "",
-      "remaining": "Direct CSV/PDF downloads exist for the listed records. A general report catalogue, arbitrary report builder and generic export-job service are not supplied."
+      "notes": "Select permitted academic, finance or complaint catalogues by staff preset. JSON previews return READY synchronously; the same report request with format=PDF or CSV produces a protected download. Specific filters, current role/class-lead/subject scope, accepted report snapshots and 1,000-row bounds are enforced. Refresh regenerates the view; arbitrary queries/background export jobs are outside these supported report types.",
+      "remaining": ""
     },
     {
       "id": "AD21",
@@ -1027,7 +1195,7 @@
       "id": "AD24",
       "title": "Payments and money checks",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1056,16 +1224,36 @@
         {
           "method": "GET",
           "path": "/schools/{school}/payment-intents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/{kind}"
         }
       ],
-      "notes": "Confirmed payments, checkout attempts and settled bank/provider money are separate views. Principal/Accounts can inspect attempts; PENDING or INIT_UNKNOWN is not payment. Old school subaccounts remain available for reviewed reconciliation.",
-      "remaining": "A staff notice/receipt delivery troubleshooting and retry console remains to build. The school-wide checkout list has pupil/invoice/state/reference/date filters and preserved payer/settlement snapshots."
+      "notes": "Confirmed payments, checkout attempts and bank/provider settlement remain separate. Accounts/Principal can inspect attempt history, fee delivery states and bounded finance reports. Safe delivery metadata excludes payer contact/proofs and message content; retry does not turn queued mail into a confirmed delivery.",
+      "remaining": ""
     },
     {
       "id": "AD25",
       "title": "Payment detail and refund review",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1098,10 +1286,18 @@
         {
           "method": "POST",
           "path": "/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/{kind}"
         }
       ],
-      "notes": "",
-      "remaining": "Approved refunds are paid through the bank/provider dashboard and confirmed with evidence. No backend endpoint automatically sends refund money."
+      "notes": "Prepare/request and independently approve refunds, execute through the bank/provider, then confirm with evidence/authoritative provider outcome. This is the agreed external-disbursement workflow; this API does not automatically send refund money. Refund report states distinguish request/approval from confirmed return.",
+      "remaining": ""
     },
     {
       "id": "AD26",
@@ -1159,7 +1355,7 @@
       "id": "AD28",
       "title": "School announcements",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1184,10 +1380,26 @@
         {
           "method": "POST",
           "path": "/schools/{school}/notices/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices/{id}/delivery-summary"
         }
       ],
-      "notes": "",
-      "remaining": "No whole-notice recipient delivery summary or manual failed-delivery retry action. Background delivery workers retry; per-account notification delivery is available in SH06."
+      "notes": "Principal/Office can inspect a published notice recipient/read summary and per-notification channel states. Manual retry targets a failed delivery with reason/version and preserves current access/preferences, leases and expiry. Provider receipt and in-app reading remain different evidence.",
+      "remaining": ""
     },
     {
       "id": "AD29",
@@ -1259,7 +1471,7 @@
       "id": "AD32",
       "title": "Complaint details and resolution",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1280,10 +1492,30 @@
         {
           "method": "GET",
           "path": "/schools/{school}/complaints/{caseId}/history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/{kind}"
         }
       ],
-      "notes": "",
-      "remaining": "No staff-wide delivery retry console. Case entries, private staff notes, ownership, resolution/acceptance and visible history are implemented."
+      "notes": "Case ownership/category and private-note rules apply. Staff can inspect permitted case delivery metadata; only the current owner or Principal retries a case delivery. Complaint register/backlog exports retain preset limits and omit message bodies/private notes.",
+      "remaining": ""
     },
     {
       "id": "AD33",
@@ -1821,7 +2053,7 @@
       "id": "TE15",
       "title": "Teaching reports",
       "role": "Teacher",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1834,10 +2066,18 @@
         {
           "method": "GET",
           "path": "/schools/{school}/reports/{reportId}/pdf"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/{kind}"
         }
       ],
-      "notes": "",
-      "remaining": "Class broadsheets and final report PDFs require the class-lead scope. A general subject-teacher report/export catalogue is not supplied."
+      "notes": "The catalogue exposes only teacher-permitted reports. PUBLISHED_BROADSHEET uses the current class-lead scope and latest accepted snapshots; SUBJECT_MARKS uses cycleId/assignmentId and the assigned-subject/class-lead scope. Working sheets are labelled; they do not become family reports. PDF/CSV downloads repeat authorization.",
+      "remaining": ""
     },
     {
       "id": "TE16",

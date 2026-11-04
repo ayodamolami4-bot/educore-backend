@@ -42,13 +42,23 @@ The scenario-module convention is one exported `async function` per `*-tests.mjs
 
 ## Work still required before real-school release
 
-- Enable and review dependency-vulnerability and static security scans. The current CI builds, formats, validates contracts and executes tests; no CodeQL/Dependabot/SCA scan result is claimed.
+- Review ongoing dependency-vulnerability and static analysis findings. CodeQL configuration now scans Java and JavaScript/TypeScript, checks the actual SARIF output and rejects high/critical results. Dependabot update configuration is included. Configuration and synthetic gate tests do not establish an actual clean scan or a complete SCA review.
 - Expand an independent authorization matrix across sensitive routes, including changed roles/guardian links, worker execution, downloads/exports and connection reuse. The current shared-school databases use application checks/constraints; PostgreSQL row-level security is not implemented.
 - Test migrations on a representative existing dataset as well as fresh databases. Applied Flyway files must remain unchanged.
 - Validate actual Paystack test-account flows, external mailbox delivery and native Expo devices. Do not use real money or actual pupil records for development checks.
 - Complete HTTPS hosting, private service networking, durable secret management, rate/abuse controls, monitoring and a tested backup/restore process.
 - Review file malware scanning, operational limits and load behaviour; existing file type/hash/size checks are not a malware scanner.
 - Have another engineer review critical access, payment, grading and promotion behaviour before release. Automated and AI reviews support that review; they do not supply independent sign-off.
-- Finish the controls in the 15 PARTIAL pages, resolve the explicitly deferred recovery policy if scope changes, and connect/test the React Native role screens.
+- Core controls now have 35 unit tests, 80 PostgreSQL scenario groups and full container evidence. Connect/test the React Native role screens and retain SH09 help-only unless a different recovery policy is adopted.
 
 No new feature policy, paid hosting, provider delivery or production-data action is authorized by this review record.
+
+## Final core-control checkpoint
+
+[Run 41888279723](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41888279723) verifies 35 unit tests, 80 PostgreSQL scenario groups, all five Docker builds and both startup checks at `5eb8d421c2407f3f3791ecff164f434973a2f89f`. The final map has 285 public operations, 93 MAPPED pages and the one retained help-only policy boundary. Provider/device/production evidence remains separate.
+
+The final review corrected the earlier backlog's scope wording: the adopted grading policy is fixed but now explicitly Principal approved; refunds are externally executed and then confirmed; report catalogues supply the supported bounded synchronous previews/PDF/CSV rather than an arbitrary query/export-job builder. These decisions are recorded in the preserved administrator target and the current handover, not silently treated as new missing endpoints.
+
+CodeQL first-run verification is pending publication of its workflow on this review branch. The workflow builds Java for extraction, analyzes JavaScript/TypeScript and prints actual result counts from SARIF. No SARIF file is a failing check. The gate itself was verified with synthetic empty and high-severity results; that is gate validation, not a source-code scan. Dependabot's normal update configuration takes effect on the default branch after the reviewed merge.
+
+[GitHub's compiled-language CodeQL guidance](https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/manage-your-configuration/codeql-for-compiled-languages) documents the v4 action and manual Java extraction used here.

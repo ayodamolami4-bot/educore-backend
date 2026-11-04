@@ -2,7 +2,7 @@
 
 Use **`http://localhost:8080/api/v1`** in local web development. The GitHub repository URL is source code, not a running API. A physical phone needs the development computer's reachable address.
 
-The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOINTS.md): **261 gateway operations and 117 request record types**. Import [openapi.json](openapi.json) into an API client, or filter [ENDPOINT_CATALOGUE.csv](ENDPOINT_CATALOGUE.csv). [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) identifies remaining work. Earlier proposal PDFs are not the runtime contract.
+The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOINTS.md): **285 gateway operations and 126 catalogued request record types**. Import [openapi.json](openapi.json) into an API client, or filter [ENDPOINT_CATALOGUE.csv](ENDPOINT_CATALOGUE.csv). [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) identifies remaining work. Earlier proposal PDFs are not the runtime contract.
 
 ## Shared rules
 
@@ -170,9 +170,9 @@ Directory parameters are optional and combine with cursor/limit pagination:
 
 Teacher directory rows contain teachers only. Eligibility filters search qualifications; actual class filters search active teaching assignments. The app must not treat eligibility as a work assignment. Searches are limited to 80 characters and remain school-scoped. School guardian contact edits never change the parent's global login contact. Another principal must have activated their account before the last activated principal can be removed.
 
-## Explicitly unfinished controls
+## Core coverage and release boundaries
 
-Use the PARTIAL rows in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) as the remaining contract backlog. The remaining contracts include provisioning diagnostics, invitation management, broader session/subject/room administration, payment administration, report/export controls and delivery troubleshooting. Materials, physical-work receipt, verified historical/admission documents and formal attendance reviews have the explicit workflows below. Keep any action listed as remaining in the screen map unavailable until its contract exists.
+[SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) maps all 94 pages: 93 core contracts are mapped and SH09 retains its help-only policy boundary. Provisioning, invitations, setup/resource administration, supported report/export types and delivery operations have the explicit workflows below. The mapping describes backend coverage, not completed frontend screens or production/provider validation. Read [REVIEW_HANDOVER.md](REVIEW_HANDOVER.md) for the account, device and review steps.
 
 SH09 remains contact/help only: no staff-assisted global password reset is adopted. Failed or missing recovery proofs cannot consume an active account's school activation slip or reveal whether an account has verified email. Actual provider/device validation and deployment remain separate from local test doubles.
 
@@ -231,7 +231,7 @@ A malformed provider initialization response is an unknown outcome, not proof of
 - `PATCH /subjects/{id}` takes `name`, `active`, reason and version. Subject codes/core identity remain stable; current/future assigned or curriculum subjects cannot be retired. New assignments/curricula/qualifications require active subjects.
 - `GET /rooms` lists room IDs, stable uppercase codes, display names, capacity, active state and versions with active/cursor filters. `POST /rooms` and `PATCH /rooms/{id}` take code/name/capacity/active/reason. Codes are immutable. Current/future room references block deactivation; new saves reject inactive rooms. Legacy room text is indexed and new text entry creates a matching catalogue item; existing published labels are retained.
 
-These additions have Java and catalogue checks; the added real-database scenarios must pass before their screen rows are marked verified.
+These controls are included in the verified real-PostgreSQL/container checkpoint recorded in IMPLEMENTATION_STATUS.md.
 
 ## Reviewed provisioning repair
 

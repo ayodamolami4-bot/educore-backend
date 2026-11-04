@@ -27,7 +27,7 @@ Public access goes through the gateway. Business `/internal/*` endpoints accept 
 
 Academics saves the student, dated class placement, guardian link and an outbox event **in one local transaction**. It returns `ACCOUNTS_PENDING`. A worker sends the event to Identity. Identity deduplicates the event with its inbox, then creates or explicitly links permitted accounts. A lost response is retried without creating another account. The pending account can then receive a school-issued activation slip.
 
-An outbox is a saved delivery list: committing the school change also commits the item that must be delivered. It is not a Kafka broker. Inbox records stop a repeated delivery from applying the same work again. A short delivery lease permits safe outbox workers; retries back off and stop after the configured attempt limit. Operational monitoring and manual failed-event repair screens remain to build.
+An outbox is a saved delivery list: committing the school change also commits the item that must be delivered. It is not a Kafka broker. Inbox records stop a repeated delivery from applying the same work again. A short delivery lease permits safe outbox workers; retries back off and stop after the configured attempt limit. School-scoped provisioning APIs expose safe status/retry information. A reviewed initial-account match repair serializes cancellation against Identity processing, preserves the original event and queues a replacement. Already-applied/provisioned identities cannot be rematched; a cancelled old event cannot apply later. Operational alerting/hosted monitoring remain release work.
 
 This build uses local database transactions and outbox/inbox coordination. It does not claim a complete multi-step Saga orchestrator. Kafka and Kubernetes are not required for the current runnable project; adding them before measuring a need would add separate systems for the beginner team to operate.
 
@@ -83,3 +83,11 @@ The outbox/inbox and ledger give exactly-once **local effects** for deduplicated
 | Docker Compose and GitHub Actions | Repeatable local services and checked builds/integration/container startup. This does not deploy a hosted system. |
 
 Kafka, Kubernetes, an AWS deployment, a complete Saga orchestrator and a circuit-breaker implementation are not part of the present build. They were discussed as options; adding any requires a concrete operational need and an explicit decision. Current coordination is the local-transaction/outbox/inbox design above.
+
+## Administration and report boundaries
+
+Pending invitation history/replacement/revocation cannot reset active global accounts. Account locks and linked activation-flow proofs make replacement/revocation apply after a phone has reviewed an invitation but before password setup. Date/resource administration uses versions, reasons and in-use guards; active-session selection is a display preference. Room codes are canonical for new booking conflicts while legacy accepted labels remain unchanged.
+
+Staff report catalogues live in the service owning the data. Repeatable-read database snapshots keep each report internally consistent; downloads recheck current preset/class-lead/subject permissions. New report views reject oversized results rather than truncating and keep accepted publications separate from private working sheets. The fixed adopted grading policy has an explicit Principal approval record, including approval on mark opening for existing clients.
+
+Delivery operation versions are separate from in-app read versions. Manual retry checks scope, current case ownership, leases, windows and current recipient/device/email preferences. Worker rechecks remain in place. Authentication mail is excluded from school delivery consoles, and a provider receipt is never described as an app read. CodeQL and dependency update configuration support review; they do not replace independent release/security review.

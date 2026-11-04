@@ -41,11 +41,11 @@ On Windows PowerShell use `./mvnw.cmd verify`. Use a **JDK**, which includes the
 
 The expanded backend is saved on [backend/complete-workflows](https://github.com/ayodamolami4-bot/educore-backend/tree/backend/complete-workflows). It includes school/staff/student/guardian administration, calendars/curriculum, timetable and examination drafts, attendance, marks/report publication, promotion/graduation, materials, app/physical assignments, verified school documents, fee plans and reconciliation, parent communication/complaints, delivery workers and reviewed imports/exports.
 
-The latest verified code passed **34 unit tests, 67 PostgreSQL integration groups, all five Docker builds and two container startup checks**. The complete screen design still has missing contracts and release work; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
+The latest verified code passed **35 unit tests, 80 PostgreSQL integration groups, all five Docker builds and two container startup checks**. Core contracts now map 93 pages with one retained help-only recovery-policy boundary. Frontend/provider/device and release work remain; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
 
 ## Frontend handoff
 
-Start with [SCREEN_CONNECTIONS.md](docs/SCREEN_CONNECTIONS.md): all 94 agreed pages are mapped to real endpoints, with remaining controls labelled. Then read [API.md](docs/API.md). [FRONTEND_ENDPOINTS.md](docs/FRONTEND_ENDPOINTS.md) lists all **261 implemented gateway operations** and **117 request record types**. There is also an [OpenAPI request catalogue](docs/openapi.json) and a [filterable endpoint CSV](docs/ENDPOINT_CATALOGUE.csv).
+Start with [REVIEW_HANDOVER.md](docs/REVIEW_HANDOVER.md), then [SCREEN_CONNECTIONS.md](docs/SCREEN_CONNECTIONS.md): all 94 agreed pages are mapped to real endpoints, with remaining controls labelled. Then read [API.md](docs/API.md). [FRONTEND_ENDPOINTS.md](docs/FRONTEND_ENDPOINTS.md) lists all **285 implemented gateway operations** and **126 request record types**. There is also an [OpenAPI request catalogue](docs/openapi.json) and a [filterable endpoint CSV](docs/ENDPOINT_CATALOGUE.csv).
 
 The frontend Model owns API calls and response mapping, the Presenter owns screen state/actions, and the View owns rendering. School/role/child permissions and official calculations are enforced on Java.
 

@@ -17,11 +17,14 @@ Each implemented item requires permissions, failure states, history and real-dat
 - [x] Read-only School Office fee status, Principal versioned settlement settings/history, scoped checkout attempts, permanent school subaccounts and preserved unknown provider outcomes.
 - [x] Scoped communication/complaints and leased configured delivery.
 - [x] Reviewed CSV imports/resume, opening balances, scoped exports and service-owned activity.
-- [x] Review all 94 pages and validate the 261-operation request catalogue against current controllers.
-- [ ] Implement the remaining controls in the 15 PARTIAL screen rows.
-- [ ] Adopt and implement an assisted-recovery policy beyond the agreed SH09 help-only boundary.
-- [ ] Enable dependency/static security scanning and expand the independent authorization review; existing targeted tests are not a complete security audit.
+- [x] Review all 94 pages and validate the 285-operation request catalogue against current controllers.
+- [x] Complete the remaining account, school setup, report and delivery controls; the final map has 93 MAPPED rows and no PARTIAL rows.
+- [x] Preserve the agreed SH09 help-only boundary and tested verified-email/saved-code recovery; active global identities cannot be reset by school invitations.
+- [x] Add CodeQL analysis, an actual-SARIF high/critical finding gate and Dependabot update configuration. Scan results/review are separate evidence.
+- [ ] Expand independent authorization/security review; targeted tests and automated scans are not a complete audit.
 - [ ] Complete actual provider/device validation, hosting, backup/restore and independent release/security review.
 - [ ] Build/connect and test the React Native role screens with the frontend team.
 
 A checked backend item is not a completed frontend page or evidence of a live provider/deployment.
+
+A future staff-assisted global-recovery product requires an adopted verification policy. Arbitrary grading/report builders and automatic refund disbursement are not part of the preserved presentation-school scope.
