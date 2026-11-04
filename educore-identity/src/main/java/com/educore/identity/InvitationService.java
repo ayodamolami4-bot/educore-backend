@@ -27,14 +27,6 @@ public class InvitationService {
 
   private Map<String, Object> subject(Actor a, UUID school, String type, UUID subject) {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
-    var rows =
-        db.queryForList(
-            "select a.id,a.status,a.login_id from provisioned_subjects p join accounts a on a.id=p.account_id where p.school_id=? and p.subject_type=? and p.subject_id=?",
-            school,
-            type,
-            subject);
-    if (rows.isEmpty())
-      throw fail(404, "NOT_FOUND", "This school account has not been provisioned.");
     if ("STAFF".equals(type)
         && "SCHOOL_OFFICE".equals(a.context().role())
         && db.queryForObject(
@@ -47,6 +39,14 @@ public class InvitationService {
           403,
           "ADMINISTRATOR_INVITATION_FORBIDDEN",
           "Only the principal manages administrator invitations.");
+    var rows =
+        db.queryForList(
+            "select a.id,a.status,a.login_id from provisioned_subjects p join accounts a on a.id=p.account_id where p.school_id=? and p.subject_type=? and p.subject_id=?",
+            school,
+            type,
+            subject);
+    if (rows.isEmpty())
+      throw fail(404, "NOT_FOUND", "This school account has not been provisioned.");
     return rows.get(0);
   }
 
