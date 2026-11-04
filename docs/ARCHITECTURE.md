@@ -45,9 +45,11 @@ This build uses local database transactions and outbox/inbox coordination. It do
 
 ## Payment boundaries
 
-A checkout is an intention to pay. Finance creates a stable reference before calling Paystack. A timeout becomes an unknown/pending outcome that can be verified later. A valid webhook signature wakes verification; the provider's server-side response must match reference, amount, NGN currency and test domain before local allocation. A duplicate success does not allocate twice. Overpayments and mismatches are recorded for review.
+A checkout is an intention to pay. Finance creates a stable reference before calling Paystack. A timeout or malformed provider response becomes an unknown/pending outcome that retains its original reference for later verification. A valid webhook signature wakes verification; the provider's server-side response must match reference, amount, NGN currency and test domain before local allocation. A duplicate success does not allocate twice. Overpayments and mismatches are recorded for review.
 
-Verification of one transaction and bank/provider **settlement reconciliation** are different jobs. This build implements both transaction verification and reviewed bank/provider statement reconciliation, including gross/fee/net differences and reasoned exceptions. Approved refunds remain pending until the external bank/provider outcome is confirmed. The API does not automatically send refund money. Provider integration has been exercised with local test doubles, not real funds.
+Verification of one transaction and bank/provider **settlement reconciliation** are different jobs. This build implements both transaction verification and reviewed bank/provider statement reconciliation, including gross/fee/net differences and reasoned exceptions. Approved refunds remain pending until the external bank/provider outcome is confirmed. The API does not automatically send refund money. Principal creates the first school test settlement configuration, then uses versioned reasoned updates; Accounts can read its history. Settlement subaccounts remain permanently school-bound, so concurrent claims have one winner and older references remain reconcilable. Each new checkout retains its original settlement settings and school pupil/payer snapshot. School Office receives a separate read-only fee-status summary.
+
+Provider integration has been exercised with local test doubles, not real funds. Configuration readiness does not verify bank/subaccount ownership.
 
 ## Metadata and school rules
 

@@ -14,10 +14,11 @@ Each implemented item requires permissions, failure states, history and real-dat
 - [x] Verified admission/historical/staff documents, revision visibility and ready-image school logos.
 - [x] Teacher attendance correction requests, stale-source approval/decline, reviewed family alerts and saved office follow-ups.
 - [x] Fee plans/batches, independent approvals, confirmed refunds, settlement review and receipts.
+- [x] Read-only School Office fee status, Principal versioned settlement settings/history, scoped checkout attempts, permanent school subaccounts and preserved unknown provider outcomes.
 - [x] Scoped communication/complaints and leased configured delivery.
 - [x] Reviewed CSV imports/resume, opening balances, scoped exports and service-owned activity.
-- [x] Review all 94 pages and validate the 256-operation request catalogue against current controllers.
-- [ ] Implement the remaining controls in the 17 PARTIAL screen rows.
+- [x] Review all 94 pages and validate the 261-operation request catalogue against current controllers.
+- [ ] Implement the remaining controls in the 15 PARTIAL screen rows.
 - [ ] Adopt and implement an assisted-recovery policy beyond the agreed SH09 help-only boundary.
 - [ ] Enable dependency/static security scanning and expand the independent authorization review; existing targeted tests are not a complete security audit.
 - [ ] Complete actual provider/device validation, hosting, backup/restore and independent release/security review.

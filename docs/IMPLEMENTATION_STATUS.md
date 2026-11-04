@@ -17,8 +17,8 @@ The expanded backend is on `backend/complete-workflows`. **The full agreed appli
 | Promotion/graduation | Published-evidence preview, documented exceptions, stale-source checks, JSS3 pathways, ended-year principal confirmation, repeat-safe placements and SSS3 school completion |
 | Learning/files | Class/subject materials and accepted revisions; app/physical assignments, teacher-recorded receipts, private feedback drafts/release, accepted learner history and protected encrypted PDF/JPG/PNG attachments |
 | School documents | Verified admission copies, historical paper reports and staff credentials; principal-only historical publication, private revision drafts, per-revision visibility, archive and school-logo selection; scans never manufacture official marks |
-| Fees | Immutable invoice lines, partial payments, cash/verified-bank records, test hosted checkout, signed webhook intake/verification, fee plans/batches, independent adjustment approval, confirmed refunds and invoice/receipt PDFs |
-| Reconciliation | Statement/provider settlement review, gross/fee/net differences, permanent references, reviewed exceptions and finance overview |
+| Fees | Immutable invoices, partial/manual/test payments, reviewed adjustments/refunds and PDFs; School Office fee-status summary, versioned Principal settlement settings/history, school checkout-attempt filters and preserved payer/settlement snapshots |
+| Reconciliation | Statement/provider settlement review, gross/fee/net differences, permanent school-bound references, historical subaccount selection, reviewed exceptions and finance overview |
 | Communication | School/class/department notices, child-linked parent/class-lead/office threads, current-participant checks and private attachments |
 | Complaints | Parent/walk-in/phone intake, category/owner limits, private notes, teaching-day response target, resolution/parent acceptance or review, visible history |
 | Delivery | Leased SMTP/Expo workers, preference checks, retries/expiry, provider receipt handling, invalid-device suppression and truthful unconfigured states |
@@ -26,25 +26,25 @@ The expanded backend is on `backend/complete-workflows`. **The full agreed appli
 
 ## Verified evidence
 
-[GitHub Actions run 41828518009](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41828518009), code commit `5266c16c63caccd76cb57283ece2b7479c974f8b`, passed:
+[GitHub Actions run 41837711741](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41837711741), code commit `fee70d527a897196022c947143d6189350332178`, passed:
 
-- **33 unit tests**, none skipped.
-- **62 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
-- Controller/catalogue/page connection checks, all five Docker image builds and both container startup checks.
+- **34 unit tests**, none skipped.
+- **67 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
+- Controller/catalogue/page and scenario-runner wiring checks, all five Docker image builds and both container startup checks.
 
-The latest scenarios exercise material publication/revision and optional-subject audiences, private files and sibling/school isolation, physical-work receipt and duplicate-safe revisions, private feedback release/stale-source checks, verified historical/admission/staff documents, school logos, teacher correction requests/declines, stale attendance approvals, official family history, reviewed correction alerts and private follow-up evidence/history. Existing enrolment, schedule, assessment, finance, communication and recovery checks also pass.
+The latest scenarios exercise School Office fee-summary privacy and blocked financial actions, current school/pupil/term scopes, Principal-only versioned settings and immutable history, paused checkout with continuing verification, permanent and concurrent school subaccount binding, checkout-state/filter/pagination and snapshot preservation, historical settlement reconciliation and malformed provider responses that retain one stable unknown payment reference. Earlier enrolment, schedule, attendance, assessment, learning, finance, communication and recovery checks also pass.
 
 Paystack, SMTP and Expo are local test doubles. Actual provider accounts, external mailboxes/native devices and a hosted API have not been demonstrated. Local Docker startup is verified.
 
 ## Screen review and remaining work
 
-The review covers **94 agreed pages**: **76 MAPPED**, **17 PARTIAL**, and **1 POLICY_DEFERRED**. MAPPED describes core API coverage; the frontend role screens still require implementation and connection by the frontend team. Every PARTIAL row states its missing planned controls.
+The review covers **94 agreed pages**: **78 MAPPED**, **15 PARTIAL**, and **1 POLICY_DEFERRED**. MAPPED describes core API coverage; the frontend role screens still require implementation and connection by the frontend team. Every PARTIAL row states its missing planned controls.
 
 Remaining contracts include:
 
 1. Provisioning diagnostics/retry and pending-invitation status/revoke controls; active global accounts still use their private recovery proofs.
 2. Existing session/term date editing and an active-session preference; subject lifecycle and a room catalogue.
-3. Broader report/export controls, a school-wide checkout-attempt list, payment-settings reads/editor and the School Office fee-only read preset.
+3. Broader report/export controls. The School Office fee summary, versioned payment-settings editor/history and school-wide checkout-attempt list are now implemented.
 4. Staff delivery troubleshooting/retry controls. Background delivery workers already retry under leases and respect access/preferences.
 5. Scope decisions called out in the screen map: the presentation school's grading policy is currently fixed; approved refunds are executed externally and confirmed with evidence, not sent automatically by this API.
 6. An adopted policy for recovery when all private proofs are lost. SH09 is deliberately contact/help only; staff cannot reset an active global identity. Existing verified-email/saved-code recovery and failure boundaries are tested.
@@ -58,7 +58,7 @@ The agreed target is preserved in [the final administrator specification](produc
 
 - [Page-to-endpoint connections and precise gaps](SCREEN_CONNECTIONS.md)
 - [API workflow guide](API.md)
-- [All 256 implemented endpoints and 116 request record types](FRONTEND_ENDPOINTS.md)
+- [All 261 implemented endpoints and 117 request record types](FRONTEND_ENDPOINTS.md)
 - [OpenAPI request catalogue](openapi.json)
 - [Endpoint CSV](ENDPOINT_CATALOGUE.csv)
 - [Local setup](SETUP.md)

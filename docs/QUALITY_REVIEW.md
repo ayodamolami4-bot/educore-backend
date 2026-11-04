@@ -49,6 +49,6 @@ The scenario-module convention is one exported `async function` per `*-tests.mjs
 - Complete HTTPS hosting, private service networking, durable secret management, rate/abuse controls, monitoring and a tested backup/restore process.
 - Review file malware scanning, operational limits and load behaviour; existing file type/hash/size checks are not a malware scanner.
 - Have another engineer review critical access, payment, grading and promotion behaviour before release. Automated and AI reviews support that review; they do not supply independent sign-off.
-- Finish the controls in the 17 PARTIAL pages, resolve the explicitly deferred recovery policy if scope changes, and connect/test the React Native role screens.
+- Finish the controls in the 15 PARTIAL pages, resolve the explicitly deferred recovery policy if scope changes, and connect/test the React Native role screens.
 
 No new feature policy, paid hosting, provider delivery or production-data action is authorized by this review record.

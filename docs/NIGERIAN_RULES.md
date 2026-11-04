@@ -34,7 +34,7 @@ The API must calculate official totals and recommendations. A phone may show a p
 
 Additional agreed boundaries:
 
-- Administration has Principal, School Office and Accounts presets. Only Principal manages administrator privileges and final academic/promotion publication. School Office fee-only access remains listed as a missing control.
+- Administration has Principal, School Office and Accounts presets. Only Principal manages administrator privileges and final academic/promotion publication. School Office reads the selected pupil fee-status summary; full invoice/payment detail and money-changing actions remain with Principal/Accounts.
 - Teacher eligibility is different from actual teaching assignments. A new pupil joins the dated class-arm timetable and applicable SSS/optional-subject group; the school does not build a separate timetable per pupil.
 - A phone number or matching name alone does not merge global parent identities. School edits to guardian contact data never reset the parent's global password/recovery identity. Existing accounts require explicit verified linking.
 - For sessions from 2026/27, the presentation project's admission policy restricts fresh/transfer SSS3 entry. Principal's documented legacy-data migration is a separate reviewed path. This describes the adopted application boundary, not a new claim about national law.
