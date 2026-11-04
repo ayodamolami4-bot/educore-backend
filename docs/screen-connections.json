@@ -143,7 +143,7 @@
       "id": "AD04",
       "title": "Student profile",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -204,10 +204,14 @@
         {
           "method": "POST",
           "path": "/schools/{school}/documents/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/fee-status"
         }
       ],
-      "notes": "",
-      "remaining": "The School Office fee-only read preset remains to build. Historical document copies are separate from system-generated report marks."
+      "notes": "School Office uses /invoices/fee-status for a selected pupil and optional term. It receives read-only balances/status, not invoice lines, payer details or payment evidence. Principal/Accounts retain full invoice permissions.",
+      "remaining": ""
     },
     {
       "id": "AD05",
@@ -379,7 +383,7 @@
       "id": "AD10",
       "title": "School settings and admin access",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -432,10 +436,22 @@
         {
           "method": "GET",
           "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/payment-settings"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/invoices/payment-settings"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/payment-settings/history"
         }
       ],
-      "notes": "",
-      "remaining": "A read/update payment-settlement configuration editor remains to build. Ready-image school logos, versioned text fields and staff access are implemented."
+      "notes": "Principal creates the initial approved test settlement configuration, then edits with its latest version and a reason. Accounts can read settings/history. Pausing new checkout does not stop existing payment verification. Server secrets are never entered in this form.",
+      "remaining": ""
     },
     {
       "id": "AD11",
@@ -1036,10 +1052,14 @@
         {
           "method": "GET",
           "path": "/schools/{school}/reconciliation/exceptions"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payment-intents"
         }
       ],
-      "notes": "",
-      "remaining": "A school-wide list of every checkout attempt and a notice/receipt delivery retry console are not supplied. Confirmed payments, known verification exceptions and settlement review are available."
+      "notes": "Confirmed payments, checkout attempts and settled bank/provider money are separate views. Principal/Accounts can inspect attempts; PENDING or INIT_UNKNOWN is not payment. Old school subaccounts remain available for reviewed reconciliation.",
+      "remaining": "A staff notice/receipt delivery troubleshooting and retry console remains to build. The school-wide checkout list has pupil/invoice/state/reference/date filters and preserved payer/settlement snapshots."
     },
     {
       "id": "AD25",

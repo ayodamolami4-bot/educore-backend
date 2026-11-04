@@ -13,6 +13,54 @@ public class InternalAcademicController {
     this.s = s;
   }
 
+  public record FinanceContext(UUID schoolId, Actor actor, UUID studentId) {}
+
+  @PostMapping("/internal/finance-context")
+  Object financeContext(@RequestBody FinanceContext b) {
+    Actor.internalOnly("finance");
+    var a = b.actor();
+    var c = a.school(b.schoolId(), "PRINCIPAL", "ACCOUNTS", "PARENT");
+    var student =
+        s.one(
+            "select full_name,admission_number from students where school_id=? and id=?",
+            b.schoolId(),
+            b.studentId());
+    String payerName;
+    if ("PARENT".equals(c.role())) {
+      a.child(b.studentId(), true);
+      s.one(
+          "select student_id from guardian_links where school_id=? and student_id=? and guardian_id=? and active and payer_access",
+          b.schoolId(),
+          b.studentId(),
+          c.subjectId());
+      payerName =
+          (String)
+              s.one(
+                      "select full_name from guardians where school_id=? and id=?",
+                      b.schoolId(),
+                      c.subjectId())
+                  .get("full_name");
+    } else {
+      payerName =
+          (String)
+              s.one(
+                      "select full_name from staff where school_id=? and id=? and active and staff_role=?",
+                      b.schoolId(),
+                      c.subjectId(),
+                      c.role())
+                  .get("full_name");
+    }
+    return Api.map(
+        "studentName",
+        student.get("full_name"),
+        "admissionNumber",
+        student.get("admission_number"),
+        "payer",
+        Api.map("accountId", a.accountId(), "role", c.role(), "displayName", payerName),
+        "source",
+        "CHECKOUT_INITIALIZATION");
+  }
+
   public record CommunicationContext(UUID schoolId, Actor actor, UUID studentId, String category) {}
 
   @PostMapping("/internal/communication-context")

@@ -18,6 +18,7 @@ import { rosterTests } from './roster-tests.mjs';
 import { workspaceTests } from './workspace-tests.mjs';
 import { resourceTests } from './resource-tests.mjs';
 import { attendanceReviewTests } from './attendance-review-tests.mjs';
+import { financeWorkspaceTests } from './finance-workspace-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
 // Only external Paystack, SMTP and Expo push providers are local test doubles.
@@ -31,7 +32,7 @@ for (const name of names) {
   for (const suffix of ['DATABASE_URL', 'DATABASE_USER', 'DATABASE_PASSWORD']) assert.ok(runtime[name.toUpperCase() + '_' + suffix], `Configure ${name.toUpperCase()}_${suffix}`);
 }
 const temp = resolve(root, '.dev'); mkdirSync(temp, { recursive: true });
-const checks = []; const services = []; const smtpMessages = []; const transactions = new Map(); const settlements = new Map(); const refunds=new Map(); const pushMessages=[]; const pushTickets=new Map();
+const checks = []; const services = []; const smtpMessages = []; const transactions = new Map(); const settlements = new Map(); const refunds=new Map(); const pushMessages=[]; const pushTickets=new Map(); const initializationReplies=new Map();
 const providerKey = 'sk_test_' + randomBytes(24).toString('hex');
 const passed = name => { checks.push(name); console.log('PASS', name); };
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -47,6 +48,7 @@ const provider = httpServer(async (req,res) => {
       let raw = ''; for await (const chunk of req) raw += chunk;
       const body = JSON.parse(raw); assert.equal(body.currency,'NGN'); assert.match(body.subaccount,/^ACCT_/); assert.ok(Number(body.amount)>0);
       transactions.set(body.reference,{ ...body, amount:Number(body.amount), status:'pending', domain:'test' });
+      if(initializationReplies.has(body.email)){res.writeHead(200,{'Content-Type':'application/json'}).end(initializationReplies.get(body.email));return;}
       data = { reference:body.reference, authorization_url:'https://checkout.paystack.com/' + body.reference, access_code:'synthetic-test-code' };
     } else if (req.method === 'GET' && req.url.startsWith('/transaction/verify/')) {
       const reference = req.url.slice('/transaction/verify/'.length); data = transactions.get(reference);
@@ -234,6 +236,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds,smtpMessages,pushMessages};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);await deliveryTests(helpers,finance);await importTests(helpers,finance);await rosterTests(helpers,finance);await workspaceTests(helpers);await resourceTests(helpers);await attendanceReviewTests(helpers);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds,smtpMessages,pushMessages,initializationReplies};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);await deliveryTests(helpers,finance);await importTests(helpers,finance);await rosterTests(helpers,finance);await workspaceTests(helpers);await resourceTests(helpers);await attendanceReviewTests(helpers);await financeWorkspaceTests(helpers);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
 finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();pushProvider.closeAllConnections();pushProvider.close();smtp.close();}

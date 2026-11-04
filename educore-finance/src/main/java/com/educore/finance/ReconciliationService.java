@@ -147,7 +147,7 @@ public class ReconciliationService {
         });
   }
 
-  public record Period(LocalDate from, LocalDate to) {}
+  public record Period(LocalDate from, LocalDate to, String subaccount) {}
 
   public Object sync(Actor a, UUID school, Period b, String key) {
     role(a, school);
@@ -168,16 +168,22 @@ public class ReconciliationService {
               "select pg_advisory_xact_lock(hashtextextended(?,0))",
               Object.class,
               "settlement|" + school);
-          var settings =
-              f.one(
-                  "select paystack_subaccount from school_payment_settings where school_id=?",
-                  school);
+          String subaccount = b.subaccount();
+          if (subaccount == null)
+            subaccount =
+                (String)
+                    f.one(
+                            "select paystack_subaccount from school_payment_settings where school_id=?",
+                            school)
+                        .get("paystack_subaccount");
+          f.one(
+              "select paystack_subaccount from school_settlement_accounts where school_id=? and paystack_subaccount=?",
+              school,
+              subaccount);
           var result = new ArrayList<Object>();
           boolean done = false;
           for (int page = 1; page <= 10; page++) {
-            var list =
-                f.paystack.settlements(
-                    settings.get("paystack_subaccount").toString(), b.from(), b.to(), page);
+            var list = f.paystack.settlements(subaccount, b.from(), b.to(), page);
             if (!list.isArray())
               throw fail(
                   503,
@@ -228,6 +234,8 @@ public class ReconciliationService {
                   map(
                       "providerSettlementId",
                       ref,
+                      "subaccount",
+                      subaccount,
                       "currency",
                       "NGN",
                       "grossMinor",

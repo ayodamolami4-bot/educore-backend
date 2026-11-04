@@ -1,6 +1,6 @@
 # Implemented endpoints and request fields
 
-Reviewed 2026-11-04. These 256 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
+Reviewed 2026-11-04. These 261 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
 
 Start with [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) and [API.md](API.md) for permissions, workflows, versions and response adapters. Views are implemented by the frontend team.
 
@@ -221,6 +221,8 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/schools/{school}/invoices/{invoiceId}` | — | — | — | — |
 | POST | `/schools/{school}/invoices/{invoiceId}/manual-payments` | FinanceService.Manual | required | required | — |
 | POST | `/schools/{school}/invoices/payment-settings` | FinanceController.Settlement | required | — | — |
+| GET | `/schools/{school}/invoices/payment-settings` | — | — | — | — |
+| PUT | `/schools/{school}/invoices/payment-settings` | PaymentSettingsService.Update | required | required | — |
 | POST | `/schools/{school}/invoices/{invoiceId}/checkout` | FinanceService.Checkout | required | — | — |
 | GET | `/schools/{school}/payment-intents/{intentId}` | — | — | — | — |
 | POST | `/schools/{school}/payment-intents/{intentId}/verify` | — | — | — | — |
@@ -232,6 +234,9 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/schools/{school}/reconciliation/settlements/{settlementId}` | — | — | — | — |
 | POST | `/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution` | ReconciliationService.Resolution | — | — | — |
 | GET | `/schools/{school}/reconciliation/overview` | — | — | — | — |
+| GET | `/schools/{school}/invoices/fee-status` | — | — | — | studentId, termId, cursor, limit |
+| GET | `/schools/{school}/payment-intents` | — | — | — | studentId, invoiceId, state, reference, from, to, cursor, limit |
+| GET | `/schools/{school}/invoices/payment-settings/history` | — | — | — | beforeVersion, limit |
 | POST | `/schools/{school}/invoices/opening-balances` | OpeningBalanceService.Preview | required | — | — |
 | GET | `/schools/{school}/invoices/opening-balances/{batchId}` | — | — | — | — |
 | POST | `/schools/{school}/invoices/opening-balances/{batchId}/confirm` | OpeningBalanceService.Confirm | — | — | — |
@@ -910,6 +915,14 @@ These are declared property names and Java types. Required/conditional values ar
 | `csv` | `String` |
 | `columnMapping` | `Map<String,String>` |
 
+### PaymentSettingsService.Update
+
+| Field | Type |
+| --- | --- |
+| `subaccount` | `String` |
+| `checkoutEnabled` | `Boolean` |
+| `reason` | `String` |
+
 ### PlanningService.Availability
 
 | Field | Type |
@@ -1011,6 +1024,7 @@ These are declared property names and Java types. Required/conditional values ar
 | --- | --- |
 | `from` | `LocalDate` |
 | `to` | `LocalDate` |
+| `subaccount` | `String` |
 
 ### ReconciliationService.Resolution
 

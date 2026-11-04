@@ -212,6 +212,8 @@ GET,/schools/{school}/invoices,finance,,,,"studentId, cursor, limit",educore-fin
 GET,/schools/{school}/invoices/{invoiceId},finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
 POST,/schools/{school}/invoices/{invoiceId}/manual-payments,finance,FinanceService.Manual,required,required,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
 POST,/schools/{school}/invoices/payment-settings,finance,FinanceController.Settlement,required,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
+GET,/schools/{school}/invoices/payment-settings,finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
+PUT,/schools/{school}/invoices/payment-settings,finance,PaymentSettingsService.Update,required,required,,educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
 POST,/schools/{school}/invoices/{invoiceId}/checkout,finance,FinanceService.Checkout,required,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
 GET,/schools/{school}/payment-intents/{intentId},finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
 POST,/schools/{school}/payment-intents/{intentId}/verify,finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
@@ -223,6 +225,9 @@ GET,/schools/{school}/reconciliation/settlements,finance,,,,"cursor, limit",educ
 GET,/schools/{school}/reconciliation/settlements/{settlementId},finance,,,,,educore-finance/src/main/java/com/educore/finance/ReconciliationController.java
 POST,/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution,finance,ReconciliationService.Resolution,,,,educore-finance/src/main/java/com/educore/finance/ReconciliationController.java
 GET,/schools/{school}/reconciliation/overview,finance,,,,,educore-finance/src/main/java/com/educore/finance/ReconciliationController.java
+GET,/schools/{school}/invoices/fee-status,finance,,,,"studentId, termId, cursor, limit",educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
+GET,/schools/{school}/payment-intents,finance,,,,"studentId, invoiceId, state, reference, from, to, cursor, limit",educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
+GET,/schools/{school}/invoices/payment-settings/history,finance,,,,"beforeVersion, limit",educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
 POST,/schools/{school}/invoices/opening-balances,finance,OpeningBalanceService.Preview,required,,,educore-finance/src/main/java/com/educore/finance/OpeningBalanceController.java
 GET,/schools/{school}/invoices/opening-balances/{batchId},finance,,,,,educore-finance/src/main/java/com/educore/finance/OpeningBalanceController.java
 POST,/schools/{school}/invoices/opening-balances/{batchId}/confirm,finance,OpeningBalanceService.Confirm,,,,educore-finance/src/main/java/com/educore/finance/OpeningBalanceController.java

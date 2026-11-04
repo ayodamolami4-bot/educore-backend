@@ -20,6 +20,7 @@ public class FinanceService {
   final ServiceHttp http;
   final Outbox outbox;
   final Paystack paystack;
+  final PaymentSettingsService paymentSettings;
   final String academics;
 
   public FinanceService(
@@ -30,6 +31,7 @@ public class FinanceService {
       ServiceHttp http,
       Outbox outbox,
       Paystack paystack,
+      PaymentSettingsService paymentSettings,
       @Value("${educore.academics-url}") String academics) {
     this.db = db;
     this.commands = commands;
@@ -38,6 +40,7 @@ public class FinanceService {
     this.http = http;
     this.outbox = outbox;
     this.paystack = paystack;
+    this.paymentSettings = paymentSettings;
     this.academics = academics;
   }
 
@@ -340,31 +343,7 @@ public class FinanceService {
   }
 
   public Object setting(Actor a, UUID school, String subaccount, String key) {
-    a.school(school, "PRINCIPAL");
-    if (subaccount == null || !subaccount.matches("ACCT_[A-Za-z0-9]{4,70}"))
-      throw fail(
-          422, "INVALID_SUBACCOUNT", "Provide the school's approved Paystack test subaccount.");
-    return commands.execute(
-        a.accountId().toString(),
-        school.toString(),
-        "payment-settings",
-        key,
-        map("subaccount", subaccount),
-        () -> {
-          db.update(
-              "insert into school_payment_settings(school_id,paystack_subaccount) values (?,?) on conflict(school_id) do update set paystack_subaccount=excluded.paystack_subaccount,version=school_payment_settings.version+1",
-              school,
-              subaccount);
-          commands.audit(
-              school,
-              a.accountId(),
-              "PAYMENT_SETTINGS_UPDATED",
-              "SCHOOL",
-              school,
-              "Approved test settlement configuration",
-              Map.of());
-          return map("schoolId", school, "testMode", true, "configured", true);
-        });
+    return paymentSettings.create(a, school, subaccount, key);
   }
 
   public record Checkout(long amountMinor, String email) {}
@@ -393,33 +372,34 @@ public class FinanceService {
                 422,
                 "PAYMENT_AMOUNT",
                 "Choose an amount permitted by the current invoice balance.");
-          var settings =
-              db.queryForList(
-                  "select paystack_subaccount from school_payment_settings where school_id=?",
-                  school);
-          if (settings.isEmpty())
-            throw fail(
-                503,
-                "SCHOOL_SETTLEMENT_NOT_CONFIGURED",
-                "The school has not configured its approved Paystack test settlement account.");
+          var settings = paymentSettings.checkout(school);
+          Object payerSnapshot =
+              http.post(
+                  academics,
+                  "/internal/finance-context",
+                  map("schoolId", school, "actor", a, "studentId", i.get("student_id")),
+                  Object.class);
           UUID id = UUID.randomUUID();
           String reference = "EC-" + id;
           db.update(
-              "insert into payment_intents(id,school_id,invoice_id,actor_id,reference,amount_minor,email_cipher) values (?,?,?,?,?,?,?)",
+              "insert into payment_intents(id,school_id,invoice_id,actor_id,reference,amount_minor,email_cipher,settlement_subaccount,settlement_settings_version,payer_snapshot) values (?,?,?,?,?,?,?,?,?,?::jsonb)",
               id,
               school,
               invoiceId,
               a.accountId(),
               reference,
               b.amountMinor(),
-              crypto.seal(email));
+              crypto.seal(email),
+              settings.get("paystack_subaccount"),
+              settings.get("version"),
+              json.write(payerSnapshot));
           try {
             JsonNode response =
                 paystack.initialize(
                     reference,
                     b.amountMinor(),
                     email,
-                    (String) settings.get(0).get("paystack_subaccount"));
+                    (String) settings.get("paystack_subaccount"));
             String authorization = response.path("authorization_url").asText();
             if (!reference.equals(response.path("reference").asText())
                 || !authorization.startsWith("https://checkout.paystack.com/"))

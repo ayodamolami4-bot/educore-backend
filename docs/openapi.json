@@ -16298,6 +16298,135 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "GET /schools/{school}/invoices/payment-settings",
+        "operationId": "get_schools_school_invoices_payment_settings",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "FinanceWorkspaceController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "PUT /schools/{school}/invoices/payment-settings",
+        "operationId": "put_schools_school_invoices_payment_settings",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          }
+        ],
+        "x-controller": "FinanceWorkspaceController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentSettingsService_Update",
+                "x-java-type": "PaymentSettingsService.Update"
+              }
+            }
+          }
+        }
       }
     },
     "/schools/{school}/invoices/{invoiceId}/checkout": {
@@ -17002,6 +17131,303 @@
         ],
         "x-controller": "ReconciliationController",
         "x-source": "educore-finance/src/main/java/com/educore/finance/ReconciliationController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/invoices/fee-status": {
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "GET /schools/{school}/invoices/fee-status",
+        "operationId": "get_schools_school_invoices_fee_status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "x-java-type": "int",
+              "default": 30
+            }
+          }
+        ],
+        "x-controller": "FinanceWorkspaceController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/payment-intents": {
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "GET /schools/{school}/payment-intents",
+        "operationId": "get_schools_school_payment_intents",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "invoiceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "reference",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "x-java-type": "int",
+              "default": 30
+            }
+          }
+        ],
+        "x-controller": "FinanceWorkspaceController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/invoices/payment-settings/history": {
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "GET /schools/{school}/invoices/payment-settings/history",
+        "operationId": "get_schools_school_invoices_payment_settings_history",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "beforeVersion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "x-java-type": "Long"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "x-java-type": "int",
+              "default": 30
+            }
+          }
+        ],
+        "x-controller": "FinanceWorkspaceController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java",
         "responses": {
           "422": {
             "description": "Invalid request or business input.",
@@ -21067,6 +21493,10 @@
             "type": "string",
             "format": "date",
             "x-java-type": "LocalDate"
+          },
+          "subaccount": {
+            "type": "string",
+            "x-java-type": "String"
           }
         }
       },
@@ -21632,6 +22062,25 @@
           "note": {
             "type": "string",
             "x-java-type": "String"
+          },
+          "reason": {
+            "type": "string",
+            "x-java-type": "String"
+          }
+        }
+      },
+      "PaymentSettingsService_Update": {
+        "type": "object",
+        "x-java-record": "PaymentSettingsService.Update",
+        "description": "Declared fields; conditional and cross-record validation is enforced by the service. See API.md.",
+        "properties": {
+          "subaccount": {
+            "type": "string",
+            "x-java-type": "String"
+          },
+          "checkoutEnabled": {
+            "type": "boolean",
+            "x-java-type": "Boolean"
           },
           "reason": {
             "type": "string",

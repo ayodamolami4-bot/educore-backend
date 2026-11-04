@@ -41,6 +41,10 @@ public class Paystack {
       throw new IllegalStateException("Paystack requires HTTPS.");
   }
 
+  public boolean isConfigured() {
+    return !key.isBlank();
+  }
+
   public void configured() {
     if (key.isBlank())
       throw Api.fail(
@@ -130,7 +134,26 @@ public class Paystack {
       if (r.statusCode() < 200 || r.statusCode() >= 300)
         throw Api.fail(
             503, "PROVIDER_UNAVAILABLE", "The payment provider could not confirm this request.");
-      JsonNode result = json.tree(r.body());
+      JsonNode result;
+      try {
+        result = json.tree(r.body());
+      } catch (IllegalArgumentException ex) {
+        throw new Api.Failure(
+            503,
+            "PROVIDER_RESPONSE_INVALID",
+            "The provider response could not be verified. Check the saved payment reference before retrying.",
+            true);
+      }
+      if (result == null
+          || !result.isObject()
+          || !result.path("status").isBoolean()
+          || result.path("data").isMissingNode()
+          || result.path("data").isNull())
+        throw new Api.Failure(
+            503,
+            "PROVIDER_RESPONSE_INVALID",
+            "The provider response could not be verified. Check the saved payment reference before retrying.",
+            true);
       if (!result.path("status").asBoolean())
         throw Api.fail(
             503, "PROVIDER_UNAVAILABLE", "The payment provider did not accept this request.");
