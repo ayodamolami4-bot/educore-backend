@@ -134,6 +134,8 @@ public class SchoolService {
         school,
         "schoolName",
         s.get("name"),
+        "logoFileId",
+        s.get("logo_file_id"),
         "timezone",
         s.get("timezone"),
         "currency",

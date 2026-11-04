@@ -42,6 +42,8 @@ public class SchoolWorkspaceService {
         p.get("contact_email"),
         "address",
         p.get("address"),
+        "logoFileId",
+        p.get("logo_file_id"),
         "wednesdayPtEnabled",
         p.get("wednesday_pt"),
         "timezone",
@@ -53,7 +55,13 @@ public class SchoolWorkspaceService {
   }
 
   public record Settings(
-      String phone, String email, String address, boolean wednesdayPtEnabled, String reason) {}
+      String phone,
+      String email,
+      String address,
+      boolean wednesdayPtEnabled,
+      String reason,
+      UUID logoFileId,
+      boolean clearLogo) {}
 
   public Object settings(Actor a, UUID school, Settings b, long version, String key) {
     a.school(school, "PRINCIPAL");
@@ -66,12 +74,25 @@ public class SchoolWorkspaceService {
         () -> {
           var p = s.one("select * from schools where id=? for update", school);
           expectVersion(version, ((Number) p.get("version")).longValue());
+          if (b.clearLogo() && b.logoFileId() != null)
+            throw fail(
+                422,
+                "AMBIGUOUS_LOGO_CHANGE",
+                "Choose a replacement logo or clear the current logo.");
+          if (b.logoFileId() != null)
+            s.one(
+                "select id from school_files where school_id=? and id=? and purpose='SCHOOL_ASSET' and state='READY' and media_type in ('image/png','image/jpeg')",
+                school,
+                b.logoFileId());
           s.db.update(
-              "update schools set contact_phone=?,contact_email=?,address=?,wednesday_pt=?,version=version+1 where id=?",
+              "update schools set contact_phone=?,contact_email=?,address=?,wednesday_pt=?,logo_file_id=?,version=version+1 where id=?",
               b.phone() == null ? null : phone(b.phone()),
               b.email() == null ? null : email(b.email()),
               b.address() == null ? null : text(b.address(), 5, 240, "Address"),
               b.wednesdayPtEnabled(),
+              b.clearLogo()
+                  ? null
+                  : b.logoFileId() != null ? b.logoFileId() : p.get("logo_file_id"),
               school);
           s.commands.audit(
               school,

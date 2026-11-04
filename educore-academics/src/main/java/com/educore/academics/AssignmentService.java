@@ -28,7 +28,7 @@ public class AssignmentService {
     return s.commands.execute(a.accountId().toString(), school.toString(), path, key, body, action);
   }
 
-  private Map<String, Object> work(UUID school, UUID id, boolean lock) {
+  Map<String, Object> work(UUID school, UUID id, boolean lock) {
     return s.one(
         "select w.*,t.class_id,t.subject_id,t.teacher_id,t.department,t.required,c.attendance_teacher_id,t.active as teaching_active from learning_assignments w join teaching_assignments t on t.id=w.teaching_assignment_id join classes c on c.id=t.class_id where w.school_id=? and w.id=?"
             + (lock ? " for update of w" : ""),
@@ -36,7 +36,7 @@ public class AssignmentService {
         id);
   }
 
-  private void owner(Actor a, UUID school, Map<String, Object> w) {
+  void owner(Actor a, UUID school, Map<String, Object> w) {
     a.school(school, "TEACHER");
     if (!a.context().subjectId().equals(w.get("teacher_id"))
         || !Boolean.TRUE.equals(w.get("teaching_active"))
@@ -52,7 +52,15 @@ public class AssignmentService {
     return "PARENT".equals(a.context().role()) ? a.context().childId() : a.context().subjectId();
   }
 
-  private void eligible(UUID school, Map<String, Object> w, UUID student, boolean writing) {
+  void eligible(UUID school, Map<String, Object> w, UUID student, boolean writing) {
+    if (!writing
+        && s.db.queryForObject(
+                "select count(*) from assignment_submissions sub where sub.school_id=? and sub.assignment_id=? and sub.student_id=? and exists(select 1 from submission_revisions rev where rev.submission_id=sub.id)",
+                Integer.class,
+                school,
+                w.get("id"),
+                student)
+            > 0) return;
     String date = "DRAFT".equals(w.get("state")) ? "current_date" : "?::date";
     List<Object> args = new ArrayList<>(Arrays.asList(school, student, w.get("class_id")));
     if (!"DRAFT".equals(w.get("state"))) args.add(w.get("published_at"));
@@ -80,7 +88,7 @@ public class AssignmentService {
             == 0) throw fail(404, "NOT_FOUND", "This subject choice is unavailable.");
   }
 
-  private void read(Actor a, UUID school, Map<String, Object> w) {
+  void read(Actor a, UUID school, Map<String, Object> w) {
     var c = a.school(school, "PRINCIPAL", "SCHOOL_OFFICE", "TEACHER", "STUDENT", "PARENT");
     if (Set.of("PRINCIPAL", "SCHOOL_OFFICE").contains(c.role())) return;
     if ("TEACHER".equals(c.role())) {
@@ -102,9 +110,18 @@ public class AssignmentService {
       String instructions,
       Instant dueAt,
       BigDecimal maximumScore,
-      List<UUID> fileIds) {}
+      List<UUID> fileIds,
+      String submissionMode) {}
+
+  private String mode(Input b) {
+    String mode = b.submissionMode() == null ? "APP" : b.submissionMode();
+    if (!Set.of("APP", "PHYSICAL").contains(mode))
+      throw fail(422, "INVALID_SUBMISSION_MODE", "Choose APP or PHYSICAL submission.");
+    return mode;
+  }
 
   private void validate(Input b) {
+    mode(b);
     text(b.title(), 3, 160, "Assignment title");
     text(b.instructions(), 5, 8000, "Instructions");
     if (b.dueAt() == null
@@ -141,7 +158,7 @@ public class AssignmentService {
           futureDeadline(b.dueAt());
           UUID id = UUID.randomUUID();
           s.db.update(
-              "insert into learning_assignments(id,school_id,teaching_assignment_id,term_id,title,instructions,due_at,maximum_score,created_by) values (?,?,?,?,?,?,?,?,?)",
+              "insert into learning_assignments(id,school_id,teaching_assignment_id,term_id,title,instructions,due_at,maximum_score,created_by,submission_mode) values (?,?,?,?,?,?,?,?,?,?)",
               id,
               school,
               b.teachingAssignmentId(),
@@ -150,7 +167,8 @@ public class AssignmentService {
               b.instructions().strip(),
               java.sql.Timestamp.from(b.dueAt()),
               b.maximumScore(),
-              a.accountId());
+              a.accountId(),
+              mode(b));
           files.attach(a, school, b.fileIds(), "ASSIGNMENT", "ASSIGNMENT", id, null);
           s.commands.audit(
               school, a.accountId(), "ASSIGNMENT_DRAFT_CREATED", "ASSIGNMENT", id, null, Map.of());
@@ -184,11 +202,12 @@ public class AssignmentService {
                 "ASSIGNMENT_SCOPE_IMMUTABLE",
                 "Create a new assignment to change its class, subject or term.");
           s.db.update(
-              "update learning_assignments set title=?,instructions=?,due_at=?,maximum_score=?,version=version+1 where id=?",
+              "update learning_assignments set title=?,instructions=?,due_at=?,maximum_score=?,submission_mode=?,version=version+1 where id=?",
               b.title().strip(),
               b.instructions().strip(),
               java.sql.Timestamp.from(b.dueAt()),
               b.maximumScore(),
+              mode(b),
               id);
           s.db.update(
               "update file_links set active=false where resource_type='ASSIGNMENT' and resource_id=?",
@@ -259,6 +278,8 @@ public class AssignmentService {
             w.get("due_at"),
             "maximumScore",
             w.get("maximum_score"),
+            "submissionMode",
+            w.get("submission_mode"),
             "state",
             w.get("state"),
             "version",
@@ -366,8 +387,7 @@ public class AssignmentService {
     return page(items, limit, item -> item.get("id").toString());
   }
 
-  private Map<String, Object> submission(
-      UUID school, UUID assignment, UUID student, boolean create) {
+  Map<String, Object> submission(UUID school, UUID assignment, UUID student, boolean create) {
     var rows =
         s.db.queryForList(
             "select * from assignment_submissions where school_id=? and assignment_id=? and student_id=?",
@@ -391,7 +411,7 @@ public class AssignmentService {
     return rows.isEmpty() ? null : rows.get(0);
   }
 
-  private Object mySubmission(Actor a, UUID school, UUID assignment, UUID student, boolean create) {
+  Object mySubmission(Actor a, UUID school, UUID assignment, UUID student, boolean create) {
     var sub = submission(school, assignment, student, create);
     if (sub == null) return map("state", "NOT_STARTED", "version", 1);
     if (!"STUDENT".equals(a.context().role())
@@ -405,6 +425,10 @@ public class AssignmentService {
           sub.get("id"),
           "studentId",
           student,
+          "channel",
+          sub.get("channel"),
+          "receivedOn",
+          sub.get("received_on"),
           "state",
           sub.get("state"),
           "version",
@@ -425,6 +449,10 @@ public class AssignmentService {
         sub.get("id"),
         "studentId",
         student,
+        "channel",
+        sub.get("channel"),
+        "receivedOn",
+        sub.get("received_on"),
         "responseText",
         sub.get("response_text"),
         "state",
@@ -445,7 +473,7 @@ public class AssignmentService {
             sub.get("id")));
   }
 
-  private void submissionScope(Actor a, UUID school, Map<String, Object> w, UUID student) {
+  void submissionScope(Actor a, UUID school, Map<String, Object> w, UUID student) {
     read(a, school, w);
     if (Set.of("PARENT", "STUDENT").contains(a.context().role()) && !student.equals(learner(a)))
       throw fail(404, "NOT_FOUND", "This submission is unavailable.");
@@ -461,6 +489,11 @@ public class AssignmentService {
   public record Draft(String responseText, List<UUID> fileIds) {}
 
   private void writable(Map<String, Object> w, Map<String, Object> sub) {
+    if (!"APP".equals(w.get("submission_mode")))
+      throw fail(
+          409,
+          "PHYSICAL_SUBMISSION_REQUIRED",
+          "Your teacher records receipt of this physical assignment.");
     if (!Set.of("PUBLISHED", "CLOSED").contains(w.get("state")))
       throw fail(409, "ASSIGNMENT_NOT_OPEN", "Only published work accepts responses.");
     if ("CLOSED".equals(w.get("state")) && sub.get("extra_deadline") == null)
@@ -572,7 +605,7 @@ public class AssignmentService {
     return map(
         "items",
         s.db.queryForList(
-            "select sub.id,sub.student_id as \"studentId\",st.full_name as \"studentName\",sub.state,sub.score,sub.version,sub.submitted_at as \"submittedAt\" from assignment_submissions sub join students st on st.id=sub.student_id where sub.school_id=? and sub.assignment_id=? order by st.full_name",
+            "select sub.id,sub.student_id as \"studentId\",st.full_name as \"studentName\",sub.state,sub.score,sub.version,sub.channel,sub.received_on as \"receivedOn\",sub.submitted_at as \"submittedAt\" from assignment_submissions sub join students st on st.id=sub.student_id where sub.school_id=? and sub.assignment_id=? order by st.full_name",
             school,
             id),
         "hasMore",
@@ -593,101 +626,103 @@ public class AssignmentService {
         "assignments/" + id + "/submissions/" + student + "/feedback",
         key,
         map("input", b, "version", version),
-        () -> {
-          var w = work(school, id, true);
-          var sub = submission(school, id, student, false);
-          if (sub == null) throw fail(404, "NOT_FOUND", "The submission is unavailable.");
-          expectVersion(version, ((Number) sub.get("version")).longValue());
-          if (!Set.of("SUBMITTED", "GRADED").contains(sub.get("state")))
-            throw fail(
-                409,
-                "WORK_NOT_SUBMITTED",
-                "Review accepted student work before returning or grading it.");
-          String action = Objects.toString(b.action(), "");
-          if (!Set.of("GRADE", "RETURN").contains(action))
-            throw fail(422, "INVALID_REVIEW_ACTION", "Choose GRADE or RETURN.");
-          String feedback = text(b.feedback(), 2, 3000, "Feedback");
-          String reason = b.reason() == null ? null : text(b.reason(), 5, 500, "Review reason");
-          BigDecimal score = b.score();
-          if ("GRADE".equals(action)) {
-            if (score == null
-                || score.signum() < 0
-                || score.compareTo((BigDecimal) w.get("maximum_score")) > 0
-                || score.stripTrailingZeros().scale() > 1)
-              throw fail(
-                  422,
-                  "INVALID_SCORE",
-                  "Use a score within the assignment maximum, with at most one decimal place.");
-            if ("GRADED".equals(sub.get("state")) && reason == null)
-              throw fail(
-                  422, "GRADE_CORRECTION_REASON_REQUIRED", "A grade correction needs a reason.");
-          } else {
-            score = null;
-            if (reason == null
-                || b.extraDeadline() == null
-                || !b.extraDeadline().isAfter(Instant.now()))
-              throw fail(
-                  422,
-                  "RETURN_DEADLINE_REQUIRED",
-                  "A returned submission needs a reason and a future resubmission deadline.");
-          }
-          int revision =
-              s.db.queryForObject(
-                  "select max(revision) from submission_revisions where submission_id=?",
-                  Integer.class,
-                  sub.get("id"));
-          s.db.update(
-              "insert into submission_reviews(id,submission_id,submission_revision,action,score,feedback,reason,author_id) values (?,?,?,?,?,?,?,?)",
-              UUID.randomUUID(),
-              sub.get("id"),
-              revision,
-              action,
-              score,
-              feedback,
-              reason,
-              a.accountId());
-          s.db.update(
-              "update assignment_submissions set state=?,score=?,feedback=?,feedback_by=?,feedback_at=now(),extra_deadline=coalesce(?,extra_deadline),version=version+1 where id=?",
-              "GRADE".equals(action) ? "GRADED" : "RETURNED",
-              score,
-              feedback,
-              a.accountId(),
-              b.extraDeadline() == null ? null : java.sql.Timestamp.from(b.extraDeadline()),
-              sub.get("id"));
-          s.commands.audit(
-              school,
-              a.accountId(),
-              "ASSIGNMENT_FEEDBACK_RECORDED",
-              "SUBMISSION",
-              (UUID) sub.get("id"),
-              reason,
-              map("action", action, "revision", revision));
-          s.outbox.add(
-              "communication",
-              "CHILD_NOTIFICATION",
-              map(
-                  "schoolId",
-                  school,
-                  "childId",
-                  student,
-                  "category",
-                  "LEARNING",
-                  "title",
-                  "Learning feedback available",
-                  "safePreview",
-                  "Your school posted learning feedback. Open the app to view it.",
-                  "target",
-                  map(
-                      "screenId",
-                      "PA01",
-                      "schoolId",
-                      school,
-                      "childId",
-                      student,
-                      "resourceId",
-                      id)));
-          return mySubmission(a, school, id, student, false);
-        });
+        () -> applyFeedback(a, school, id, student, b, version));
+  }
+
+  record ReviewedFeedback(
+      String action, java.math.BigDecimal score, String feedback, String reason) {}
+
+  ReviewedFeedback validateFeedback(Map<String, Object> w, Map<String, Object> sub, Feedback b) {
+    if (!Set.of("SUBMITTED", "GRADED").contains(sub.get("state")))
+      throw fail(
+          409,
+          "WORK_NOT_SUBMITTED",
+          "Review accepted student work before returning or grading it.");
+    String action = Objects.toString(b.action(), "");
+    if (!Set.of("GRADE", "RETURN").contains(action))
+      throw fail(422, "INVALID_REVIEW_ACTION", "Choose GRADE or RETURN.");
+    String feedback = text(b.feedback(), 2, 3000, "Feedback");
+    String reason = b.reason() == null ? null : text(b.reason(), 5, 500, "Review reason");
+    BigDecimal score = b.score();
+    if ("GRADE".equals(action)) {
+      if (score == null
+          || score.signum() < 0
+          || score.compareTo((BigDecimal) w.get("maximum_score")) > 0
+          || score.stripTrailingZeros().scale() > 1)
+        throw fail(
+            422,
+            "INVALID_SCORE",
+            "Use a score within the assignment maximum, with at most one decimal place.");
+      if ("GRADED".equals(sub.get("state")) && reason == null)
+        throw fail(422, "GRADE_CORRECTION_REASON_REQUIRED", "A grade correction needs a reason.");
+    } else {
+      score = null;
+      if (reason == null || b.extraDeadline() == null || !b.extraDeadline().isAfter(Instant.now()))
+        throw fail(
+            422,
+            "RETURN_DEADLINE_REQUIRED",
+            "A returned submission needs a reason and a future resubmission deadline.");
+    }
+    return new ReviewedFeedback(action, score, feedback, reason);
+  }
+
+  Object applyFeedback(Actor a, UUID school, UUID id, UUID student, Feedback b, long version) {
+    var w = work(school, id, true);
+    owner(a, school, w);
+    var sub = submission(school, id, student, false);
+    if (sub == null) throw fail(404, "NOT_FOUND", "The submission is unavailable.");
+    expectVersion(version, ((Number) sub.get("version")).longValue());
+    var checked = validateFeedback(w, sub, b);
+    String action = checked.action(), feedback = checked.feedback(), reason = checked.reason();
+    BigDecimal score = checked.score();
+    int revision =
+        s.db.queryForObject(
+            "select max(revision) from submission_revisions where submission_id=?",
+            Integer.class,
+            sub.get("id"));
+    s.db.update(
+        "insert into submission_reviews(id,submission_id,submission_revision,action,score,feedback,reason,author_id) values (?,?,?,?,?,?,?,?)",
+        UUID.randomUUID(),
+        sub.get("id"),
+        revision,
+        action,
+        score,
+        feedback,
+        reason,
+        a.accountId());
+    s.db.update(
+        "update assignment_submissions set state=?,score=?,feedback=?,feedback_by=?,feedback_at=now(),extra_deadline=coalesce(?,extra_deadline),version=version+1 where id=?",
+        "GRADE".equals(action) ? "GRADED" : "RETURNED",
+        score,
+        feedback,
+        a.accountId(),
+        b.extraDeadline() == null ? null : java.sql.Timestamp.from(b.extraDeadline()),
+        sub.get("id"));
+    s.commands.audit(
+        school,
+        a.accountId(),
+        "ASSIGNMENT_FEEDBACK_RECORDED",
+        "SUBMISSION",
+        (UUID) sub.get("id"),
+        reason,
+        map("action", action, "revision", revision));
+    s.outbox.add(
+        "communication",
+        "CHILD_NOTIFICATION",
+        map(
+            "schoolId",
+            school,
+            "childId",
+            student,
+            "category",
+            "LEARNING",
+            "title",
+            "Learning feedback available",
+            "safePreview",
+            "Your school posted learning feedback. Open the app to view it.",
+            "target",
+            map("screenId", "PA01", "schoolId", school, "childId", student, "resourceId", id)));
+    return mySubmission(a, school, id, student, false);
   }
 
   public Object history(Actor a, UUID school, UUID id, UUID student) {

@@ -1,5 +1,5 @@
 {
-  "reviewedOn": "2026-11-03",
+  "reviewedOn": "2026-11-04",
   "screenCount": 94,
   "meaning": "MAPPED describes reviewed core API coverage, not a completed or tested frontend. PARTIAL includes a remaining planned control.",
   "sharedFiles": [
@@ -106,10 +106,38 @@
         {
           "method": "POST",
           "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
         }
       ],
       "notes": "",
-      "remaining": "Private admission-document attachments and a provisioning-error/retry screen are not implemented. Activation slips report pending provisioning; do not show a permanent password."
+      "remaining": "A provisioning-error/retry screen remains to build. Enrol first, then attach admission documents to the accepted student ID."
     },
     {
       "id": "AD04",
@@ -148,10 +176,38 @@
         {
           "method": "GET",
           "path": "/schools/{school}/students/{studentId}/academic-history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
         }
       ],
       "notes": "",
-      "remaining": "Historical paper-report attachment import and the School Office fee-only read preset are not implemented. Principal/Accounts use the finance pages."
+      "remaining": "The School Office fee-only read preset remains to build. Historical document copies are separate from system-generated report marks."
     },
     {
       "id": "AD05",
@@ -252,10 +308,38 @@
         {
           "method": "POST",
           "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
         }
       ],
       "notes": "",
-      "remaining": "Teacher document attachments and an explicit failed-provisioning retry action are not implemented; outbox retries are automatic."
+      "remaining": "An explicit provisioning-error/retry action remains to build. Staff credentials have their own private document purpose and explicit teacher visibility."
     },
     {
       "id": "AD09",
@@ -336,10 +420,22 @@
         {
           "method": "POST",
           "path": "/schools/{school}/invoices/payment-settings"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
         }
       ],
       "notes": "",
-      "remaining": "School logos and a read/update payment-settlement configuration editor are not supplied. The current endpoint sets a test Paystack subaccount. Do not alter this from ordinary office settings."
+      "remaining": "A read/update payment-settlement configuration editor remains to build. Ready-image school logos, versioned text fields and staff access are implemented."
     },
     {
       "id": "AD11",
@@ -1085,7 +1181,7 @@
       "id": "AD33",
       "title": "Bring in or download school data",
       "role": "Administrator",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1138,10 +1234,38 @@
         {
           "method": "GET",
           "path": "/schools/{school}/invoices/export.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
         }
       ],
-      "notes": "",
-      "remaining": "No historical paper-report upload/import or generic job queue UI. Import job polling, correction and resume use the specific import endpoints."
+      "notes": "Verified historical document copies use /documents and do not generate official marks. Only published permitted copies are returned. CSV imports use their specific preview/job/confirm routes.",
+      "remaining": ""
     },
     {
       "id": "AD34",
@@ -1217,7 +1341,7 @@
       "id": "TE03",
       "title": "Class workspace",
       "role": "Teacher",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1230,10 +1354,38 @@
         {
           "method": "GET",
           "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/materials/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/materials/{id}/archive"
         }
       ],
-      "notes": "",
-      "remaining": "Standalone learning-material publication is not implemented. Assignment handouts work through assignment attachments; do not label that as a separate material resource."
+      "notes": "Class/subject material reads are scoped. Families see the accepted snapshot while the teacher edits the next draft; attachments require the same audience.",
+      "remaining": ""
     },
     {
       "id": "TE04",
@@ -1379,7 +1531,7 @@
       "id": "TE10",
       "title": "Assignment and submissions",
       "role": "Teacher",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1392,16 +1544,20 @@
         {
           "method": "POST",
           "path": "/schools/{school}/assignments/{assignmentId}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/physical-receipt"
         }
       ],
-      "notes": "",
-      "remaining": "Recording receipt of physical/offline work is not implemented. Current submissions are app text/files with versioned feedback."
+      "notes": "Choose APP or PHYSICAL when creating the assignment. Only the assigned teacher records physical receipt with its school date, reason and optional private evidence.",
+      "remaining": ""
     },
     {
       "id": "TE11",
       "title": "Review student submission",
       "role": "Teacher",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1414,10 +1570,22 @@
         {
           "method": "POST",
           "path": "/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/feedback"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft/release"
         }
       ],
-      "notes": "",
-      "remaining": "Feedback is accepted through one action (RETURN or GRADE); a separate server feedback-draft/release workflow is not supplied."
+      "notes": "Review drafts are teacher-only. Release checks the accepted submission version; parents and students see only released feedback.",
+      "remaining": ""
     },
     {
       "id": "TE12",
@@ -1655,7 +1823,7 @@
       "id": "ST03",
       "title": "Subject workspace",
       "role": "Student",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1664,10 +1832,22 @@
         {
           "method": "GET",
           "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}/history"
         }
       ],
-      "notes": "",
-      "remaining": "No standalone learning-material library. Existing subject assignments and their authorised handouts are available."
+      "notes": "Class/subject material reads are scoped. Families see the accepted snapshot while the teacher edits the next draft; attachments require the same audience.",
+      "remaining": ""
     },
     {
       "id": "ST04",
@@ -1831,7 +2011,7 @@
       "id": "ST13",
       "title": "Profile and academic history",
       "role": "Student",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1844,10 +2024,22 @@
         {
           "method": "GET",
           "path": "/schools/{school}/students/{studentId}/external-results"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
         }
       ],
-      "notes": "",
-      "remaining": "External issued results and promotion history work; historical paper-report PDFs are not imported by this backend."
+      "notes": "Verified historical document copies use /documents and do not generate official marks. Only published permitted copies are returned. CSV imports use their specific preview/job/confirm routes.",
+      "remaining": ""
     },
     {
       "id": "PA01",
@@ -1901,7 +2093,7 @@
       "id": "PA03",
       "title": "Child overview",
       "role": "Parent",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1922,10 +2114,22 @@
         {
           "method": "GET",
           "path": "/schools/{school}/invoices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
         }
       ],
-      "notes": "",
-      "remaining": "Historical paper-report attachments are not available. Learning and fee sections must each check their own guardian permissions."
+      "notes": "Verified historical document copies use /documents and do not generate official marks. Only published permitted copies are returned. CSV imports use their specific preview/job/confirm routes.",
+      "remaining": ""
     },
     {
       "id": "PA04",
@@ -1957,7 +2161,7 @@
       "id": "PA05",
       "title": "Child learning",
       "role": "Parent",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1966,10 +2170,22 @@
         {
           "method": "GET",
           "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}/history"
         }
       ],
-      "notes": "",
-      "remaining": "Standalone learning materials are not implemented. Read only accepted assignment handouts/submissions; a parent never sees a private learner draft."
+      "notes": "Class/subject material reads are scoped. Families see the accepted snapshot while the teacher edits the next draft; attachments require the same audience.",
+      "remaining": ""
     },
     {
       "id": "PA06",

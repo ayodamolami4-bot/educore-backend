@@ -14,18 +14,24 @@ public class FileService {
   private final ServiceHttp http;
   private final String communication;
   private final long schoolQuota;
+  private final LearningScope learningScope;
+  private final SchoolDocumentScope documentScope;
 
   public FileService(
       SchoolService s,
       Crypto crypto,
       ServiceHttp http,
       @Value("${educore.communication-url}") String communication,
-      @Value("${educore.file-school-quota-bytes:104857600}") long schoolQuota) {
+      @Value("${educore.file-school-quota-bytes:104857600}") long schoolQuota,
+      LearningScope learningScope,
+      SchoolDocumentScope documentScope) {
     this.s = s;
     this.crypto = crypto;
     this.http = http;
     this.communication = communication;
     this.schoolQuota = schoolQuota;
+    this.learningScope = learningScope;
+    this.documentScope = documentScope;
   }
 
   public record Metadata(
@@ -36,7 +42,8 @@ public class FileService {
       String mediaType,
       int size,
       String sha256,
-      boolean familyVisible) {}
+      boolean familyVisible,
+      UUID staffId) {}
 
   private Map<String, Object> row(UUID school, UUID id, boolean lock) {
     return s.one(
@@ -55,6 +62,8 @@ public class FileService {
         f.get("student_id"),
         "classId",
         f.get("class_id"),
+        "staffId",
+        f.get("staff_id"),
         "filename",
         f.get("filename"),
         "mediaType",
@@ -95,9 +104,28 @@ public class FileService {
   }
 
   private void creationScope(
-      Actor a, UUID school, String purpose, UUID student, UUID classId, boolean familyVisible) {
+      Actor a,
+      UUID school,
+      String purpose,
+      UUID student,
+      UUID classId,
+      boolean familyVisible,
+      UUID staff) {
     var c = a.school(school);
     String role = c.role();
+    if ("STAFF_DOCUMENT".equals(purpose)) {
+      a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+      if (staff == null || student != null || classId != null || familyVisible)
+        throw fail(
+            422, "STAFF_FILE_SCOPE", "A private staff document requires its staff profile only.");
+      s.one("select id from staff where school_id=? and id=?", school, staff);
+      return;
+    }
+    if (staff != null)
+      throw fail(
+          422, "INVALID_STAFF_FILE_SCOPE", "Only staff-document uploads accept a staff profile.");
+    if (Set.of("STUDENT_DOCUMENT", "PHYSICAL_EVIDENCE").contains(purpose) && student == null)
+      throw fail(422, "STUDENT_FILE_SCOPE", "Choose the pupil who owns this document.");
     if (Set.of("PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS", "TEACHER").contains(role)
         && s.db.queryForObject(
                 "select count(*) from staff where school_id=? and id=? and active",
@@ -107,6 +135,11 @@ public class FileService {
             == 0) throw fail(404, "NOT_FOUND", "School access is unavailable.");
     if ("SCHOOL_ASSET".equals(purpose)) {
       a.school(school, "PRINCIPAL");
+      if (student != null || classId != null)
+        throw fail(
+            422,
+            "SCHOOL_ASSET_SCOPE",
+            "A school logo belongs to the school without a pupil or class scope.");
       return;
     }
     if (familyVisible && !Set.of("PRINCIPAL", "SCHOOL_OFFICE").contains(role))
@@ -134,12 +167,14 @@ public class FileService {
     } else if ("SCHOOL_OFFICE".equals(role) && "FINANCE_EVIDENCE".equals(purpose))
       throw fail(403, "FILE_PURPOSE_FORBIDDEN", "School Office cannot manage financial evidence.");
     else if ("TEACHER".equals(role)) {
-      if (!Set.of("ASSIGNMENT", "STUDENT_DOCUMENT", "COMMUNICATION").contains(purpose))
+      if (!Set.of(
+              "ASSIGNMENT", "STUDENT_DOCUMENT", "COMMUNICATION", "MATERIAL", "PHYSICAL_EVIDENCE")
+          .contains(purpose))
         throw fail(403, "FILE_PURPOSE_FORBIDDEN", "Choose a permitted teaching file purpose.");
       if (student != null) s.learning(a, school, student);
       if (classId != null
           && s.db.queryForObject(
-                  "select count(*) from teaching_assignments where school_id=? and class_id=? and teacher_id=?",
+                  "select count(*) from teaching_assignments where school_id=? and class_id=? and teacher_id=? and active",
                   Integer.class,
                   school,
                   classId,
@@ -155,22 +190,26 @@ public class FileService {
   }
 
   public Object create(Actor a, UUID school, Metadata b, String key) {
-    if ("ASSIGNMENT".equals(b.purpose()) && (b.classId() == null || b.studentId() != null))
+    if (Set.of("ASSIGNMENT", "MATERIAL").contains(Objects.toString(b.purpose(), ""))
+        && (b.classId() == null || b.studentId() != null))
       throw fail(
           422,
           "ASSIGNMENT_FILE_SCOPE",
           "Assignment handouts belong to a teaching class, without a private child record.");
     if (b.purpose() == null
         || !Set.of(
-                "STUDENT_DOCUMENT",
-                "ASSIGNMENT",
-                "SUBMISSION",
-                "COMMUNICATION",
-                "FINANCE_EVIDENCE",
-                "SCHOOL_ASSET")
-            .contains(b.purpose()))
+                    "STUDENT_DOCUMENT",
+                    "ASSIGNMENT",
+                    "SUBMISSION",
+                    "COMMUNICATION",
+                    "FINANCE_EVIDENCE",
+                    "SCHOOL_ASSET")
+                .contains(b.purpose())
+            && !Set.of("MATERIAL", "STAFF_DOCUMENT", "PHYSICAL_EVIDENCE")
+                .contains(Objects.toString(b.purpose(), "")))
       throw fail(422, "INVALID_FILE_PURPOSE", "Choose a supported file purpose.");
-    creationScope(a, school, b.purpose(), b.studentId(), b.classId(), b.familyVisible());
+    creationScope(
+        a, school, b.purpose(), b.studentId(), b.classId(), b.familyVisible(), b.staffId());
     String filename = text(b.filename(), 1, 120, "Filename");
     if (filename.contains("/")
         || filename.contains("\\")
@@ -228,7 +267,7 @@ public class FileService {
                 "The configured school or account file allowance is full. Ask the principal to review storage.");
           UUID id = UUID.randomUUID();
           s.db.update(
-              "insert into school_files(id,school_id,owner_id,student_id,class_id,purpose,filename,media_type,expected_size,sha256,family_visible) values (?,?,?,?,?,?,?,?,?,?,?)",
+              "insert into school_files(id,school_id,owner_id,student_id,class_id,purpose,filename,media_type,expected_size,sha256,family_visible,staff_id,owner_role) values (?,?,?,?,?,?,?,?,?,?,?,?,?)",
               id,
               school,
               a.accountId(),
@@ -239,7 +278,9 @@ public class FileService {
               b.mediaType(),
               b.size(),
               b.sha256(),
-              b.familyVisible());
+              b.familyVisible(),
+              b.staffId(),
+              a.context().role());
           s.commands.audit(
               school,
               a.accountId(),
@@ -263,7 +304,8 @@ public class FileService {
         (String) before.get("purpose"),
         (UUID) before.get("student_id"),
         (UUID) before.get("class_id"),
-        Boolean.TRUE.equals(before.get("family_visible")));
+        Boolean.TRUE.equals(before.get("family_visible")),
+        (UUID) before.get("staff_id"));
     if (bytes.length != ((Number) before.get("expected_size")).intValue()
         || !Crypto.equal(Crypto.hashBytes(bytes), (String) before.get("sha256")))
       throw fail(
@@ -332,6 +374,15 @@ public class FileService {
       if (Set.of("PARENT", "STUDENT").contains(role) && r.get("published_at") != null) {
         UUID student = "PARENT".equals(role) ? a.context().childId() : a.context().subjectId();
         s.learning(a, school, student);
+        if ("SUBMISSION".equals(r.get("resource_type")) && student.equals(r.get("student_id")))
+          return true;
+        if ("ASSIGNMENT".equals(r.get("resource_type"))
+            && s.db.queryForObject(
+                    "select count(*) from assignment_submissions sub where sub.assignment_id=? and sub.student_id=? and exists(select 1 from submission_revisions rev where rev.submission_id=sub.id)",
+                    Integer.class,
+                    r.get("assignment_id"),
+                    student)
+                > 0) return true;
         if (!Boolean.TRUE.equals(r.get("required"))
             && s.db.queryForObject(
                     "select count(*) from student_subject_choices where student_id=? and session_id=(select session_id from terms where id=?) and subject_id=?",
@@ -371,18 +422,25 @@ public class FileService {
     if ("PARENT".equals(role) && student != null)
       if ("COMMUNICATION".equals(purpose)) communicationChild(a, school, student);
       else childAccess(a, school, student, "FINANCE_EVIDENCE".equals(purpose));
-    if (a.accountId().equals(f.get("owner_id"))) return;
+    boolean ownerRole = f.get("owner_role") == null || role.equals(f.get("owner_role"));
+    boolean ownPurpose =
+        switch (purpose) {
+          case "SUBMISSION" ->
+              "STUDENT".equals(role) && Objects.equals(student, a.context().subjectId());
+          case "STAFF_DOCUMENT" -> Set.of("PRINCIPAL", "SCHOOL_OFFICE").contains(role);
+          case "ASSIGNMENT", "MATERIAL", "PHYSICAL_EVIDENCE" ->
+              Set.of("PRINCIPAL", "SCHOOL_OFFICE", "TEACHER").contains(role);
+          case "STUDENT_DOCUMENT" -> !"ACCOUNTS".equals(role);
+          default -> true;
+        };
+    if (a.accountId().equals(f.get("owner_id")) && ownerRole && ownPurpose) return;
     if ("SCHOOL_ASSET".equals(purpose)) return;
     if ("FINANCE_EVIDENCE".equals(purpose) && Set.of("PRINCIPAL", "ACCOUNTS").contains(role))
       return;
-    if ("STUDENT_DOCUMENT".equals(purpose)) {
-      if (Set.of("PRINCIPAL", "SCHOOL_OFFICE").contains(role)) return;
-      if (Boolean.TRUE.equals(f.get("family_visible")) && student != null) {
-        s.learning(a, school, student);
-        return;
-      }
-    }
-    if (Set.of("ASSIGNMENT", "SUBMISSION").contains(purpose)
+    if (Set.of("STUDENT_DOCUMENT", "STAFF_DOCUMENT").contains(purpose)
+        && documentFile(a, school, f)) return;
+    if ("MATERIAL".equals(purpose) && materialFile(a, school, (UUID) f.get("id"))) return;
+    if (Set.of("ASSIGNMENT", "SUBMISSION", "PHYSICAL_EVIDENCE").contains(purpose)
         && learningFile(a, school, (UUID) f.get("id"))) return;
     if ("COMMUNICATION".equals(purpose)) {
       @SuppressWarnings("unchecked")
@@ -395,6 +453,59 @@ public class FileService {
       if (Boolean.TRUE.equals(result.get("allowed"))) return;
     }
     throw fail(404, "NOT_FOUND", "The file is unavailable.");
+  }
+
+  private boolean materialFile(Actor a, UUID school, UUID id) {
+    for (var m :
+        s.db.queryForList(
+            "select m.*,t.class_id,t.subject_id,t.teacher_id,t.active,(st.active and st.staff_role='TEACHER') as teacher_active,c.attendance_teacher_id,c.session_id from file_links l join learning_materials m on m.id=l.resource_id join teaching_assignments t on t.id=m.teaching_assignment_id join staff st on st.id=t.teacher_id join classes c on c.id=t.class_id where l.file_id=? and l.resource_type='MATERIAL' and m.school_id=?",
+            id,
+            school)) {
+      boolean published = "PUBLISHED".equals(m.get("state"));
+      try {
+        learningScope.read(a, school, m, published);
+        if (Set.of("PRINCIPAL", "SCHOOL_OFFICE", "TEACHER").contains(a.context().role()))
+          return true;
+        if (published
+            && s.db.queryForObject(
+                    "select count(*) from material_revisions where material_id=? and snapshot->'files' @> ?::jsonb",
+                    Integer.class,
+                    m.get("id"),
+                    s.json.write(List.of(map("id", id))))
+                > 0) return true;
+      } catch (Api.Failure ex) {
+        if (ex.status != 404) throw ex;
+      }
+    }
+    return false;
+  }
+
+  private boolean documentFile(Actor a, UUID school, Map<String, Object> file) {
+    if (Set.of("PRINCIPAL", "SCHOOL_OFFICE").contains(a.context().role())) return true;
+    for (var d :
+        s.db.queryForList(
+            "select d.* from file_links l join school_documents d on d.id=l.resource_id where l.file_id=? and l.resource_type='SCHOOL_DOCUMENT' and d.school_id=? and d.state='PUBLISHED'",
+            file.get("id"),
+            school)) {
+      try {
+        documentScope.read(a, school, d, s.json.tree(d.get("published_snapshot").toString()));
+        for (var rev :
+            s.db.queryForList(
+                "select snapshot from school_document_revisions where document_id=? and (snapshot->>'fileId')::uuid=?",
+                d.get("id"),
+                file.get("id"))) {
+          try {
+            documentScope.read(a, school, d, s.json.tree(rev.get("snapshot").toString()));
+            return true;
+          } catch (Api.Failure ex) {
+            if (ex.status != 404) throw ex;
+          }
+        }
+      } catch (Api.Failure ex) {
+        if (ex.status != 404) throw ex;
+      }
+    }
+    return false;
   }
 
   public Object metadata(Actor a, UUID school, UUID id) {
@@ -429,6 +540,19 @@ public class FileService {
       throw fail(422, "INVALID_ATTACHMENTS", "Use at most five distinct ready files.");
     for (UUID id : files) {
       var f = row(school, id, true);
+      if ("SUBMISSION".equals(resourceType)
+          && f.get("class_id") != null
+          && !Objects.equals(
+              f.get("class_id"),
+              s.one(
+                      "select ta.class_id from assignment_submissions sub join learning_assignments w on w.id=sub.assignment_id join teaching_assignments ta on ta.id=w.teaching_assignment_id where sub.school_id=? and sub.id=?",
+                      school,
+                      resource)
+                  .get("class_id")))
+        throw fail(
+            422,
+            "ATTACHMENT_CLASS_MISMATCH",
+            "Use an attachment from this submission's teaching class.");
       if ("ASSIGNMENT".equals(resourceType)
           && !Objects.equals(
               f.get("class_id"),
