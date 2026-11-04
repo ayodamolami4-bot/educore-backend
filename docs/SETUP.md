@@ -2,7 +2,7 @@
 
 ## Demo sign-in or a real admin account
 
-For the separate frontend's default demo mode, press **Fill demo sign-in details** and **Sign in**, then choose the **Principal** context. The fictional login is `EC-DEMO-001` and its password is `EduCore learning demo 2026!`. This uses the frontend's in-memory demo transport and does not create a backend account or call its business APIs. The role modules on frontend main are placeholders until their developers connect their screens; the shared sign-in, context, notifications and settings screens are implemented.
+For the separate frontend's default demo mode, press **Fill demo sign-in details** and **Sign in**, then choose the **Principal** context. The fictional login is `EC-DEMO-001` and its password is `EduCore learning demo 2026!`. This uses the frontend's in-memory demo transport and does not create a backend account or call its business APIs. At the 4 November 2026 handoff, the role modules on frontend main are placeholders until their developers connect their screens; the shared sign-in, context, notifications and settings screens are implemented.
 
 For a real local development admin, follow steps 1–4 below. The bootstrap command creates the school's first **Principal**, writes a private one-time activation slip, and lets you choose your own password. There is no public form that allows someone to grant themselves school-admin access, and no reusable default backend password. A hosted EduCore API and a complete connected role interface have not been demonstrated.
 

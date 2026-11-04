@@ -9,12 +9,15 @@ Each implemented item requires permissions, failure states, history and real-dat
 - [x] Subject marks → class-lead package submission/return → principal publication, immutable report revisions and PDF/CSV.
 - [x] Late admission/transfer/withdrawal roster synchronisation without deleting marks or inventing zeros.
 - [x] Promotion/repeat, explicit JSS3 pathways, SSS3 completion and stale-source protection.
-- [x] App assignments/submissions/feedback and protected attachments.
+- [x] App/physical assignments, private teacher review drafts, accepted revisions and protected attachments.
+- [x] Class/subject materials with published snapshots and private revision drafts.
+- [x] Verified admission/historical/staff documents, revision visibility and ready-image school logos.
+- [x] Teacher attendance correction requests, stale-source approval/decline, reviewed family alerts and saved office follow-ups.
 - [x] Fee plans/batches, independent approvals, confirmed refunds, settlement review and receipts.
 - [x] Scoped communication/complaints and leased configured delivery.
 - [x] Reviewed CSV imports/resume, opening balances, scoped exports and service-owned activity.
-- [x] Review all 94 pages and validate the 224-operation request catalogue against current controllers.
-- [ ] Implement the remaining controls in the 27 PARTIAL screen rows.
+- [x] Review all 94 pages and validate the 256-operation request catalogue against current controllers.
+- [ ] Implement the remaining controls in the 17 PARTIAL screen rows.
 - [ ] Adopt and implement an assisted-recovery policy beyond the agreed SH09 help-only boundary.
 - [ ] Complete actual provider/device validation, hosting, backup/restore and independent release/security review.
 - [ ] Build/connect and test the React Native role screens with the frontend team.

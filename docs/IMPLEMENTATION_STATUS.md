@@ -1,4 +1,4 @@
-# Implementation status — 3 November 2026
+# Implementation status — 4 November 2026
 
 The expanded backend is on `backend/complete-workflows`. **The full agreed application is still unfinished.** The core workflows below are implemented and exercised. The completed screen review records exact remaining contracts in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md).
 
@@ -11,11 +11,12 @@ The expanded backend is on `backend/complete-workflows`. **The full agreed appli
 | Administration | Staff presets/onboarding and activated-principal protection, teacher eligibility/availability and handover, versioned settings/forms, student corrections/transfers/withdrawal, guardian contacts and permissions, scoped directory filters |
 | Enrolment | Generated fresh admission numbers, explicit legacy migration, verified guardian links, repeat-safe provisioning and private pending-account activation slips |
 | Planning | Curriculum alternatives and weekly timetable drafts/editing/cloning; dated publication, calendar revisions, exam schedules, normal/exam resource conflicts, optional-subject snapshots, activity-supervisor conflicts and a scoped daily schedule projection |
-| Attendance | Assigned-teacher registers, complete submit, submitted-only office overview, corrections/absence alerts, own-child history and three confirmed absences in ten teaching days with missing-register coverage |
+| Attendance | Assigned-teacher registers, complete submit, submitted-only overview, private correction requests/decisions, stale-source checks, office-reviewed alerts, official own-child history and saved absence follow-ups with private office notes |
 | Assessment | Frozen subject scopes, subject-sheet entry/return/submission, class-lead remarks/five ratings, explicit class-package submit/return, principal publication, correction revisions, PDF reports and CSV broadsheets |
 | Roster changes | Principal review/synchronisation after late admission, transfer or withdrawal; blank new marks, archived read-only rows, teacher confirmation, preserved issued snapshots and class-scoped report history |
 | Promotion/graduation | Published-evidence preview, documented exceptions, stale-source checks, JSS3 pathways, ended-year principal confirmation, repeat-safe placements and SSS3 school completion |
-| Learning/files | Assignments, private app drafts, accepted submission revisions, deadline/return/grading actions, family reads and protected encrypted PDF/JPG/PNG attachments |
+| Learning/files | Class/subject materials and accepted revisions; app/physical assignments, teacher-recorded receipts, private feedback drafts/release, accepted learner history and protected encrypted PDF/JPG/PNG attachments |
+| School documents | Verified admission copies, historical paper reports and staff credentials; principal-only historical publication, private revision drafts, per-revision visibility, archive and school-logo selection; scans never manufacture official marks |
 | Fees | Immutable invoice lines, partial payments, cash/verified-bank records, test hosted checkout, signed webhook intake/verification, fee plans/batches, independent adjustment approval, confirmed refunds and invoice/receipt PDFs |
 | Reconciliation | Statement/provider settlement review, gross/fee/net differences, permanent references, reviewed exceptions and finance overview |
 | Communication | School/class/department notices, child-linked parent/class-lead/office threads, current-participant checks and private attachments |
@@ -25,36 +26,37 @@ The expanded backend is on `backend/complete-workflows`. **The full agreed appli
 
 ## Verified evidence
 
-[GitHub Actions run 41589276279](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41589276279), code commit `320c8acd3efc12401d662fb429c38a02b92034b9`, passed:
+[GitHub Actions run 41828518009](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41828518009), code commit `5266c16c63caccd76cb57283ece2b7479c974f8b`, passed:
 
 - **33 unit tests**, none skipped.
-- **52 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
-- All five Docker image builds and both container startup checks.
+- **62 integration scenario groups**, using actual PostgreSQL and HTTP between all five Java programs.
+- Controller/catalogue/page connection checks, all five Docker image builds and both container startup checks.
 
-The added scenarios exercise cross-schedule replacement/conflicts, family optional-subject scope, roster changes and report privacy, class-package submission/return and re-entry after roster/duty changes, directory/settings/form versions, activated-principal protection, activity duties, repeated-absence coverage and failed recovery boundaries.
+The latest scenarios exercise material publication/revision and optional-subject audiences, private files and sibling/school isolation, physical-work receipt and duplicate-safe revisions, private feedback release/stale-source checks, verified historical/admission/staff documents, school logos, teacher correction requests/declines, stale attendance approvals, official family history, reviewed correction alerts and private follow-up evidence/history. Existing enrolment, schedule, assessment, finance, communication and recovery checks also pass.
 
 Paystack, SMTP and Expo are local test doubles. Actual provider accounts, external mailboxes/native devices and a hosted API have not been demonstrated. Local Docker startup is verified.
 
 ## Screen review and remaining work
 
-The review covers **94 agreed pages**: **66 MAPPED**, **27 PARTIAL**, and **1 POLICY_DEFERRED**. MAPPED describes core API coverage; the frontend role screens still require implementation and connection by the frontend team. Every PARTIAL row states its missing planned controls.
+The review covers **94 agreed pages**: **76 MAPPED**, **17 PARTIAL**, and **1 POLICY_DEFERRED**. MAPPED describes core API coverage; the frontend role screens still require implementation and connection by the frontend team. Every PARTIAL row states its missing planned controls.
 
 Remaining contracts include:
 
-1. Standalone class/subject materials, physical-work receipt, admission-document attachments and historical paper-report import.
-2. Formal teacher attendance-correction requests/declines, saved follow-up records and a broader delivery administration/retry screen.
-3. Provisioning diagnostics/retry controls, existing session/term date editing, subject lifecycle and a room catalogue.
-4. Broader report/export controls, a school-wide checkout-attempt list and the School Office fee-only read preset.
-5. An adopted policy for recovery when all private proofs are lost. SH09 is deliberately contact/help only; staff cannot reset an active global identity. Existing verified-email/saved-code recovery and failure boundaries are tested.
-6. Actual provider/device validation, HTTPS hosting, backup/restore, operational monitoring and independent access/load/security review.
+1. Provisioning diagnostics/retry and pending-invitation status/revoke controls; active global accounts still use their private recovery proofs.
+2. Existing session/term date editing and an active-session preference; subject lifecycle and a room catalogue.
+3. Broader report/export controls, a school-wide checkout-attempt list, payment-settings reads/editor and the School Office fee-only read preset.
+4. Staff delivery troubleshooting/retry controls. Background delivery workers already retry under leases and respect access/preferences.
+5. Scope decisions called out in the screen map: the presentation school's grading policy is currently fixed; approved refunds are executed externally and confirmed with evidence, not sent automatically by this API.
+6. An adopted policy for recovery when all private proofs are lost. SH09 is deliberately contact/help only; staff cannot reset an active global identity. Existing verified-email/saved-code recovery and failure boundaries are tested.
+7. Actual provider/device validation, HTTPS hosting, backup/restore, operational monitoring and independent access/load/security review.
 
-The earlier local-environment interruption is resolved. Tested code is saved remotely. `main` still contains the earlier foundation; use the expanded branch for review and local development. Do not describe the whole backend or all 94 screens as complete.
+Tested code and the endpoint handoff are saved remotely. `main` still contains the earlier foundation; use the expanded branch for review and local development. Do not describe the whole backend or all 94 screens as complete.
 
 ## Handoff
 
 - [Page-to-endpoint connections and precise gaps](SCREEN_CONNECTIONS.md)
 - [API workflow guide](API.md)
-- [All 224 implemented endpoints and 105 request record types](FRONTEND_ENDPOINTS.md)
+- [All 256 implemented endpoints and 116 request record types](FRONTEND_ENDPOINTS.md)
 - [OpenAPI request catalogue](openapi.json)
 - [Endpoint CSV](ENDPOINT_CATALOGUE.csv)
 - [Local setup](SETUP.md)
