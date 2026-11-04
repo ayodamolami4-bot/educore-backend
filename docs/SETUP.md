@@ -1,5 +1,11 @@
 # Run EduCore on your computer
 
+## Demo sign-in or a real admin account
+
+For the separate frontend's default demo mode, press **Fill demo sign-in details** and **Sign in**, then choose the **Principal** context. The fictional login is `EC-DEMO-001` and its password is `EduCore learning demo 2026!`. This uses the frontend's in-memory demo transport and does not create a backend account or call its business APIs. The role modules on frontend main are placeholders until their developers connect their screens; the shared sign-in, context, notifications and settings screens are implemented.
+
+For a real local development admin, follow steps 1–4 below. The bootstrap command creates the school's first **Principal**, writes a private one-time activation slip, and lets you choose your own password. There is no public form that allows someone to grant themselves school-admin access, and no reusable default backend password. A hosted EduCore API and a complete connected role interface have not been demonstrated.
+
 ## 1. Tools
 
 Install Git, Node.js 24 and Docker with the Compose plugin. Start Docker before continuing. The commands below work from the backend folder in a terminal or PowerShell. Building Java inside Docker does not need a separate JDK installation. To work on Java outside Docker, install a Java 17+ **JDK**.
@@ -87,7 +93,7 @@ Local operation does not need a payment account or an email provider. Manual cas
 
 Hosted checkout is **test mode only**. Configure a Paystack `sk_test_` secret in backend `.env` and configure the school's approved test subaccount through the principal payment-settings endpoint. Recreate Finance after configuration changes. The app opens the returned hosted checkout URL and polls the payment intent; a browser redirect is not a paid receipt. A reachable HTTPS webhook URL is needed for external webhook testing. Local automated tests use a fake provider and do not contact Paystack.
 
-Email stays disabled until a provider is configured. Add the optional SMTP variables listed in `.env.example`, set `EDUCORE_EMAIL_ENABLED=true`, and recreate Communication. Remote SMTP requires TLS. The sender mailbox/domain must be authorised by your provider. Without configuration, mail remains `WAITING_CONFIGURATION`; the app must not claim it was delivered. Native push delivery is not implemented yet, even though registering a device is supported.
+Email stays disabled until a provider is configured. Add the optional SMTP variables listed in `.env.example`, set `EDUCORE_EMAIL_ENABLED=true`, and recreate Communication. Remote SMTP requires TLS. The sender mailbox/domain must be authorised by your provider. Without configuration, mail remains `WAITING_CONFIGURATION`; the app must not claim it was delivered. The configured Expo push worker is implemented and tested with a local provider double. Actual native-device delivery, Expo credentials and app links still need separate validation; an Expo provider receipt does not prove the person read the message.
 
 ## 8. Stop, update and diagnose
 

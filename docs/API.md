@@ -172,7 +172,7 @@ Teacher directory rows contain teachers only. Eligibility filters search qualifi
 
 ## Explicitly unfinished controls
 
-Use the PARTIAL rows in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) as the remaining contract backlog. Standalone materials, physical-work receipt, historical/admission attachments, formal attendance correction requests/follow-up records, provisioning diagnostics, broader session/subject/room administration, report/export controls and delivery administration are not provided by invented routes. Keep their frontend actions unavailable until the corresponding backend contract is implemented.
+Use the PARTIAL rows in [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) as the remaining contract backlog. The remaining contracts include provisioning diagnostics, invitation management, broader session/subject/room administration, payment administration, report/export controls and delivery troubleshooting. Materials, physical-work receipt, verified historical/admission documents and formal attendance reviews have the explicit workflows below. Keep any action listed as remaining in the screen map unavailable until its contract exists.
 
 SH09 remains contact/help only: no staff-assisted global password reset is adopted. Failed or missing recovery proofs cannot consume an active account's school activation slip or reveal whether an account has verified email. Actual provider/device validation and deployment remain separate from local test doubles.
 
