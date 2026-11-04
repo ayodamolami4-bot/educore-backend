@@ -36,6 +36,8 @@ public class SchoolWorkspaceService {
         p.get("name"),
         "code",
         p.get("code"),
+        "activeSessionId",
+        p.get("active_session_id"),
         "phone",
         p.get("contact_phone"),
         "email",

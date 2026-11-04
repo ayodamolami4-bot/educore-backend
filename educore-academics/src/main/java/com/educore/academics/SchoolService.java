@@ -44,6 +44,30 @@ public class SchoolService {
     return commands.execute(a.accountId().toString(), school.toString(), path, key, body, action);
   }
 
+  String room(UUID school, String value) {
+    if (value == null) return null;
+    String code = text(value, 1, 40, "Room").toUpperCase(Locale.ROOT);
+    // Legacy text entry creates a stable catalogue item without changing historical labels.
+    db.update(
+        "insert into school_rooms(id,school_id,code,name) values (?,?,?,?) on conflict(school_id,code) do nothing",
+        UUID.randomUUID(),
+        school,
+        code,
+        code);
+    var room =
+        one("select active from school_rooms where school_id=? and code=? for share", school, code);
+    if (!Boolean.TRUE.equals(room.get("active")))
+      throw fail(422, "ROOM_INACTIVE", "Choose an active room.");
+    return code;
+  }
+
+  void activeSubject(UUID school, UUID id) {
+    var subject =
+        one("select active from subjects where school_id=? and id=? for share", school, id);
+    if (!Boolean.TRUE.equals(subject.get("active")))
+      throw fail(422, "SUBJECT_INACTIVE", "Choose an active subject.");
+  }
+
   public record Principal(String fullName, String phone) {}
 
   public record Bootstrap(UUID schoolId, String code, String name, Principal principal) {}
@@ -136,6 +160,8 @@ public class SchoolService {
         s.get("name"),
         "logoFileId",
         s.get("logo_file_id"),
+        "activeSessionId",
+        s.get("active_session_id"),
         "timezone",
         s.get("timezone"),
         "currency",
@@ -224,7 +250,7 @@ public class SchoolService {
           dates(b.startsOn(), b.endsOn());
           var s =
               one(
-                  "select * from academic_sessions where school_id=? and id=?",
+                  "select * from academic_sessions where school_id=? and id=? for update",
                   school,
                   b.sessionId());
           if (b.number() < 1
@@ -354,7 +380,7 @@ public class SchoolService {
               code,
               text(b.name(), 2, 100, "Subject name"),
               b.core());
-          return map("id", id, "code", code, "name", b.name());
+          return map("id", id, "code", code, "name", b.name(), "active", true, "version", 1);
         });
   }
 
@@ -363,7 +389,8 @@ public class SchoolService {
     return map(
         "items",
         db.queryForList(
-            "select id,code,name,core from subjects where school_id=? order by name", school),
+            "select id,code,name,core,active,version from subjects where school_id=? order by name",
+            school),
         "hasMore",
         false);
   }
@@ -412,13 +439,15 @@ public class SchoolService {
               phone,
               b.email() == null ? null : email(b.email()));
           for (String level : new HashSet<>(b.eligibleLevels()))
-            for (UUID subject : new HashSet<>(b.subjectIds()))
+            for (UUID subject : new HashSet<>(b.subjectIds())) {
+              activeSubject(school, subject);
               db.update(
                   "insert into staff_qualifications(school_id,staff_id,subject_id,level) values (?,?,?,?)",
                   school,
                   id,
                   subject,
                   level);
+            }
           for (var assignment : b.assignments()) assignment(school, id, assignment);
           UUID event =
               outbox.add(
@@ -455,6 +484,7 @@ public class SchoolService {
 
   UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
     lockPlacements(school);
+    activeSubject(school, b.subjectId());
     var c =
         one("select level from classes where school_id=? and id=? for update", school, b.classId());
     String department = b.department();

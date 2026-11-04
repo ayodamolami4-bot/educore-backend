@@ -53,7 +53,7 @@ def split_fields(text):
     return parts
 
 records = {}
-java_files = list(root.glob("educore-*/src/main/java/**/*.java")) + list(root.glob("platform/src/main/java/**/*.java"))
+java_files = sorted(list(root.glob("educore-*/src/main/java/**/*.java")) + list(root.glob("platform/src/main/java/**/*.java")))
 for file in java_files:
     source = file.read_text()
     for match in re.finditer(r"\brecord\s+(\w+)\s*\(", source):
@@ -183,7 +183,7 @@ for path, methods in paths.items():
                      "if_match": ("required" if headers["If-Match"].get("required") else "conditional") if "If-Match" in headers else "",
                      "query_fields": ", ".join(v["name"] for v in op.get("parameters", []) if v["in"]=="query"), "source": op["x-source"]})
 out = io.StringIO(newline="")
-writer = csv.DictWriter(out, fieldnames=list(rows[0]))
+writer = csv.DictWriter(out, fieldnames=list(rows[0]), lineterminator="\n")
 writer.writeheader(); writer.writerows(rows)
 (root/"docs/ENDPOINT_CATALOGUE.csv").write_bytes(out.getvalue().encode())
 lines = ["# Implemented endpoints and request fields", "", f"Reviewed {today}. These {len(rows)} public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.", "", "Start with [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) and [API.md](API.md) for permissions, workflows, versions and response adapters. Views are implemented by the frontend team.", "", "Protected requests use `Authorization: Bearer <accessToken>`. Commands retain their key, body and version when retried. `If-Match` uses the returned resource version, for example `\"v3\"`.", "", "| Method | Path | Request record | Idempotency-Key | If-Match | Query fields |", "| --- | --- | --- | --- | --- | --- |"]

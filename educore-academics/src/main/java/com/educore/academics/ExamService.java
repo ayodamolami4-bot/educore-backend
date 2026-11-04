@@ -483,7 +483,7 @@ public class ExamService {
               b.onDate(),
               minute(b.start()),
               minute(b.start()) + b.durationMinutes(),
-              text(b.room(), 1, 40, "Exam room"),
+              s.room(school, b.room()),
               b.exceptionReason(),
               ev,
               teaching.get("required"),

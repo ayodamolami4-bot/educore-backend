@@ -1,6 +1,6 @@
 # Implemented endpoints and request fields
 
-Reviewed 2026-11-04. These 261 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
+Reviewed 2026-11-04. These 272 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
 
 Start with [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) and [API.md](API.md) for permissions, workflows, versions and response adapters. Views are implemented by the frontend team.
 
@@ -8,52 +8,46 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 
 | Method | Path | Request record | Idempotency-Key | If-Match | Query fields |
 | --- | --- | --- | --- | --- | --- |
-| GET | `/schools/{school}/notices/{id}` | — | — | — | — |
-| PUT | `/schools/{school}/notices/{id}` | CommunicationWorkService.Notice | required | required | — |
-| POST | `/schools/{school}/notices/{id}/publish` | — | required | required | — |
-| POST | `/schools/{school}/notices/{id}/archive` | CommunicationWorkController.Reason | required | required | — |
-| GET | `/schools/{school}/threads/contacts` | — | — | — | studentId |
-| POST | `/schools/{school}/threads` | CommunicationWorkService.ThreadInput | required | — | — |
-| GET | `/schools/{school}/threads` | — | — | — | cursor, limit |
-| GET | `/schools/{school}/threads/{threadId}` | — | — | — | — |
-| POST | `/schools/{school}/threads/{threadId}/messages` | CommunicationWorkService.Message | required | required | — |
-| POST | `/schools/{school}/threads/{threadId}/close` | CommunicationWorkController.Reason | required | required | — |
-| PUT | `/schools/{school}/threads/{threadId}/read` | — | — | — | — |
-| POST | `/schools/{school}/complaints/{caseId}/status` | CommunicationWorkService.StateChange | required | required | — |
-| PUT | `/schools/{school}/complaints/{caseId}/owner` | CommunicationWorkService.Owner | required | required | — |
-| GET | `/schools/{school}/complaints/{caseId}/history` | — | — | — | — |
-| GET | `/me/notifications` | — | — | — | schoolId, category, unread, cursor, limit |
-| PUT | `/me/notifications/{notificationId}/read` | — | — | — | — |
-| GET | `/me/notifications/{notificationId}/delivery` | — | — | — | — |
-| POST | `/schools/{school}/notices` | CommunicationWorkService.Notice | required | — | — |
-| GET | `/schools/{school}/notices` | — | — | — | cursor, limit |
-| POST | `/schools/{school}/complaints` | CommunicationWorkService.Complaint | required | — | — |
-| GET | `/schools/{school}/complaints` | — | — | — | cursor, limit |
-| GET | `/schools/{school}/complaints/{caseId}` | — | — | — | — |
-| POST | `/schools/{school}/complaints/{caseId}/replies` | CommunicationWorkService.Reply | required | required | — |
-| POST | `/schools/{school}/complaints/{caseId}/close` | CommunicationController.Close | required | required | — |
-| GET | `/schools/{school}/materials` | — | — | — | classId, subjectId, termId, cursor, limit |
-| POST | `/schools/{school}/materials` | MaterialService.Input | required | — | — |
-| GET | `/schools/{school}/materials/{id}` | — | — | — | — |
-| PUT | `/schools/{school}/materials/{id}` | MaterialService.Input | required | required | — |
-| POST | `/schools/{school}/materials/{id}/publish` | — | required | required | — |
-| POST | `/schools/{school}/materials/{id}/archive` | MaterialService.Reason | required | required | — |
-| GET | `/schools/{school}/materials/{id}/history` | — | — | — | — |
-| POST | `/schools/{school}/exam-schedules` | ExamService.Schedule | required | — | — |
-| GET | `/schools/{school}/exam-schedules` | — | — | — | termId |
-| GET | `/schools/{school}/exam-schedules/{scheduleId}/review` | — | — | — | — |
-| POST | `/schools/{school}/exam-schedules/{scheduleId}/events` | ExamService.Event | required | required | — |
-| PUT | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}` | ExamService.Event | required | required | — |
-| POST | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}/remove` | — | required | required | — |
-| POST | `/schools/{school}/exam-schedules/{scheduleId}/publish` | — | required | required | — |
-| GET | `/schools/{school}/examinations` | — | — | — | termId |
-| POST | `/schools/{school}/students/{studentId}/external-results` | ExamService.External | required | — | — |
-| GET | `/schools/{school}/students/{studentId}/external-results` | — | — | — | — |
-| POST | `/schools/{school}/files` | FileService.Metadata | required | — | — |
-| GET | `/schools/{school}/files` | — | — | — | — |
-| GET | `/schools/{school}/files/{fileId}` | — | — | — | — |
-| PUT | `/schools/{school}/files/{fileId}/content` | — | — | required | — |
-| GET | `/schools/{school}/files/{fileId}/content` | — | — | — | — |
+| POST | `/schools/{school}/timetable-plans` | TimetableService.PlanInput | required | — | — |
+| GET | `/schools/{school}/timetable-plans` | — | — | — | termId |
+| POST | `/schools/{school}/timetable-plans/{planId}/lessons` | TimetableService.LessonInput | required | required | — |
+| PUT | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}` | TimetableService.LessonInput | required | required | — |
+| POST | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}/remove` | — | required | required | — |
+| GET | `/schools/{school}/timetable-plans/{planId}/review` | — | — | — | — |
+| POST | `/schools/{school}/timetable-plans/{planId}/publish` | — | required | required | — |
+| GET | `/schools/{school}/timetable` | — | — | — | classId, on |
+| POST | `/schools/{school}/attendance/registers` | AttendanceService.RegisterInput | required | — | — |
+| GET | `/schools/{school}/attendance/registers` | — | — | — | classId, from, to, state, cursor, limit |
+| GET | `/schools/{school}/attendance/registers/{registerId}` | — | — | — | — |
+| PUT | `/schools/{school}/attendance/registers/{registerId}/marks` | AttendanceService.Marks | required | required | — |
+| POST | `/schools/{school}/attendance/registers/{registerId}/submit` | — | required | required | — |
+| POST | `/schools/{school}/attendance/registers/{registerId}/corrections` | AttendanceService.Mark | required | required | — |
+| GET | `/schools/{school}/attendance/overview` | — | — | — | on |
+| GET | `/schools/{school}/students/{studentId}/attendance` | — | — | — | from, to |
+| GET | `/schools/{school}/terms` | — | — | — | sessionId |
+| POST | `/schools/{school}/terms` | SchoolService.TermInput | required | — | — |
+| GET | `/schools/{school}/teaching-assignments` | — | — | — | classId, includeInactive |
+| POST | `/schools/{school}/teaching-assignments` | SchoolWorkspaceService.Teaching | required | — | — |
+| POST | `/schools/{school}/attendance/registers/{registerId}/absence-alerts` | AcademicController.AttendanceTeacherAlert | required | — | — |
+| POST | `/schools/{school}/calendar-exceptions` | AcademicController.CalendarInput | required | — | — |
+| GET | `/schools/{school}/imports/templates/{kind}` | — | — | — | — |
+| GET | `/schools/{school}/imports` | — | — | — | — |
+| POST | `/schools/{school}/imports` | AcademicImportService.Preview | required | — | — |
+| GET | `/schools/{school}/imports/{jobId}` | — | — | — | — |
+| PUT | `/schools/{school}/imports/{jobId}/rows/{rowId}` | AcademicImportService.Correction | required | required | — |
+| POST | `/schools/{school}/imports/{jobId}/confirm` | AcademicImportService.Confirmation | required | required | — |
+| GET | `/schools/{school}/imports/{jobId}/errors.csv` | — | — | — | — |
+| GET | `/schools/{school}/staff` | — | — | — | cursor, search, role, active, limit |
+| POST | `/schools/{school}/staff` | AdministrationService.StaffInput | required | — | — |
+| GET | `/schools/{school}/staff/{staffId}` | — | — | — | — |
+| PATCH | `/schools/{school}/staff/{staffId}` | AdministrationService.StaffEdit | required | required | — |
+| POST | `/schools/{school}/staff/{staffId}/access` | AdministrationService.AccessInput | required | required | — |
+| PUT | `/schools/{school}/teaching-assignments/{id}` | AdministrationService.AssignmentEdit | required | required | — |
+| PATCH | `/schools/{school}/students/{studentId}` | AdministrationService.StudentEdit | required | required | — |
+| GET | `/schools/{school}/students/{studentId}` | — | — | — | — |
+| POST | `/schools/{school}/students/{studentId}/transfers` | AdministrationService.Transfer | required | required | — |
+| POST | `/schools/{school}/students/{studentId}/withdrawal` | AdministrationService.Withdrawal | required | required | — |
+| POST | `/schools/{school}/students/{studentId}/guardians` | AdministrationService.GuardianLink | required | conditional | — |
 | POST | `/schools/{school}/assessment-cycles` | AssessmentService.CycleInput | required | — | — |
 | GET | `/schools/{school}/assessment-cycles` | — | — | — | termId, classId |
 | GET | `/schools/{school}/assessment-cycles/{cycleId}` | — | — | — | — |
@@ -73,13 +67,54 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/schools/{school}/reports/{reportId}` | — | — | — | — |
 | GET | `/schools/{school}/reports/{reportId}/pdf` | — | — | — | — |
 | GET | `/schools/{school}/assessment-cycles/{cycleId}/broadsheet.csv` | — | — | — | — |
-| GET | `/schools/{school}/imports/templates/{kind}` | — | — | — | — |
-| GET | `/schools/{school}/imports` | — | — | — | — |
-| POST | `/schools/{school}/imports` | AcademicImportService.Preview | required | — | — |
-| GET | `/schools/{school}/imports/{jobId}` | — | — | — | — |
-| PUT | `/schools/{school}/imports/{jobId}/rows/{rowId}` | AcademicImportService.Correction | required | required | — |
-| POST | `/schools/{school}/imports/{jobId}/confirm` | AcademicImportService.Confirmation | required | required | — |
-| GET | `/schools/{school}/imports/{jobId}/errors.csv` | — | — | — | — |
+| POST | `/schools/{school}/assignments` | AssignmentService.Input | required | — | — |
+| GET | `/schools/{school}/assignments` | — | — | — | classId, termId, cursor, limit |
+| GET | `/schools/{school}/assignments/{assignmentId}` | — | — | — | — |
+| PUT | `/schools/{school}/assignments/{assignmentId}` | AssignmentService.Input | required | required | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/publish` | — | required | required | — |
+| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}` | — | — | — | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/changes` | AssignmentService.Change | required | required | — |
+| GET | `/schools/{school}/assignments/{assignmentId}/submissions` | — | — | — | — |
+| PUT | `/schools/{school}/assignments/{assignmentId}/my-submission` | AssignmentService.Draft | required | required | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/submit` | — | required | required | — |
+| POST | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/feedback` | AssignmentService.Feedback | required | required | — |
+| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history` | — | — | — | — |
+| GET | `/schools/{school}/attendance/registers/{register}/correction-history` | — | — | — | studentId |
+| POST | `/schools/{school}/attendance/registers/{register}/correction-alerts` | AttendanceWorkflowService.Notices | required | required | — |
+| POST | `/schools/{school}/attendance/registers/{register}/correction-requests` | AttendanceWorkflowService.Correction | required | required | — |
+| GET | `/schools/{school}/attendance/correction-requests` | — | — | — | classId, state, cursor, limit |
+| GET | `/schools/{school}/attendance/correction-requests/{id}` | — | — | — | — |
+| PUT | `/schools/{school}/attendance/correction-requests/{id}` | AttendanceWorkflowService.Correction | required | required | — |
+| POST | `/schools/{school}/attendance/correction-requests/{id}/decision` | AttendanceWorkflowService.Decision | required | required | — |
+| POST | `/schools/{school}/attendance/correction-requests/{id}/cancel` | AttendanceWorkflowService.Reason | required | required | — |
+| GET | `/schools/{school}/attendance/correction-requests/{id}/history` | — | — | — | — |
+| POST | `/schools/{school}/attendance/follow-up-cases` | AttendanceFollowupService.Open | required | — | — |
+| GET | `/schools/{school}/attendance/follow-up-cases` | — | — | — | studentId, state, cursor, limit |
+| GET | `/schools/{school}/attendance/follow-up-cases/{id}` | — | — | — | — |
+| PATCH | `/schools/{school}/attendance/follow-up-cases/{id}` | AttendanceFollowupService.Change | required | required | — |
+| GET | `/schools/{school}/schedule/day` | — | — | — | classId, on |
+| POST | `/schools/{school}/exam-schedules` | ExamService.Schedule | required | — | — |
+| GET | `/schools/{school}/exam-schedules` | — | — | — | termId |
+| GET | `/schools/{school}/exam-schedules/{scheduleId}/review` | — | — | — | — |
+| POST | `/schools/{school}/exam-schedules/{scheduleId}/events` | ExamService.Event | required | required | — |
+| PUT | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}` | ExamService.Event | required | required | — |
+| POST | `/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}/remove` | — | required | required | — |
+| POST | `/schools/{school}/exam-schedules/{scheduleId}/publish` | — | required | required | — |
+| GET | `/schools/{school}/examinations` | — | — | — | termId |
+| POST | `/schools/{school}/students/{studentId}/external-results` | ExamService.External | required | — | — |
+| GET | `/schools/{school}/students/{studentId}/external-results` | — | — | — | — |
+| POST | `/schools/{school}/files` | FileService.Metadata | required | — | — |
+| GET | `/schools/{school}/files` | — | — | — | — |
+| GET | `/schools/{school}/files/{fileId}` | — | — | — | — |
+| PUT | `/schools/{school}/files/{fileId}/content` | — | — | required | — |
+| GET | `/schools/{school}/files/{fileId}/content` | — | — | — | — |
+| GET | `/schools/{school}/materials` | — | — | — | classId, subjectId, termId, cursor, limit |
+| POST | `/schools/{school}/materials` | MaterialService.Input | required | — | — |
+| GET | `/schools/{school}/materials/{id}` | — | — | — | — |
+| PUT | `/schools/{school}/materials/{id}` | MaterialService.Input | required | required | — |
+| POST | `/schools/{school}/materials/{id}/publish` | — | required | required | — |
+| POST | `/schools/{school}/materials/{id}/archive` | MaterialService.Reason | required | required | — |
+| GET | `/schools/{school}/materials/{id}/history` | — | — | — | — |
 | GET | `/schools/{school}/classes/{classId}/workspace` | — | — | — | on |
 | PATCH | `/schools/{school}/classes/{classId}` | PlanningService.ClassEdit | required | required | — |
 | POST | `/schools/{school}/curricula` | PlanningService.Curriculum | required | — | — |
@@ -94,25 +129,6 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/schools/{school}/calendar-plans` | — | — | — | sessionId |
 | POST | `/schools/{school}/calendar-plans` | PlanningService.CalendarInput | required | — | — |
 | POST | `/schools/{school}/calendar-plans/{id}/publish` | — | required | required | — |
-| POST | `/schools/{school}/assignments` | AssignmentService.Input | required | — | — |
-| GET | `/schools/{school}/assignments` | — | — | — | classId, termId, cursor, limit |
-| GET | `/schools/{school}/assignments/{assignmentId}` | — | — | — | — |
-| PUT | `/schools/{school}/assignments/{assignmentId}` | AssignmentService.Input | required | required | — |
-| POST | `/schools/{school}/assignments/{assignmentId}/publish` | — | required | required | — |
-| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}` | — | — | — | — |
-| POST | `/schools/{school}/assignments/{assignmentId}/changes` | AssignmentService.Change | required | required | — |
-| GET | `/schools/{school}/assignments/{assignmentId}/submissions` | — | — | — | — |
-| PUT | `/schools/{school}/assignments/{assignmentId}/my-submission` | AssignmentService.Draft | required | required | — |
-| POST | `/schools/{school}/assignments/{assignmentId}/submit` | — | required | required | — |
-| POST | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/feedback` | AssignmentService.Feedback | required | required | — |
-| GET | `/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history` | — | — | — | — |
-| GET | `/schools/{school}/documents` | — | — | — | studentId, staffId, kind, cursor, limit |
-| POST | `/schools/{school}/documents` | SchoolDocumentService.Input | required | — | — |
-| GET | `/schools/{school}/documents/{id}` | — | — | — | — |
-| PUT | `/schools/{school}/documents/{id}` | SchoolDocumentService.Input | required | required | — |
-| POST | `/schools/{school}/documents/{id}/publish` | — | required | required | — |
-| POST | `/schools/{school}/documents/{id}/archive` | SchoolDocumentService.Reason | required | required | — |
-| GET | `/schools/{school}/documents/{id}/history` | — | — | — | — |
 | POST | `/schools/{school}/promotion-batches` | PromotionService.Preview | required | — | — |
 | GET | `/schools/{school}/promotion-batches` | — | — | — | — |
 | GET | `/schools/{school}/promotion-batches/{batchId}` | — | — | — | — |
@@ -120,38 +136,12 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/promotion-batches/{batchId}/confirm` | — | required | required | — |
 | GET | `/schools/{school}/promotion-batches/{batchId}/outcomes.csv` | — | — | — | — |
 | GET | `/schools/{school}/students/{studentId}/academic-history` | — | — | — | — |
-| GET | `/schools/{school}/settings` | — | — | — | — |
-| PUT | `/schools/{school}/settings` | SchoolWorkspaceService.Settings | required | required | — |
-| POST | `/schools/{school}/metadata-versions` | SchoolWorkspaceService.Metadata | required | required | — |
-| GET | `/schools/{school}/guardians/{guardianId}` | — | — | — | — |
-| PATCH | `/schools/{school}/guardians/{guardianId}` | SchoolWorkspaceService.GuardianEdit | required | required | — |
-| POST | `/schools/{school}/teaching-assignments` | SchoolWorkspaceService.Teaching | required | — | — |
-| GET | `/schools/{school}/teaching-assignments` | — | — | — | classId, includeInactive |
-| GET | `/schools/{school}/terms/{termId}/activities` | — | — | — | — |
-| PUT | `/schools/{school}/terms/{termId}/activities` | SchoolWorkspaceService.Activity | required | required | — |
-| GET | `/schools/{school}/my-classes` | — | — | — | sessionId |
-| GET | `/schools/{school}/dashboard` | — | — | — | — |
-| GET | `/schools/{school}/attendance/follow-ups` | — | — | — | on |
-| GET | `/schools/{school}/students/export.csv` | — | — | — | classId |
-| GET | `/schools/{school}/teachers/export.csv` | — | — | — | — |
-| GET | `/schools/{school}/staff` | — | — | — | cursor, search, role, active, limit |
-| POST | `/schools/{school}/staff` | AdministrationService.StaffInput | required | — | — |
-| GET | `/schools/{school}/staff/{staffId}` | — | — | — | — |
-| PATCH | `/schools/{school}/staff/{staffId}` | AdministrationService.StaffEdit | required | required | — |
-| POST | `/schools/{school}/staff/{staffId}/access` | AdministrationService.AccessInput | required | required | — |
-| PUT | `/schools/{school}/teaching-assignments/{id}` | AdministrationService.AssignmentEdit | required | required | — |
-| PATCH | `/schools/{school}/students/{studentId}` | AdministrationService.StudentEdit | required | required | — |
-| GET | `/schools/{school}/students/{studentId}` | — | — | — | — |
-| POST | `/schools/{school}/students/{studentId}/transfers` | AdministrationService.Transfer | required | required | — |
-| POST | `/schools/{school}/students/{studentId}/withdrawal` | AdministrationService.Withdrawal | required | required | — |
-| POST | `/schools/{school}/students/{studentId}/guardians` | AdministrationService.GuardianLink | required | conditional | — |
-| GET | `/schools/{school}/schedule/day` | — | — | — | classId, on |
+| GET | `/schools/{school}/provisioning/{type}/{subject}` | — | — | — | — |
+| POST | `/schools/{school}/provisioning/{type}/{subject}/retry` | ProvisioningService.Retry | required | required | — |
 | GET | `/schools/{school}/metadata` | — | — | — | — |
 | PUT | `/schools/{school}/metadata` | SchoolController.MetadataInput | required | required | — |
 | POST | `/schools/{school}/academic-sessions` | SchoolService.SessionInput | required | — | — |
 | GET | `/schools/{school}/academic-sessions` | — | — | — | — |
-| POST | `/schools/{school}/terms` | SchoolService.TermInput | required | — | — |
-| GET | `/schools/{school}/terms` | — | — | — | sessionId |
 | POST | `/schools/{school}/classes` | SchoolService.ClassInput | required | — | — |
 | GET | `/schools/{school}/classes` | — | — | — | sessionId |
 | PUT | `/schools/{school}/classes/{classId}/attendance-teacher` | SchoolController.AttendanceTeacher | required | required | — |
@@ -164,41 +154,60 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/students/{studentId}/guardians/{guardianId}/revoke` | SchoolController.Reason | required | — | — |
 | GET | `/schools/{school}/audit` | — | — | — | cursor, limit |
 | GET | `/schools/{school}/guardians` | — | — | — | cursor, search, childId, activeLink, limit |
-| GET | `/schools/{school}/attendance/registers/{register}/correction-history` | — | — | — | studentId |
-| POST | `/schools/{school}/attendance/registers/{register}/correction-alerts` | AttendanceWorkflowService.Notices | required | required | — |
-| GET | `/schools/{school}/attendance/registers` | — | — | — | classId, from, to, state, cursor, limit |
-| POST | `/schools/{school}/attendance/registers` | AttendanceService.RegisterInput | required | — | — |
-| POST | `/schools/{school}/attendance/registers/{register}/correction-requests` | AttendanceWorkflowService.Correction | required | required | — |
-| GET | `/schools/{school}/attendance/correction-requests` | — | — | — | classId, state, cursor, limit |
-| GET | `/schools/{school}/attendance/correction-requests/{id}` | — | — | — | — |
-| PUT | `/schools/{school}/attendance/correction-requests/{id}` | AttendanceWorkflowService.Correction | required | required | — |
-| POST | `/schools/{school}/attendance/correction-requests/{id}/decision` | AttendanceWorkflowService.Decision | required | required | — |
-| POST | `/schools/{school}/attendance/correction-requests/{id}/cancel` | AttendanceWorkflowService.Reason | required | required | — |
-| GET | `/schools/{school}/attendance/correction-requests/{id}/history` | — | — | — | — |
-| POST | `/schools/{school}/attendance/follow-up-cases` | AttendanceFollowupService.Open | required | — | — |
-| GET | `/schools/{school}/attendance/follow-up-cases` | — | — | — | studentId, state, cursor, limit |
-| GET | `/schools/{school}/attendance/follow-up-cases/{id}` | — | — | — | — |
-| PATCH | `/schools/{school}/attendance/follow-up-cases/{id}` | AttendanceFollowupService.Change | required | required | — |
+| GET | `/schools/{school}/documents` | — | — | — | studentId, staffId, kind, cursor, limit |
+| POST | `/schools/{school}/documents` | SchoolDocumentService.Input | required | — | — |
+| GET | `/schools/{school}/documents/{id}` | — | — | — | — |
+| PUT | `/schools/{school}/documents/{id}` | SchoolDocumentService.Input | required | required | — |
+| POST | `/schools/{school}/documents/{id}/publish` | — | required | required | — |
+| POST | `/schools/{school}/documents/{id}/archive` | SchoolDocumentService.Reason | required | required | — |
+| GET | `/schools/{school}/documents/{id}/history` | — | — | — | — |
+| PATCH | `/schools/{school}/academic-sessions/{id}` | SchoolSetupService.Dates | required | required | — |
+| PATCH | `/schools/{school}/terms/{id}` | SchoolSetupService.Dates | required | required | — |
+| PUT | `/schools/{school}/active-academic-session` | SchoolSetupService.ActiveSession | required | required | — |
+| PATCH | `/schools/{school}/subjects/{id}` | SchoolSetupService.Subject | required | required | — |
+| GET | `/schools/{school}/rooms` | — | — | — | active, cursor, limit |
+| POST | `/schools/{school}/rooms` | SchoolSetupService.Room | required | — | — |
+| PATCH | `/schools/{school}/rooms/{id}` | SchoolSetupService.Room | required | required | — |
+| GET | `/schools/{school}/settings` | — | — | — | — |
+| PUT | `/schools/{school}/settings` | SchoolWorkspaceService.Settings | required | required | — |
+| POST | `/schools/{school}/metadata-versions` | SchoolWorkspaceService.Metadata | required | required | — |
+| GET | `/schools/{school}/guardians/{guardianId}` | — | — | — | — |
+| PATCH | `/schools/{school}/guardians/{guardianId}` | SchoolWorkspaceService.GuardianEdit | required | required | — |
+| GET | `/schools/{school}/terms/{termId}/activities` | — | — | — | — |
+| PUT | `/schools/{school}/terms/{termId}/activities` | SchoolWorkspaceService.Activity | required | required | — |
+| GET | `/schools/{school}/my-classes` | — | — | — | sessionId |
+| GET | `/schools/{school}/dashboard` | — | — | — | — |
+| GET | `/schools/{school}/attendance/follow-ups` | — | — | — | on |
+| GET | `/schools/{school}/students/export.csv` | — | — | — | classId |
+| GET | `/schools/{school}/teachers/export.csv` | — | — | — | — |
 | POST | `/schools/{school}/assignments/{assignment}/submissions/{student}/physical-receipt` | SubmissionWorkService.Physical | required | required | — |
 | GET | `/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft` | — | — | — | — |
 | PUT | `/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft` | AssignmentService.Feedback | required | required | — |
 | POST | `/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft/release` | — | required | required | — |
-| POST | `/schools/{school}/timetable-plans` | TimetableService.PlanInput | required | — | — |
-| GET | `/schools/{school}/timetable-plans` | — | — | — | termId |
-| POST | `/schools/{school}/timetable-plans/{planId}/lessons` | TimetableService.LessonInput | required | required | — |
-| PUT | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}` | TimetableService.LessonInput | required | required | — |
-| POST | `/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}/remove` | — | required | required | — |
-| GET | `/schools/{school}/timetable-plans/{planId}/review` | — | — | — | — |
-| POST | `/schools/{school}/timetable-plans/{planId}/publish` | — | required | required | — |
-| GET | `/schools/{school}/timetable` | — | — | — | classId, on |
-| GET | `/schools/{school}/attendance/registers/{registerId}` | — | — | — | — |
-| PUT | `/schools/{school}/attendance/registers/{registerId}/marks` | AttendanceService.Marks | required | required | — |
-| POST | `/schools/{school}/attendance/registers/{registerId}/submit` | — | required | required | — |
-| POST | `/schools/{school}/attendance/registers/{registerId}/corrections` | AttendanceService.Mark | required | required | — |
-| GET | `/schools/{school}/attendance/overview` | — | — | — | on |
-| GET | `/schools/{school}/students/{studentId}/attendance` | — | — | — | from, to |
-| POST | `/schools/{school}/attendance/registers/{registerId}/absence-alerts` | AcademicController.AttendanceTeacherAlert | required | — | — |
-| POST | `/schools/{school}/calendar-exceptions` | AcademicController.CalendarInput | required | — | — |
+| GET | `/me/notifications` | — | — | — | schoolId, category, unread, cursor, limit |
+| PUT | `/me/notifications/{notificationId}/read` | — | — | — | — |
+| GET | `/me/notifications/{notificationId}/delivery` | — | — | — | — |
+| POST | `/schools/{school}/notices` | CommunicationWorkService.Notice | required | — | — |
+| GET | `/schools/{school}/notices` | — | — | — | cursor, limit |
+| POST | `/schools/{school}/complaints` | CommunicationWorkService.Complaint | required | — | — |
+| GET | `/schools/{school}/complaints` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/complaints/{caseId}` | — | — | — | — |
+| POST | `/schools/{school}/complaints/{caseId}/replies` | CommunicationWorkService.Reply | required | required | — |
+| POST | `/schools/{school}/complaints/{caseId}/close` | CommunicationController.Close | required | required | — |
+| GET | `/schools/{school}/notices/{id}` | — | — | — | — |
+| PUT | `/schools/{school}/notices/{id}` | CommunicationWorkService.Notice | required | required | — |
+| POST | `/schools/{school}/notices/{id}/publish` | — | required | required | — |
+| POST | `/schools/{school}/notices/{id}/archive` | CommunicationWorkController.Reason | required | required | — |
+| GET | `/schools/{school}/threads/contacts` | — | — | — | studentId |
+| POST | `/schools/{school}/threads` | CommunicationWorkService.ThreadInput | required | — | — |
+| GET | `/schools/{school}/threads` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/threads/{threadId}` | — | — | — | — |
+| POST | `/schools/{school}/threads/{threadId}/messages` | CommunicationWorkService.Message | required | required | — |
+| POST | `/schools/{school}/threads/{threadId}/close` | CommunicationWorkController.Reason | required | required | — |
+| PUT | `/schools/{school}/threads/{threadId}/read` | — | — | — | — |
+| POST | `/schools/{school}/complaints/{caseId}/status` | CommunicationWorkService.StateChange | required | required | — |
+| PUT | `/schools/{school}/complaints/{caseId}/owner` | CommunicationWorkService.Owner | required | required | — |
+| GET | `/schools/{school}/complaints/{caseId}/history` | — | — | — | — |
 | POST | `/schools/{school}/fee-plans` | FeeAdministrationService.Plan | required | — | — |
 | GET | `/schools/{school}/fee-plans` | — | — | — | termId |
 | PUT | `/schools/{school}/fee-plans/{planId}` | FeeAdministrationService.Plan | required | required | — |
@@ -228,18 +237,18 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/payment-intents/{intentId}/verify` | — | — | — | — |
 | GET | `/schools/{school}/reconciliation/exceptions` | — | — | — | — |
 | POST | `/webhooks/paystack` | — | — | — | — |
-| POST | `/schools/{school}/reconciliation/statements` | ReconciliationService.Statement | required | — | — |
-| POST | `/schools/{school}/reconciliation/paystack-sync` | ReconciliationService.Period | required | — | — |
-| GET | `/schools/{school}/reconciliation/settlements` | — | — | — | cursor, limit |
-| GET | `/schools/{school}/reconciliation/settlements/{settlementId}` | — | — | — | — |
-| POST | `/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution` | ReconciliationService.Resolution | — | — | — |
-| GET | `/schools/{school}/reconciliation/overview` | — | — | — | — |
 | GET | `/schools/{school}/invoices/fee-status` | — | — | — | studentId, termId, cursor, limit |
 | GET | `/schools/{school}/payment-intents` | — | — | — | studentId, invoiceId, state, reference, from, to, cursor, limit |
 | GET | `/schools/{school}/invoices/payment-settings/history` | — | — | — | beforeVersion, limit |
 | POST | `/schools/{school}/invoices/opening-balances` | OpeningBalanceService.Preview | required | — | — |
 | GET | `/schools/{school}/invoices/opening-balances/{batchId}` | — | — | — | — |
 | POST | `/schools/{school}/invoices/opening-balances/{batchId}/confirm` | OpeningBalanceService.Confirm | — | — | — |
+| POST | `/schools/{school}/reconciliation/statements` | ReconciliationService.Statement | required | — | — |
+| POST | `/schools/{school}/reconciliation/paystack-sync` | ReconciliationService.Period | required | — | — |
+| GET | `/schools/{school}/reconciliation/settlements` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/reconciliation/settlements/{settlementId}` | — | — | — | — |
+| POST | `/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution` | ReconciliationService.Resolution | — | — | — |
+| GET | `/schools/{school}/reconciliation/overview` | — | — | — | — |
 | POST | `/auth/login` | IdentityController.Login | — | — | — |
 | POST | `/auth/refresh` | IdentityController.Token | — | — | — |
 | POST | `/auth/logout` | IdentityController.Token | — | — | — |
@@ -266,6 +275,8 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | DELETE | `/me/push-devices/{deviceId}` | — | — | — | — |
 | POST | `/schools/{school}/onboarding/{type}/{subjectId}/activation-slips` | — | required | — | — |
 | GET | `/public/access-help` | — | — | — | — |
+| GET | `/schools/{school}/onboarding/{type}/{subject}/invitations` | — | — | — | cursor, limit |
+| POST | `/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke` | InvitationService.Revoke | required | required | — |
 | GET | `/schools/{school}/activity/{domain}` | — | — | — | from, to, cursor, limit |
 | GET | `/schools/{school}/activity/{domain}/export.csv` | — | — | — | from, to |
 | GET | `/me/security-history` | — | — | — | cursor, limit |
@@ -885,6 +896,12 @@ These are declared property names and Java types. Required/conditional values ar
 | --- | --- |
 | `refreshToken` | `String` |
 
+### InvitationService.Revoke
+
+| Field | Type |
+| --- | --- |
+| `reason` | `String` |
+
 ### MaterialService.Input
 
 | Field | Type |
@@ -1017,6 +1034,13 @@ These are declared property names and Java types. Required/conditional values ar
 | `sourceSessionId` | `UUID` |
 | `targetSessionId` | `UUID` |
 | `sourceClassId` | `UUID` |
+
+### ProvisioningService.Retry
+
+| Field | Type |
+| --- | --- |
+| `eventId` | `UUID` |
+| `reason` | `String` |
 
 ### ReconciliationService.Period
 
@@ -1186,6 +1210,40 @@ These are declared property names and Java types. Required/conditional values ar
 | `number` | `int` |
 | `startsOn` | `LocalDate` |
 | `endsOn` | `LocalDate` |
+
+### SchoolSetupService.ActiveSession
+
+| Field | Type |
+| --- | --- |
+| `sessionId` | `UUID` |
+| `reason` | `String` |
+
+### SchoolSetupService.Dates
+
+| Field | Type |
+| --- | --- |
+| `name` | `String` |
+| `startsOn` | `LocalDate` |
+| `endsOn` | `LocalDate` |
+| `reason` | `String` |
+
+### SchoolSetupService.Room
+
+| Field | Type |
+| --- | --- |
+| `code` | `String` |
+| `name` | `String` |
+| `capacity` | `Integer` |
+| `active` | `boolean` |
+| `reason` | `String` |
+
+### SchoolSetupService.Subject
+
+| Field | Type |
+| --- | --- |
+| `name` | `String` |
+| `active` | `boolean` |
+| `reason` | `String` |
 
 ### SchoolWorkspaceService.Activity
 

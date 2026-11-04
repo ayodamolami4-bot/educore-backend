@@ -64,3 +64,7 @@ The agreed target is preserved in [the final administrator specification](produc
 - [Local setup](SETUP.md)
 
 Internal service routes are excluded from the frontend catalogue. Official grades/money/promotion decisions stay on Java; frontend Models adapt response names, Presenters coordinate screen actions and Views render them.
+
+### Administration controls being verified
+
+The review branch now adds provisioning status/retry, invitation history/revocation (including invalidation after activation review), versioned unused-date edits, the active-session display preference, subject lifecycle and a room catalogue. Java compilation/unit checks and catalogue validation pass locally. New PostgreSQL scenarios are wired into the runner; their runtime result is not yet recorded. The verified checkpoint above remains the last completed full run until those checks finish.

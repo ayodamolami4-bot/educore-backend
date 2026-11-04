@@ -145,7 +145,7 @@ public class TimetableService {
         > 0)
       throw fail(
           409, "TEACHER_UNAVAILABLE", "This teacher is unavailable during the proposed lesson.");
-    String room = b.room() == null ? null : text(b.room(), 1, 40, "Room");
+    String room = s.room(school, b.room());
     // The locked plan serialises common versus department class-overlap checks.
     var conflicts =
         s.db.queryForList(

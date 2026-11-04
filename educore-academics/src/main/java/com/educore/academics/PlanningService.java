@@ -123,7 +123,7 @@ public class PlanningService {
           s.db.update(
               "update classes set capacity=?,room=?,version=version+1 where id=?",
               b.capacity(),
-              b.room() == null ? null : text(b.room(), 1, 40, "Room"),
+              s.room(school, b.room()),
               id);
           s.commands.audit(
               school,
@@ -164,7 +164,7 @@ public class PlanningService {
           Set<UUID> seen = new HashSet<>();
           Map<String, Integer> groups = new HashMap<>();
           for (var r : b.subjects()) {
-            s.one("select id from subjects where school_id=? and id=?", school, r.subjectId());
+            s.activeSubject(school, r.subjectId());
             if (!seen.add(r.subjectId())
                 || r.weeklyPeriods() < 1
                 || r.weeklyPeriods() > 10
@@ -557,7 +557,7 @@ public class PlanningService {
                   "Reassign active work before removing its subject or level eligibility.");
           s.db.update("delete from staff_qualifications where staff_id=?", teacher);
           for (UUID sub : new HashSet<>(b.subjectIds())) {
-            s.one("select id from subjects where school_id=? and id=?", school, sub);
+            s.activeSubject(school, sub);
             for (String level : new HashSet<>(b.eligibleLevels()))
               s.db.update(
                   "insert into staff_qualifications(school_id,staff_id,subject_id,level) values (?,?,?,?)",

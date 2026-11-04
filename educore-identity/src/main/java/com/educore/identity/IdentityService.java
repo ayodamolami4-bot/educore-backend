@@ -424,7 +424,14 @@ public class IdentityService {
   }
 
   private Object flow(UUID account, String mode) {
+    return flow(account, mode, null);
+  }
+
+  private Object flow(UUID account, String mode, UUID invitation) {
     String token = proof(account, null, "FLOW_" + mode, Duration.ofMinutes(10), null);
+    if (invitation != null)
+      db.update(
+          "update proofs set invitation_id=? where token_hash=?", invitation, Crypto.hash(token));
     var a = account(account);
     String login = (String) a.get("login_id");
     return map(
@@ -438,21 +445,40 @@ public class IdentityService {
         login.substring(0, Math.min(8, login.length())) + "***");
   }
 
+  private void activationProof(Map<String, Object> proof) {
+    UUID invitation = (UUID) proof.get("invitation_id");
+    if (invitation != null
+        && db.queryForObject(
+                "select count(*) from school_invitations i where i.id=? and i.state='ISSUED' and exists(select 1 from memberships m where m.account_id=i.account_id and m.school_id=i.school_id and m.subject_id=i.subject_id and m.active)",
+                Integer.class,
+                invitation)
+            == 0) throw invalid();
+  }
+
   public Object activation(String login, String code, String invitation) {
     limit("activation", Objects.toString(login, invitation), 10);
     return commands.transaction(
         () -> {
-          Map<String, Object> p;
-          if (invitation != null) {
-            p = consume(invitation, "ACTIVATION_LINK", null, null);
-          } else {
-            var a = identifier(text(login, 1, 80, "Login ID"));
-            if (a == null) throw invalid();
-            p = consume(code, "ACTIVATION_CODE", (UUID) a.get("id"), null);
-          }
-          UUID id = (UUID) p.get("account_id");
-          if (!"PENDING".equals(account(id).get("status"))) throw invalid();
-          return flow(id, "ACTIVATE");
+          String token = invitation == null ? code : invitation;
+          if (token == null || token.length() > 128) throw invalid();
+          var candidates =
+              db.queryForList(
+                  "select account_id from proofs where token_hash=? and kind=?",
+                  Crypto.hash(token),
+                  invitation == null ? "ACTIVATION_CODE" : "ACTIVATION_LINK");
+          if (candidates.isEmpty()) throw invalid();
+          UUID account = (UUID) candidates.get(0).get("account_id");
+          var locked = one("select * from accounts where id=? for update", account);
+          if (!"PENDING".equals(locked.get("status"))) throw invalid();
+          if (invitation == null
+              && !Objects.equals(
+                  locked.get("login_id"), text(login, 1, 80, "Login ID").toUpperCase(Locale.ROOT)))
+            throw invalid();
+          var p =
+              consume(
+                  token, invitation == null ? "ACTIVATION_CODE" : "ACTIVATION_LINK", account, null);
+          activationProof(p);
+          return flow(account, "ACTIVATE", (UUID) p.get("invitation_id"));
         });
   }
 
@@ -505,13 +531,23 @@ public class IdentityService {
     return commands.transaction(
         () -> {
           if (token == null || token.length() > 128) throw invalid();
+          var candidate =
+              db.queryForList(
+                  "select account_id from proofs where token_hash=?", Crypto.hash(token));
+          if (candidate.isEmpty()) throw invalid();
+          UUID account = (UUID) candidate.get(0).get("account_id");
+          var locked = one("select * from accounts where id=? for update", account);
           var rows =
               db.queryForList(
                   "select * from proofs where token_hash=? and kind in ('FLOW_ACTIVATE','FLOW_RESET_EMAIL','FLOW_RESET_SAVED_CODE') and consumed_at is null and expires_at>now() for update",
                   Crypto.hash(token));
           if (rows.isEmpty()) throw invalid();
           var p = rows.get(0);
-          return savePassword((UUID) p.get("account_id"), password);
+          if ("FLOW_ACTIVATE".equals(p.get("kind"))) {
+            if (!"PENDING".equals(locked.get("status"))) throw invalid();
+            activationProof(p);
+          }
+          return savePassword(account, password);
         });
   }
 
@@ -783,67 +819,6 @@ public class IdentityService {
         "update push_devices set enabled=false,version=version+1 where id=? and account_id=?",
         id,
         a.accountId());
-  }
-
-  public Object slip(Actor actor, UUID school, String type, UUID subject, String key) {
-    actor.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
-    String subjectType = "TEACHER".equals(type) ? "STAFF" : type;
-    if (!Set.of("STAFF", "STUDENT", "GUARDIAN").contains(subjectType))
-      throw fail(422, "INVALID_SUBJECT_TYPE", "Choose STAFF, TEACHER, STUDENT or GUARDIAN.");
-    if ("STAFF".equals(subjectType)
-        && "SCHOOL_OFFICE".equals(actor.context().role())
-        && db.queryForObject(
-                "select count(*) from memberships where school_id=? and subject_id=? and role='TEACHER' and active",
-                Integer.class,
-                school,
-                subject)
-            == 0)
-      throw fail(
-          403,
-          "ADMINISTRATOR_INVITATION_FORBIDDEN",
-          "Only the principal can issue administrator access instructions.");
-    return commands.execute(
-        actor.accountId().toString(),
-        school.toString(),
-        "activation-slip/" + type + "/" + subject,
-        key,
-        map("subjectId", subject),
-        () -> {
-          var link =
-              one(
-                  "select account_id from provisioned_subjects where school_id=? and subject_type=? and subject_id=?",
-                  school,
-                  subjectType,
-                  subject);
-          UUID account = (UUID) link.get("account_id");
-          var a = account(account);
-          if (!"PENDING".equals(a.get("status")))
-            throw fail(
-                409,
-                "ALREADY_ACTIVE",
-                "This account is already active. School staff cannot reset its permanent password.");
-          db.update(
-              "update proofs set consumed_at=now() where account_id=? and kind in ('ACTIVATION_CODE','ACTIVATION_LINK') and consumed_at is null",
-              account);
-          String code = proof(account, null, "ACTIVATION_CODE", Duration.ofHours(48), null);
-          commands.audit(
-              school,
-              actor.accountId(),
-              "ACTIVATION_SLIP_ISSUED",
-              type,
-              subject,
-              "School-issued initial access",
-              Map.of());
-          return map(
-              "loginId",
-              a.get("login_id"),
-              "activationCode",
-              code,
-              "expiresAt",
-              Instant.now().plusSeconds(172800),
-              "delivery",
-              "PRIVATE_SCHOOL_HANDOVER");
-        });
   }
 
   public Object firstPrincipalSlip(UUID school, UUID subject, String key) {

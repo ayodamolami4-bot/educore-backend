@@ -27,9 +27,11 @@ public class IdentityController {
   }
 
   private final IdentityService service;
+  private final InvitationService invitations;
 
-  public IdentityController(IdentityService service) {
+  public IdentityController(IdentityService service, InvitationService invitations) {
     this.service = service;
+    this.invitations = invitations;
   }
 
   public record Login(
@@ -212,7 +214,7 @@ public class IdentityController {
       @PathVariable String type,
       @PathVariable UUID subject,
       @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-    return service.slip(Actor.current(), school, type.toUpperCase(Locale.ROOT), subject, key);
+    return invitations.issue(Actor.current(), school, type, subject, key);
   }
 
   @GetMapping("/api/v1/public/access-help")
