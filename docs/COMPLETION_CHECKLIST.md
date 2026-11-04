@@ -19,6 +19,7 @@ Each implemented item requires permissions, failure states, history and real-dat
 - [x] Review all 94 pages and validate the 256-operation request catalogue against current controllers.
 - [ ] Implement the remaining controls in the 17 PARTIAL screen rows.
 - [ ] Adopt and implement an assisted-recovery policy beyond the agreed SH09 help-only boundary.
+- [ ] Enable dependency/static security scanning and expand the independent authorization review; existing targeted tests are not a complete security audit.
 - [ ] Complete actual provider/device validation, hosting, backup/restore and independent release/security review.
 - [ ] Build/connect and test the React Native role screens with the frontend team.
 

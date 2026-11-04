@@ -5,6 +5,28 @@ import re
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
+
+def check_integration_wiring(scripts, runner):
+    """Check this project's explicit scenario-module convention, not runtime coverage."""
+    count = 0
+    for module in sorted(scripts.glob("*-tests.mjs")):
+        entries = re.findall(r"export\s+async\s+function\s+(\w+)\s*\(", module.read_text())
+        assert len(entries) == 1, f"{module.name}: expose one async scenario entry point"
+        name = entries[0]
+        imports = re.findall(
+            r"import\s*\{([^}]+)\}\s*from\s*['\"]\./" + re.escape(module.name) + r"['\"]",
+            runner,
+        )
+        assert any(re.search(r"\b" + re.escape(name) + r"\b", item) for item in imports), (
+            f"{module.name}: {name} is missing from the integration runner imports"
+        )
+        assert re.search(r"\bawait\s+" + re.escape(name) + r"\s*\(", runner), (
+            f"{module.name}: {name} is imported but not awaited by the integration runner"
+        )
+        count += 1
+    assert count > 0, "No integration scenario modules were discovered"
+    return count
+
 canonical = lambda path: re.sub(r"\{[^}]+\}", "{}", path)
 source = set()
 controllers = list(root.glob("educore-*/src/main/java/**/*Controller.java"))
@@ -48,3 +70,5 @@ if connections.exists():
         for endpoint in screen["endpoints"]:
             assert (endpoint["method"], canonical(endpoint["path"])) in source, (screen["id"], endpoint)
 print(f"API catalogue: {len(source)} implemented operations, resolved schemas and valid page connections")
+modules = check_integration_wiring(root / "scripts", (root / "scripts/integration.mjs").read_text())
+print(f"Integration wiring: {modules} scenario modules imported and awaited; runtime PASS evidence is still required")

@@ -48,11 +48,13 @@ Remaining contracts include:
 4. Staff delivery troubleshooting/retry controls. Background delivery workers already retry under leases and respect access/preferences.
 5. Scope decisions called out in the screen map: the presentation school's grading policy is currently fixed; approved refunds are executed externally and confirmed with evidence, not sent automatically by this API.
 6. An adopted policy for recovery when all private proofs are lost. SH09 is deliberately contact/help only; staff cannot reset an active global identity. Existing verified-email/saved-code recovery and failure boundaries are tested.
-7. Actual provider/device validation, HTTPS hosting, backup/restore, operational monitoring and independent access/load/security review.
+7. Actual provider/device validation, HTTPS hosting, backup/restore, operational monitoring, dependency/static security scanning and independent access/load/security review.
 
 Tested code and the endpoint handoff are saved remotely. `main` still contains the earlier foundation; use the expanded branch for review and local development. Do not describe the whole backend or all 94 screens as complete.
 
 ## Handoff
+
+The agreed target is preserved in [the final administrator specification](product/FINAL_ADMIN_SPEC_v1.md). [ARCHITECTURE.md](ARCHITECTURE.md) records implemented patterns; [QUALITY_REVIEW.md](QUALITY_REVIEW.md) records the researched review controls, the scenario-runner guard and remaining security evidence.
 
 - [Page-to-endpoint connections and precise gaps](SCREEN_CONNECTIONS.md)
 - [API workflow guide](API.md)

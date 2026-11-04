@@ -63,3 +63,5 @@ Four business services own separate PostgreSQL databases. Enrollment/account pro
 Run `./mvnw -B spotless:check verify` for formatting and unit checks and `python3 scripts/check-api-catalogue.py` to validate controller/catalogue/page connections. The [Backend checks workflow](.github/workflows/backend.yml) starts real PostgreSQL, runs all five programs and the integration suite, builds Docker images and verifies container startup. Provider HTTP/email/push integrations are tested with local doubles; no live funds or real external deliveries are involved.
 
 [Completion checklist](docs/COMPLETION_CHECKLIST.md) · [Frontend repository](https://github.com/ayodamolami4-bot/educore-frontend)
+
+[Preserved administrator decisions](docs/product/FINAL_ADMIN_SPEC_v1.md) · [School rules](docs/NIGERIAN_RULES.md) · [Architecture and patterns](docs/ARCHITECTURE.md) · [Quality checks and remaining review](docs/QUALITY_REVIEW.md)
