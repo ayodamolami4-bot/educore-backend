@@ -155,6 +155,21 @@ GET,/schools/{school}/students,academics,,,,"classId, cursor, search, limit",edu
 POST,/schools/{school}/students/{studentId}/guardians/{guardianId}/revoke,academics,SchoolController.Reason,required,,,educore-academics/src/main/java/com/educore/academics/SchoolController.java
 GET,/schools/{school}/audit,academics,,,,"cursor, limit",educore-academics/src/main/java/com/educore/academics/SchoolController.java
 GET,/schools/{school}/guardians,academics,,,,"cursor, search, childId, activeLink, limit",educore-academics/src/main/java/com/educore/academics/SchoolController.java
+GET,/schools/{school}/attendance/registers/{register}/correction-history,academics,,,,studentId,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+POST,/schools/{school}/attendance/registers/{register}/correction-alerts,academics,AttendanceWorkflowService.Notices,required,required,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+GET,/schools/{school}/attendance/registers,academics,,,,"classId, from, to, state, cursor, limit",educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+POST,/schools/{school}/attendance/registers,academics,AttendanceService.RegisterInput,required,,,educore-academics/src/main/java/com/educore/academics/AcademicController.java
+POST,/schools/{school}/attendance/registers/{register}/correction-requests,academics,AttendanceWorkflowService.Correction,required,required,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+GET,/schools/{school}/attendance/correction-requests,academics,,,,"classId, state, cursor, limit",educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+GET,/schools/{school}/attendance/correction-requests/{id},academics,,,,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+PUT,/schools/{school}/attendance/correction-requests/{id},academics,AttendanceWorkflowService.Correction,required,required,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+POST,/schools/{school}/attendance/correction-requests/{id}/decision,academics,AttendanceWorkflowService.Decision,required,required,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+POST,/schools/{school}/attendance/correction-requests/{id}/cancel,academics,AttendanceWorkflowService.Reason,required,required,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+GET,/schools/{school}/attendance/correction-requests/{id}/history,academics,,,,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+POST,/schools/{school}/attendance/follow-up-cases,academics,AttendanceFollowupService.Open,required,,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+GET,/schools/{school}/attendance/follow-up-cases,academics,,,,"studentId, state, cursor, limit",educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+GET,/schools/{school}/attendance/follow-up-cases/{id},academics,,,,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
+PATCH,/schools/{school}/attendance/follow-up-cases/{id},academics,AttendanceFollowupService.Change,required,required,,educore-academics/src/main/java/com/educore/academics/AttendanceWorkflowController.java
 POST,/schools/{school}/assignments/{assignment}/submissions/{student}/physical-receipt,academics,SubmissionWorkService.Physical,required,required,,educore-academics/src/main/java/com/educore/academics/SubmissionWorkController.java
 GET,/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft,academics,,,,,educore-academics/src/main/java/com/educore/academics/SubmissionWorkController.java
 PUT,/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft,academics,AssignmentService.Feedback,required,required,,educore-academics/src/main/java/com/educore/academics/SubmissionWorkController.java
@@ -167,7 +182,6 @@ POST,/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}/remove,academ
 GET,/schools/{school}/timetable-plans/{planId}/review,academics,,,,,educore-academics/src/main/java/com/educore/academics/AcademicController.java
 POST,/schools/{school}/timetable-plans/{planId}/publish,academics,,required,required,,educore-academics/src/main/java/com/educore/academics/AcademicController.java
 GET,/schools/{school}/timetable,academics,,,,"classId, on",educore-academics/src/main/java/com/educore/academics/AcademicController.java
-POST,/schools/{school}/attendance/registers,academics,AttendanceService.RegisterInput,required,,,educore-academics/src/main/java/com/educore/academics/AcademicController.java
 GET,/schools/{school}/attendance/registers/{registerId},academics,,,,,educore-academics/src/main/java/com/educore/academics/AcademicController.java
 PUT,/schools/{school}/attendance/registers/{registerId}/marks,academics,AttendanceService.Marks,required,required,,educore-academics/src/main/java/com/educore/academics/AcademicController.java
 POST,/schools/{school}/attendance/registers/{registerId}/submit,academics,,required,required,,educore-academics/src/main/java/com/educore/academics/AcademicController.java

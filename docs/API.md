@@ -2,7 +2,7 @@
 
 Use **`http://localhost:8080/api/v1`** in local web development. The GitHub repository URL is source code, not a running API. A physical phone needs the development computer's reachable address.
 
-The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOINTS.md): **242 gateway operations and 110 request record types**. Import [openapi.json](openapi.json) into an API client, or filter [ENDPOINT_CATALOGUE.csv](ENDPOINT_CATALOGUE.csv). [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) identifies remaining work. Earlier proposal PDFs are not the runtime contract.
+The complete, source-derived list is in [FRONTEND_ENDPOINTS.md](FRONTEND_ENDPOINTS.md): **256 gateway operations and 116 request record types**. Import [openapi.json](openapi.json) into an API client, or filter [ENDPOINT_CATALOGUE.csv](ENDPOINT_CATALOGUE.csv). [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) identifies remaining work. Earlier proposal PDFs are not the runtime contract.
 
 ## Shared rules
 
@@ -192,3 +192,15 @@ School staff use `/documents` for verified admission copies, historical paper re
 - A raw upload's familyVisible flag is publication intent. It does not publish an unattached office document. Current record visibility and each accepted revision's visibility are checked again for downloads and history. Owner access is also restricted to the upload's role/purpose.
 
 `GET /documents` supports `studentId`, `staffId`, `kind`, cursor and limit. Families must choose their permitted pupil. The school's logo uses a ready image upload with purpose SCHOOL_ASSET; Principal selects `logoFileId` in PUT `/settings`. Omitting it preserves the existing logo, and `clearLogo:true` clears it. Settings and shared metadata expose the selected logo file ID. No public database/file URL is needed.
+
+## Attendance correction requests and saved follow-ups
+
+The class attendance teacher can list their dated registers with `GET /attendance/registers` (class/date/state filters). Teachers keep submitted registers locked. `POST /attendance/registers/{register}/correction-requests` proposes a pupil status/reason using the register's V; it creates a PENDING request without changing official attendance. Duplicate pending requests for the same register/pupil are rejected. Families cannot read these private requests.
+
+Use `/attendance/correction-requests` to list the permitted queue, `/{id}` to view, `/{id}/history` for its history and PUT `/{id}` to recheck a pending request against a new `registerVersion`. Only its requesting teacher can edit or cancel it, and current class duty is checked for changes. Principal/School Office uses POST `/{id}/decision` with APPROVE or DECLINE, a reason and the request's V. Approval requires the original register version to remain current; stale source returns 412 until the teacher rechecks it. Decline/cancel retain history and leave the register unchanged. Approval and the official correction commit together.
+
+The office's approval/correction reason is the reason shown with official attendance. The teacher's private request explanation is not copied into family history or push/email previews. `GET /attendance/registers/{register}/correction-history?studentId=...` returns official corrections only; families must select their permitted child. Office/Principal can review selected accepted corrections with POST `.../correction-alerts`, the current register V, `studentIds` and a review reason. Each accepted correction is queued once for that child even when the action is retried. This is separate from the existing reviewed absence-alert action.
+
+`GET /attendance/follow-ups` remains the statistical flag: three confirmed absences in the last ten teaching days, including missing-register coverage. It also returns the latest linked follow-up case. Missing registers never become absences.
+
+Principal/School Office opens POST `/attendance/follow-up-cases` with a flagged `studentId`, reviewed `onDate`, optional active office/principal `ownerId`, a private office `note` and a reason. At most one active follow-up exists per pupil. GET list/detail supplies original evidence, current flag and private office entries. PATCH `/{id}` uses V to record CONTACTED, MONITORING, RESOLVED or a reasoned reopening to OPEN, preserving all entries and original counts. Later corrections can clear the current flag without silently deleting or resolving the case. These internal contact notes are not available to teachers or families.

@@ -656,10 +656,54 @@
         {
           "method": "POST",
           "path": "/schools/{school}/attendance/registers/{registerId}/absence-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/decision"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
         }
       ],
       "notes": "",
-      "remaining": "No saved follow-up resolution workflow, formal correction-request queue or school-wide delivery retry control. Confirmed absences and missing-register coverage are available."
+      "remaining": "A staff delivery troubleshooting/retry console remains to build. Register lists, correction requests/decisions, reviewed correction alerts and saved follow-up cases are implemented."
     },
     {
       "id": "AD17",
@@ -678,10 +722,54 @@
         {
           "method": "POST",
           "path": "/schools/{school}/attendance/registers/{registerId}/absence-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/decision"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
         }
       ],
       "notes": "",
-      "remaining": "Office corrections require a reason. Teacher correction requests/declines are not separate records yet; no frontend button should imply they have been submitted."
+      "remaining": "A staff delivery troubleshooting/retry console remains to build. Register lists, correction requests/decisions, reviewed correction alerts and saved follow-up cases are implemented."
     },
     {
       "id": "AD18",
@@ -1439,7 +1527,7 @@
       "id": "TE06",
       "title": "Attendance centre",
       "role": "Teacher",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "GET",
@@ -1452,16 +1540,44 @@
         {
           "method": "GET",
           "path": "/schools/{school}/attendance/registers/{registerId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-requests"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/cancel"
         }
       ],
-      "notes": "",
-      "remaining": "No formal teacher attendance-correction request resource or request-status list yet."
+      "notes": "The assigned class teacher submits registers and requests later corrections. Pending requests do not change accepted attendance; the office approves or declines after review.",
+      "remaining": ""
     },
     {
       "id": "TE07",
       "title": "Daily class register",
       "role": "Teacher",
-      "coverage": "PARTIAL",
+      "coverage": "MAPPED",
       "endpoints": [
         {
           "method": "POST",
@@ -1478,10 +1594,38 @@
         {
           "method": "POST",
           "path": "/schools/{school}/attendance/registers/{registerId}/submit"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-requests"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/cancel"
         }
       ],
-      "notes": "",
-      "remaining": "Submitted registers are locked for teachers. Office can make a reasoned correction; a separate teacher request action is not implemented."
+      "notes": "The assigned class teacher submits registers and requests later corrections. Pending requests do not change accepted attendance; the office approves or declines after review.",
+      "remaining": ""
     },
     {
       "id": "TE08",
@@ -1984,9 +2128,13 @@
         {
           "method": "GET",
           "path": "/schools/{school}/students/{studentId}/attendance"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
         }
       ],
-      "notes": "Show missing-register coverage separately; missing is not absent.",
+      "notes": "Show submitted attendance, missing-register coverage and official corrections for this selected pupil. Private teacher requests and office follow-up notes are not returned.",
       "remaining": ""
     },
     {
@@ -2218,9 +2366,13 @@
         {
           "method": "GET",
           "path": "/schools/{school}/threads/contacts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
         }
       ],
-      "notes": "Show submitted attendance and coverage; a parent may contact the assigned class lead through approved thread contacts.",
+      "notes": "Show submitted attendance, missing-register coverage and official corrections for this selected pupil. Private teacher requests and office follow-up notes are not returned.",
       "remaining": ""
     },
     {

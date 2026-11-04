@@ -1,6 +1,6 @@
 # Implemented endpoints and request fields
 
-Reviewed 2026-11-04. These 242 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
+Reviewed 2026-11-04. These 256 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
 
 Start with [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) and [API.md](API.md) for permissions, workflows, versions and response adapters. Views are implemented by the frontend team.
 
@@ -164,6 +164,21 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/students/{studentId}/guardians/{guardianId}/revoke` | SchoolController.Reason | required | — | — |
 | GET | `/schools/{school}/audit` | — | — | — | cursor, limit |
 | GET | `/schools/{school}/guardians` | — | — | — | cursor, search, childId, activeLink, limit |
+| GET | `/schools/{school}/attendance/registers/{register}/correction-history` | — | — | — | studentId |
+| POST | `/schools/{school}/attendance/registers/{register}/correction-alerts` | AttendanceWorkflowService.Notices | required | required | — |
+| GET | `/schools/{school}/attendance/registers` | — | — | — | classId, from, to, state, cursor, limit |
+| POST | `/schools/{school}/attendance/registers` | AttendanceService.RegisterInput | required | — | — |
+| POST | `/schools/{school}/attendance/registers/{register}/correction-requests` | AttendanceWorkflowService.Correction | required | required | — |
+| GET | `/schools/{school}/attendance/correction-requests` | — | — | — | classId, state, cursor, limit |
+| GET | `/schools/{school}/attendance/correction-requests/{id}` | — | — | — | — |
+| PUT | `/schools/{school}/attendance/correction-requests/{id}` | AttendanceWorkflowService.Correction | required | required | — |
+| POST | `/schools/{school}/attendance/correction-requests/{id}/decision` | AttendanceWorkflowService.Decision | required | required | — |
+| POST | `/schools/{school}/attendance/correction-requests/{id}/cancel` | AttendanceWorkflowService.Reason | required | required | — |
+| GET | `/schools/{school}/attendance/correction-requests/{id}/history` | — | — | — | — |
+| POST | `/schools/{school}/attendance/follow-up-cases` | AttendanceFollowupService.Open | required | — | — |
+| GET | `/schools/{school}/attendance/follow-up-cases` | — | — | — | studentId, state, cursor, limit |
+| GET | `/schools/{school}/attendance/follow-up-cases/{id}` | — | — | — | — |
+| PATCH | `/schools/{school}/attendance/follow-up-cases/{id}` | AttendanceFollowupService.Change | required | required | — |
 | POST | `/schools/{school}/assignments/{assignment}/submissions/{student}/physical-receipt` | SubmissionWorkService.Physical | required | required | — |
 | GET | `/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft` | — | — | — | — |
 | PUT | `/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft` | AssignmentService.Feedback | required | required | — |
@@ -176,7 +191,6 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/schools/{school}/timetable-plans/{planId}/review` | — | — | — | — |
 | POST | `/schools/{school}/timetable-plans/{planId}/publish` | — | required | required | — |
 | GET | `/schools/{school}/timetable` | — | — | — | classId, on |
-| POST | `/schools/{school}/attendance/registers` | AttendanceService.RegisterInput | required | — | — |
 | GET | `/schools/{school}/attendance/registers/{registerId}` | — | — | — | — |
 | PUT | `/schools/{school}/attendance/registers/{registerId}/marks` | AttendanceService.Marks | required | required | — |
 | POST | `/schools/{school}/attendance/registers/{registerId}/submit` | — | required | required | — |
@@ -484,6 +498,25 @@ These are declared property names and Java types. Required/conditional values ar
 | `fileIds` | `List<UUID>` |
 | `submissionMode` | `String` |
 
+### AttendanceFollowupService.Change
+
+| Field | Type |
+| --- | --- |
+| `state` | `String` |
+| `ownerId` | `UUID` |
+| `note` | `String` |
+| `reason` | `String` |
+
+### AttendanceFollowupService.Open
+
+| Field | Type |
+| --- | --- |
+| `studentId` | `UUID` |
+| `onDate` | `LocalDate` |
+| `ownerId` | `UUID` |
+| `note` | `String` |
+| `reason` | `String` |
+
 ### AttendanceService.Mark
 
 | Field | Type |
@@ -504,6 +537,35 @@ These are declared property names and Java types. Required/conditional values ar
 | --- | --- |
 | `classId` | `UUID` |
 | `onDate` | `LocalDate` |
+
+### AttendanceWorkflowService.Correction
+
+| Field | Type |
+| --- | --- |
+| `studentId` | `UUID` |
+| `status` | `String` |
+| `reason` | `String` |
+| `registerVersion` | `Long` |
+
+### AttendanceWorkflowService.Decision
+
+| Field | Type |
+| --- | --- |
+| `action` | `String` |
+| `reason` | `String` |
+
+### AttendanceWorkflowService.Notices
+
+| Field | Type |
+| --- | --- |
+| `studentIds` | `List<UUID>` |
+| `reason` | `String` |
+
+### AttendanceWorkflowService.Reason
+
+| Field | Type |
+| --- | --- |
+| `reason` | `String` |
 
 ### CommunicationController.Close
 

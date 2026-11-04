@@ -455,11 +455,22 @@ public class SchoolWorkspaceService {
             school,
             school,
             school);
-    for (var row : rows)
+    Map<UUID, Map<String, Object>> cases = new HashMap<>();
+    for (var open :
+        s.db.queryForList(
+            "select distinct on(student_id) student_id,id,state,owner_id from attendance_followup_cases where school_id=? and on_date<=? order by student_id,on_date desc,created_at desc",
+            school,
+            on))
+      cases.put(
+          (UUID) open.get("student_id"),
+          map("id", open.get("id"), "state", open.get("state"), "ownerId", open.get("owner_id")));
+    for (var row : rows) {
       row.put(
           "coverageComplete",
           ((Number) row.get("submittedRegisters")).longValue()
               == ((Number) row.get("expectedRegisters")).longValue());
+      row.put("followUpCase", cases.get((UUID) row.get("studentId")));
+    }
     return map(
         "items",
         rows,

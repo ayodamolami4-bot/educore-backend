@@ -17,6 +17,7 @@ import { importTests } from './import-tests.mjs';
 import { rosterTests } from './roster-tests.mjs';
 import { workspaceTests } from './workspace-tests.mjs';
 import { resourceTests } from './resource-tests.mjs';
+import { attendanceReviewTests } from './attendance-review-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
 // Only external Paystack, SMTP and Expo push providers are local test doubles.
