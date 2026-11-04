@@ -54,6 +54,11 @@ public class SchoolService {
         school,
         code,
         code);
+    return activeRoom(school, code);
+  }
+
+  String activeRoom(UUID school, String value) {
+    String code = text(value, 1, 40, "Room").toUpperCase(Locale.ROOT);
     var room =
         one("select active from school_rooms where school_id=? and code=? for share", school, code);
     if (!Boolean.TRUE.equals(room.get("active")))

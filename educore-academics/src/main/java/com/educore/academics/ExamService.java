@@ -175,7 +175,7 @@ public class ExamService {
           409,
           "INVIGILATOR_ACTIVITY_CONFLICT",
           "This invigilator supervises a school activity during the examination. Reassign that duty first.");
-    text(b.room(), 1, 40, "Exam room");
+    s.activeRoom(school, b.room());
   }
 
   private int minute(String value) {
@@ -321,7 +321,7 @@ public class ExamService {
                 "Record a principal exception on the examination before introducing PT during its time."));
       var lessons =
           s.db.queryForList(
-              "select id,class_id as \"classId\",subject_id as \"subjectId\",department,required,start_min as \"startMinute\",end_min as \"endMinute\",teacher_id as \"teacherId\",room from lessons where plan_id=? and weekday=? and start_min<? and end_min>? and (teacher_id=? or room=?)",
+              "select id,class_id as \"classId\",subject_id as \"subjectId\",department,required,start_min as \"startMinute\",end_min as \"endMinute\",teacher_id as \"teacherId\",room from lessons where plan_id=? and weekday=? and start_min<? and end_min>? and (teacher_id=? or upper(btrim(room))=upper(btrim(?::text)))",
               plan,
               on.getDayOfWeek().getValue(),
               end,
@@ -428,6 +428,7 @@ public class ExamService {
                 409,
                 "EXAM_SCHEDULE_PUBLISHED",
                 "Create a new schedule revision to amend published examinations.");
+          String room = s.room(school, b.room());
           validate(a, school, x, b);
           var teaching =
               s.one(
@@ -456,6 +457,21 @@ public class ExamService {
                 409,
                 "EXAM_CLASS_CONFLICT",
                 "The pupils in this class or subject choice already have an examination during this period.");
+          if (s.db.queryForObject(
+                  "select count(*) from exam_events where schedule_id=? and on_date=? and start_min<? and end_min>? and upper(btrim(room))=? and (?::uuid is null or id<>?::uuid)",
+                  Integer.class,
+                  schedule,
+                  b.onDate(),
+                  end,
+                  start,
+                  room,
+                  event,
+                  event)
+              > 0)
+            throw fail(
+                409,
+                "EXAM_ROOM_CONFLICT",
+                "This room already has an examination during this period.");
           UUID id = event == null ? UUID.randomUUID() : event;
           long ev = 1;
           if (event != null) {
@@ -483,7 +499,7 @@ public class ExamService {
               b.onDate(),
               minute(b.start()),
               minute(b.start()) + b.durationMinutes(),
-              s.room(school, b.room()),
+              room,
               b.exceptionReason(),
               ev,
               teaching.get("required"),
@@ -579,6 +595,10 @@ public class ExamService {
         issues.add(map("eventId", e.get("id"), "detail", ex.getMessage()));
       }
     }
+    issues.addAll(
+        s.db.queryForList(
+            "select a.id as \"eventId\",b.id as \"conflictingEventId\",'EXAM_ROOM_CONFLICT' as code from exam_events a join exam_events b on b.schedule_id=a.schedule_id and b.id>a.id and b.on_date=a.on_date and b.start_min<a.end_min and b.end_min>a.start_min and upper(btrim(b.room))=upper(btrim(a.room)) where a.schedule_id=?",
+            id));
     issues.addAll(normalConflicts(school, x, rows, null));
     return map(
         "id",

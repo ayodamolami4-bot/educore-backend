@@ -542,8 +542,13 @@ public class SchoolWorkspaceService {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
     var rows =
         s.db.queryForList(
-            "select staff_number,full_name,phone,email,staff_role,active from staff where school_id=? and staff_role='TEACHER' order by staff_number limit 10000",
+            "select staff_number,full_name,phone,email,staff_role,active from staff where school_id=? and staff_role='TEACHER' order by staff_number limit 10001",
             school);
+    if (rows.size() > 10000)
+      throw fail(
+          422,
+          "EXPORT_TOO_LARGE",
+          "Use filtered teaching-assignment reports instead of truncating the teacher directory.");
     var data = new ArrayList<List<?>>();
     for (var r : rows)
       data.add(

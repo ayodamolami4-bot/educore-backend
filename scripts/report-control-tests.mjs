@@ -46,8 +46,8 @@ export async function reportControlTests(u,academic,finance) {
 
   const base=`/api/v1/schools/${finance.school}`,fget=async(path,token=finance.admin.accessToken,expected=200)=>(await request(base+path,{token,expected})).body;
   const financeCatalogue=await fget('/reconciliation/reports/catalogue',finance.accounts.accessToken);assert.equal(financeCatalogue.amountUnit,'KOBO');
-  const balances=await fget('/reconciliation/reports/INVOICE_BALANCES?termId='+finance.term.id,finance.accounts.accessToken);assert.ok(balances.rows.length>0);const invoice=await fget('/invoices/'+finance.invoice.id);const row=balances.rows.find(x=>x.invoiceId===finance.invoice.id);assert.equal(row.balanceKobo,invoice.invoice.balanceMinor);
-  const cash=await fget('/reconciliation/reports/CONFIRMED_PAYMENTS?source=CASH',finance.accounts.accessToken);assert.ok(cash.rows.length>0&&cash.rows.every(x=>x.source==='CASH'));
+  const balances=await fget('/reconciliation/reports/INVOICE_BALANCES?termId='+finance.term.id,finance.accounts.accessToken);assert.ok(balances.rows.length>0);const invoice=await fget('/invoices/'+finance.invoice);const row=balances.rows.find(x=>x.invoiceId===finance.invoice);assert.equal(row.balanceKobo,invoice.invoice.balanceMinor);
+  const bank=await fget('/reconciliation/reports/CONFIRMED_PAYMENTS?source=BANK',finance.accounts.accessToken);assert.ok(bank.rows.length>0&&bank.rows.every(x=>x.source==='BANK'));
   assert.ok((await fget('/reconciliation/reports/REFUNDS',finance.accounts.accessToken)).rows.length>0);
   assert.ok((await fget('/reconciliation/reports/SETTLEMENTS',finance.accounts.accessToken)).rows.length>0);
   await fget('/reconciliation/reports/SETTLEMENTS?termId='+finance.term.id,finance.accounts.accessToken,422);

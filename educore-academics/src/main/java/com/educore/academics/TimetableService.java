@@ -149,7 +149,7 @@ public class TimetableService {
     // The locked plan serialises common versus department class-overlap checks.
     var conflicts =
         s.db.queryForList(
-            "select l.id from lessons l where l.plan_id=? and l.weekday=? and l.start_min<? and l.end_min>? and (l.teacher_id=? or (?::text is not null and l.room=?::text) or (l.class_id=? and (l.department is null or ?::text is null or l.department=?::text) and not (l.choice_group is not null and l.choice_group is not distinct from ?::text and l.subject_id<>?)))",
+            "select l.id from lessons l where l.plan_id=? and l.weekday=? and l.start_min<? and l.end_min>? and (l.teacher_id=? or (?::text is not null and upper(btrim(l.room))=?::text) or (l.class_id=? and (l.department is null or ?::text is null or l.department=?::text) and not (l.choice_group is not null and l.choice_group is not distinct from ?::text and l.subject_id<>?)))",
             plan,
             b.weekday(),
             minute + b.durationMinutes(),
@@ -321,6 +321,14 @@ public class TimetableService {
                 ex.getMessage()));
       }
     }
+    invalid.addAll(
+        s.db.queryForList(
+            "select a.id as \"lessonId\",b.id as \"conflictingLessonId\",'ROOM_CONFLICT' as issue from lessons a join lessons b on b.plan_id=a.plan_id and b.id>a.id and b.weekday=a.weekday and b.start_min<a.end_min and b.end_min>a.start_min and upper(btrim(b.room))=upper(btrim(a.room)) where a.plan_id=?",
+            plan));
+    invalid.addAll(
+        s.db.queryForList(
+            "select l.id as \"lessonId\",'ROOM_INACTIVE' as issue from lessons l join school_rooms r on r.school_id=l.school_id and r.code=upper(btrim(l.room)) where l.plan_id=? and not r.active",
+            plan));
     invalid.addAll(exams.conflictsForTimetable(school, p));
     boolean complete =
         invalid.isEmpty()

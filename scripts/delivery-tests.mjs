@@ -12,4 +12,5 @@ export async function deliveryTests(u,f){
  const c2=(await request(`/api/v1/schools/${school}/complaints`,{method:'POST',token:parent.accessToken,headers:{'Idempotency-Key':key()},body:{studentId:children[0].id,category:'GENERAL',subject:'Second fictional delivery test',body:'Confirm that the unavailable synthetic device is no longer used.'}})).body;
  const notification2=await poll(async()=>{const n=(await request(`/api/v1/me/notifications?schoolId=${school}&category=CASES`,{token:parent.accessToken})).body;return n.items.find(x=>x.target.resourceId===c2.id);},'second delivery acknowledgment');await poll(async()=>pushMessages.some(x=>x.data.notificationId===notification2.id),'subsequent valid-device delivery');assert.equal(pushMessages.filter(x=>x.data.notificationId===notification2.id).length,1);
  passed('leased SMTP and configured push workers deliver safe previews, distinguish provider receipt from device reading, and stop using devices rejected by Expo');
+ return {rejectedDeviceNotificationId:notification.id};
 }

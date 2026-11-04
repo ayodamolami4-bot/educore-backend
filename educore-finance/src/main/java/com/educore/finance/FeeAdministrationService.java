@@ -628,8 +628,13 @@ public class FeeAdministrationService {
     a.school(school, "PRINCIPAL", "ACCOUNTS");
     var rows =
         f.db.queryForList(
-            "select id,student_id,total_minor,credit_minor,paid_minor,refunded_minor,due_on from invoices where school_id=? order by created_at,id limit 10000",
+            "select id,student_id,total_minor,credit_minor,paid_minor,refunded_minor,due_on from invoices where school_id=? order by created_at,id limit 10001",
             school);
+    if (rows.size() > 10000)
+      throw fail(
+          422,
+          "EXPORT_TOO_LARGE",
+          "Use the finance report date/term/student filters instead of truncating invoices.");
     return Documents.csv(
         List.of(
             "invoice_id",

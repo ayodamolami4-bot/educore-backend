@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export async function deliveryControlTests(u,f) {
+export async function deliveryControlTests(u,f,delivery) {
   const {request,key,poll,passed,pushMessages,bootstrap,activate,login,choose}=u;const {school,admin,parent,children,accounts}=f;
   const base=`/api/v1/schools/${school}`;
   const call=async(method,path,body,version,expected=200,token=admin.accessToken,k=key())=>(await request(base+path,{method,body,token,expected,headers:{'Idempotency-Key':k,...(version===undefined?{}:{'If-Match':`"v${version}"`})}})).body;
@@ -23,6 +23,7 @@ export async function deliveryControlTests(u,f) {
   assert.ok((await get('/delivery/notifications?resourceId='+c.id+'&failedOnly=false')).items.some(x=>x.id===notification.id));
   passed('delivery retries are scoped, versioned and duplicate safe, with no replay of confirmed sends or exposure of message content and device tokens');
 
+  const pendingToken='ExpoPushToken[SyntheticPendingReceiptDevice]';await request('/api/v1/me/push-devices',{method:'POST',token:parent.accessToken,headers:{'Idempotency-Key':key()},body:{installationId:key(),platform:'ANDROID',pushToken:pendingToken}});
   const notice=await call('POST','/notices',{title:'Reviewed test school notice',body:'A synthetic school notice for the staff delivery summary.',scope:'SCHOOL'});
   await call('POST',`/notices/${notice.id}/publish`,undefined,notice.version);
   const summary=await poll(async()=>{const x=await get(`/notices/${notice.id}/delivery-summary`);return x.inApp.recipients>0?x:false;},'notice recipient summary');assert.equal(summary.providerReceiptIsReadConfirmation,false);assert.ok(summary.inApp.recipients>=2);
@@ -30,10 +31,11 @@ export async function deliveryControlTests(u,f) {
   await call('GET',`/notices/${notice.id}/delivery-summary`,undefined,undefined,403,accounts.accessToken);
   const foreign=await bootstrap('Delivery console isolation');await activate(foreign.slip);const other=await login(foreign.slip.loginId);await choose(other,foreign.schoolId,'PRINCIPAL');
   await call('GET','/delivery/notifications',undefined,undefined,404,other.accessToken);
-  const dead=(await get(`/delivery/notifications?category=CASES&failedOnly=true`)).items;
-  for(const n of dead.slice(0,10)){
-    const detail=await get(`/delivery/notifications/${n.id}`);const invalid=detail.push.find(p=>p.errorCode==='DeviceNotRegistered');
-    if(invalid){await call('POST',`/delivery/notifications/${n.id}/retry`,{channel:'PUSH',deliveryId:invalid.id,reason:'A rejected device cannot be re-enabled by a delivery retry'},detail.version,409);break;}
-  }
+  const dead=await get(`/delivery/notifications/${delivery.rejectedDeviceNotificationId}`);const invalid=dead.push.find(p=>p.errorCode==='DeviceNotRegistered');assert.ok(invalid);
+  await call('POST',`/delivery/notifications/${dead.id}/retry`,{channel:'PUSH',deliveryId:invalid.id,reason:'A rejected device cannot be re-enabled by a delivery retry'},dead.version,409);
+  const parentNotice=await poll(async()=>{const x=(await request(`/api/v1/me/notifications?schoolId=${school}&category=SCHOOL`,{token:parent.accessToken})).body;return x.items.find(n=>n.target.resourceId===notice.id)||false;},'parent notice notification');
+  const awaiting=await poll(async()=>{const x=await get(`/delivery/notifications/${parentNotice.id}`);return x.push.filter(p=>p.state==='AWAITING_RECEIPT').length===1&&pushMessages.some(p=>p.to===pendingToken&&p.data.notificationId===parentNotice.id)?x:false;},'provider accepted but unconfirmed receipt');
+  const pending=awaiting.push.find(p=>p.state==='AWAITING_RECEIPT');await call('POST',`/delivery/notifications/${awaiting.id}/retry`,{channel:'PUSH',deliveryId:pending.id,reason:'An unknown provider receipt must not cause another send'},awaiting.version,409);
+  assert.equal(pushMessages.filter(p=>p.to===pendingToken&&p.data.notificationId===parentNotice.id).length,1);
   passed('notice summaries distinguish in-app recipients/read state from provider delivery; staff consoles cannot cross schools or finance permissions');
 }

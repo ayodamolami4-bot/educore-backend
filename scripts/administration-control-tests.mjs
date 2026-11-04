@@ -31,6 +31,18 @@ export async function administrationControlTests(u) {
   await call('PATCH',`/terms/${term.id}`,{startsOn:day(-28),endsOn:day(72),reason:'A dated timetable must keep its accepted term boundary'},term.version,409);
   assert.ok((await get('/rooms?active=false')).items.some(x=>x.id===room.id));
   passed('subject and room lifecycle preserves existing work and blocks new use of inactive resources');
+  const reopened=await call('PATCH',`/rooms/${room.id}`,{code:room.code,name:room.name,capacity:40,active:true,reason:'Maintenance is complete and the room can be scheduled'},retired.version);
+  const savedLesson=await call('POST',`/timetable-plans/${plan.id}/lessons`,{assignmentId:assignment.id,weekday:1,start:'08:30',durationMinutes:30,room:'lab-a'},plan.version);
+  assert.match(savedLesson.id,/^[0-9a-f-]{36}$/);
+  u.academicsSql(`update lessons set room='LaB-a' where id='${savedLesson.id}'`);
+  const classB=await call('POST','/classes',{sessionId:session.id,level:'JSS1',arm:'B'});
+  await call('POST','/teachers',{fullName:'Other Room Teacher',phone:'08070345678',eligibleLevels:['JSS1'],subjectIds:[english.id],assignments:[{classId:classB.id,subjectId:english.id,weeklyPeriods:1}]});
+  const otherAssignment=(await get('/teaching-assignments?classId='+classB.id)).items[0];
+  await call('POST',`/timetable-plans/${plan.id}/lessons`,{assignmentId:otherAssignment.id,weekday:1,start:'08:30',durationMinutes:30,room:' LAB-A '},savedLesson.planVersion,409);
+  assert.equal((await get(`/timetable-plans/${plan.id}/review`)).lessons.find(x=>x.id===savedLesson.id).room,'LaB-a');
+  await call('PATCH',`/rooms/${room.id}`,{code:room.code,name:room.name,capacity:40,active:false,reason:'A room with current lesson references cannot be retired'},reopened.version,409);
+  passed('legacy room labels keep their spelling while canonical room matching prevents mixed-case double booking and unsafe deactivation');
+
 
   const office=await call('POST','/staff',{fullName:'Control School Office',phone:'08040345678',role:'SCHOOL_OFFICE'});
   const officeSlip=await poll(async()=>{const r=await request(`/api/v1/schools/${school}/onboarding/STAFF/${office.id}/activation-slips`,{method:'POST',token:admin.accessToken,body:{},headers:{'Idempotency-Key':key()},expected:null});return r.status===200?r.body:false;},'control office account');
