@@ -39,6 +39,8 @@ GET,/schools/{school}/students/{studentId},academics,,,,,educore-academics/src/m
 POST,/schools/{school}/students/{studentId}/transfers,academics,AdministrationService.Transfer,required,required,,educore-academics/src/main/java/com/educore/academics/AdministrationController.java
 POST,/schools/{school}/students/{studentId}/withdrawal,academics,AdministrationService.Withdrawal,required,required,,educore-academics/src/main/java/com/educore/academics/AdministrationController.java
 POST,/schools/{school}/students/{studentId}/guardians,academics,AdministrationService.GuardianLink,required,conditional,,educore-academics/src/main/java/com/educore/academics/AdministrationController.java
+GET,/schools/{school}/grading-policy,academics,,,,,educore-academics/src/main/java/com/educore/academics/AssessmentController.java
+POST,/schools/{school}/assessment-cycles/{id}/approve-policy,academics,AssessmentService.PolicyApproval,required,required,,educore-academics/src/main/java/com/educore/academics/AssessmentController.java
 POST,/schools/{school}/assessment-cycles,academics,AssessmentService.CycleInput,required,,,educore-academics/src/main/java/com/educore/academics/AssessmentController.java
 GET,/schools/{school}/assessment-cycles,academics,,,,"termId, classId",educore-academics/src/main/java/com/educore/academics/AssessmentController.java
 GET,/schools/{school}/assessment-cycles/{cycleId},academics,,,,,educore-academics/src/main/java/com/educore/academics/AssessmentController.java
@@ -129,6 +131,7 @@ GET,/schools/{school}/promotion-batches/{batchId}/outcomes.csv,academics,,,,,edu
 GET,/schools/{school}/students/{studentId}/academic-history,academics,,,,,educore-academics/src/main/java/com/educore/academics/PromotionController.java
 GET,/schools/{school}/provisioning/{type}/{subject},academics,,,,,educore-academics/src/main/java/com/educore/academics/ProvisioningController.java
 POST,/schools/{school}/provisioning/{type}/{subject}/retry,academics,ProvisioningService.Retry,required,required,,educore-academics/src/main/java/com/educore/academics/ProvisioningController.java
+POST,/schools/{school}/provisioning/{type}/{subject}/replacement,academics,ProvisioningService.Replacement,required,required,,educore-academics/src/main/java/com/educore/academics/ProvisioningController.java
 GET,/schools/{school}/metadata,academics,,,,,educore-academics/src/main/java/com/educore/academics/SchoolController.java
 PUT,/schools/{school}/metadata,academics,SchoolController.MetadataInput,required,required,,educore-academics/src/main/java/com/educore/academics/SchoolController.java
 POST,/schools/{school}/academic-sessions,academics,SchoolService.SessionInput,required,,,educore-academics/src/main/java/com/educore/academics/SchoolController.java
@@ -152,6 +155,8 @@ PUT,/schools/{school}/documents/{id},academics,SchoolDocumentService.Input,requi
 POST,/schools/{school}/documents/{id}/publish,academics,,required,required,,educore-academics/src/main/java/com/educore/academics/SchoolDocumentController.java
 POST,/schools/{school}/documents/{id}/archive,academics,SchoolDocumentService.Reason,required,required,,educore-academics/src/main/java/com/educore/academics/SchoolDocumentController.java
 GET,/schools/{school}/documents/{id}/history,academics,,,,,educore-academics/src/main/java/com/educore/academics/SchoolDocumentController.java
+GET,/schools/{school}/school-reports/catalogue,academics,,,,,educore-academics/src/main/java/com/educore/academics/SchoolReportController.java
+GET,/schools/{school}/school-reports/{kind},academics,,,,"sessionId, termId, classId, studentId, department, from, to, cycleId, assignmentId, format",educore-academics/src/main/java/com/educore/academics/SchoolReportController.java
 PATCH,/schools/{school}/academic-sessions/{id},academics,SchoolSetupService.Dates,required,required,,educore-academics/src/main/java/com/educore/academics/SchoolSetupController.java
 PATCH,/schools/{school}/terms/{id},academics,SchoolSetupService.Dates,required,required,,educore-academics/src/main/java/com/educore/academics/SchoolSetupController.java
 PUT,/schools/{school}/active-academic-session,academics,SchoolSetupService.ActiveSession,required,required,,educore-academics/src/main/java/com/educore/academics/SchoolSetupController.java
@@ -199,6 +204,12 @@ PUT,/schools/{school}/threads/{threadId}/read,communication,,,,,educore-communic
 POST,/schools/{school}/complaints/{caseId}/status,communication,CommunicationWorkService.StateChange,required,required,,educore-communication/src/main/java/com/educore/communication/CommunicationWorkController.java
 PUT,/schools/{school}/complaints/{caseId}/owner,communication,CommunicationWorkService.Owner,required,required,,educore-communication/src/main/java/com/educore/communication/CommunicationWorkController.java
 GET,/schools/{school}/complaints/{caseId}/history,communication,,,,,educore-communication/src/main/java/com/educore/communication/CommunicationWorkController.java
+GET,/schools/{school}/complaints/reports/catalogue,communication,,,,,educore-communication/src/main/java/com/educore/communication/ComplaintReportController.java
+GET,/schools/{school}/complaints/reports/{kind},communication,,,,"category, state, ownerId, from, to, format",educore-communication/src/main/java/com/educore/communication/ComplaintReportController.java
+GET,/schools/{school}/delivery/notifications,communication,,,,"category, resourceId, childId, failedOnly, cursor, limit",educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java
+GET,/schools/{school}/delivery/notifications/{id},communication,,,,,educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java
+POST,/schools/{school}/delivery/notifications/{id}/retry,communication,DeliveryOperationsService.Retry,required,required,,educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java
+GET,/schools/{school}/notices/{id}/delivery-summary,communication,,,,,educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java
 POST,/schools/{school}/fee-plans,finance,FeeAdministrationService.Plan,required,,,educore-finance/src/main/java/com/educore/finance/FeeAdministrationController.java
 GET,/schools/{school}/fee-plans,finance,,,,termId,educore-finance/src/main/java/com/educore/finance/FeeAdministrationController.java
 PUT,/schools/{school}/fee-plans/{planId},finance,FeeAdministrationService.Plan,required,required,,educore-finance/src/main/java/com/educore/finance/FeeAdministrationController.java
@@ -228,6 +239,8 @@ GET,/schools/{school}/payment-intents/{intentId},finance,,,,,educore-finance/src
 POST,/schools/{school}/payment-intents/{intentId}/verify,finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
 GET,/schools/{school}/reconciliation/exceptions,finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
 POST,/webhooks/paystack,finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceController.java
+GET,/schools/{school}/reconciliation/reports/catalogue,finance,,,,,educore-finance/src/main/java/com/educore/finance/FinanceReportController.java
+GET,/schools/{school}/reconciliation/reports/{kind},finance,,,,"termId, studentId, source, from, to, format",educore-finance/src/main/java/com/educore/finance/FinanceReportController.java
 GET,/schools/{school}/invoices/fee-status,finance,,,,"studentId, termId, cursor, limit",educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
 GET,/schools/{school}/payment-intents,finance,,,,"studentId, invoiceId, state, reference, from, to, cursor, limit",educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java
 GET,/schools/{school}/invoices/payment-settings/history,finance,,,,"beforeVersion, limit",educore-finance/src/main/java/com/educore/finance/FinanceWorkspaceController.java

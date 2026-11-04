@@ -22,6 +22,20 @@ public class AssessmentController {
     return Api.version(h.getFirst("If-Match"));
   }
 
+  @GetMapping("/grading-policy")
+  Object policy(@PathVariable UUID school) {
+    return s.gradingPolicy(Actor.current(), school);
+  }
+
+  @PostMapping("/assessment-cycles/{id}/approve-policy")
+  Object policy(
+      @PathVariable UUID school,
+      @PathVariable UUID id,
+      @RequestBody AssessmentService.PolicyApproval b,
+      @RequestHeader HttpHeaders h) {
+    return s.approvePolicy(Actor.current(), school, id, b, version(h), key(h));
+  }
+
   @PostMapping("/assessment-cycles")
   Object create(
       @PathVariable UUID school,

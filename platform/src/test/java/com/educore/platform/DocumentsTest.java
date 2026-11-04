@@ -30,6 +30,22 @@ class DocumentsTest {
   }
 
   @Test
+  void reportExportsRejectOversizedResultsInsteadOfSilentlyTruncating() {
+    var failure =
+        assertThrows(
+            Api.Failure.class,
+            () ->
+                new ReportData(
+                    "ATTENDANCE",
+                    "School attendance",
+                    List.of("status"),
+                    Collections.nCopies(1001, Map.of("status", "NOT_RECORDED")),
+                    List.of()));
+    assertEquals("REPORT_TOO_LARGE", failure.code);
+    assertEquals(422, failure.status);
+  }
+
+  @Test
   void reportPdfPreservesUnicodeStudentNamesAndPaginates() throws Exception {
     List<String> lines = new ArrayList<>();
     lines.add("Ayọ Adésínà — report revision 2");

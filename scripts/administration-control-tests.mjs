@@ -72,4 +72,17 @@ export async function administrationControlTests(u) {
   await call('POST',`/provisioning/STAFF/${bad.id}/retry`,retryBody,failed.version,412);
   await call('POST',`/provisioning/STAFF/${bad.id}/retry`,{eventId:provisioned.items[0].eventId,reason:'A different subject event cannot be replayed'},failed.version,404);
   passed('failed provisioning retries retain the original event and are idempotent, versioned, and bound to the correct subject');
+  let pendingRepair=await poll(async()=>{const x=await get(`/provisioning/STAFF/${bad.id}`);return x.items.find(e=>e.eventId===failed.eventId&&e.errorCode&&e.state!=='PROCESSING')||false;},'reviewable failed account match');
+  const repairBody={eventId:failed.eventId,mode:'LINK_EXISTING',existingLoginId:final.loginId,relationshipVerified:true,verificationReference:'Principal checked the synthetic existing global identity',reason:'Correct the supplied existing account without recreating the staff record'};
+  await call('POST',`/provisioning/STAFF/${bad.id}/replacement`,{...repairBody,relationshipVerified:false},pendingRepair.version,422);
+  const repairKey=key(),repaired=await call('POST',`/provisioning/STAFF/${bad.id}/replacement`,repairBody,pendingRepair.version,200,admin.accessToken,repairKey);assert.notEqual(repaired.eventId,failed.eventId);
+  assert.deepEqual(await call('POST',`/provisioning/STAFF/${bad.id}/replacement`,repairBody,pendingRepair.version,200,admin.accessToken,repairKey),repaired);
+  const repairedStatus=await poll(async()=>{const x=await get(`/provisioning/STAFF/${bad.id}`);return x.items.some(e=>e.eventId===repaired.eventId&&e.state==='PROVISIONED')?x:false;},'reviewed replacement provisioning');
+  assert.equal(repairedStatus.items.find(e=>e.eventId===failed.eventId).state,'SUPERSEDED');
+  assert.equal((await get(`/onboarding/STAFF/${bad.id}/invitations`)).loginId,final.loginId);
+  assert.equal((await login(final.loginId)).accountId,parent.accountId);
+  await u.identityEvent(failed.eventId,'STAFF_ACCESS_CHANGED',{schoolId:school,schoolName:'Synthetic administration school',staff:{id:bad.id,fullName:'Failed Provisioning Office',phone:'08060345678',role:'SCHOOL_OFFICE',active:true,version:1}},409);
+  await call('POST',`/provisioning/STAFF/${bad.id}/retry`,retryBody,repaired.originalEventVersion,409);
+  passed('reviewed account-match repair cancels the unapplied original, blocks late replay and reuses the verified global login without creating another school person');
+
 }

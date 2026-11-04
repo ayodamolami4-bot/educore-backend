@@ -232,3 +232,39 @@ A malformed provider initialization response is an unknown outcome, not proof of
 - `GET /rooms` lists room IDs, stable uppercase codes, display names, capacity, active state and versions with active/cursor filters. `POST /rooms` and `PATCH /rooms/{id}` take code/name/capacity/active/reason. Codes are immutable. Current/future room references block deactivation; new saves reject inactive rooms. Legacy room text is indexed and new text entry creates a matching catalogue item; existing published labels are retained.
 
 These additions have Java and catalogue checks; the added real-database scenarios must pass before their screen rows are marked verified.
+
+## Reviewed provisioning repair
+
+`POST /provisioning/{type}/{subject}/replacement` accepts the failed `eventId`, `mode` (`CREATE_NEW` or `LINK_EXISTING`), exact `existingLoginId` for linking, `relationshipVerified`, `verificationReference`, `reason`, `If-Match` and `Idempotency-Key`. It repairs only initial STAFF/GUARDIAN account matching. Student, guardian and staff IDs remain unchanged.
+
+Identity serializes cancellation against processing the original event. Already-applied outcomes or already-provisioned subjects cannot be rematched. A cancelled original can never apply later, even if its sender retries after a timeout. Academics preserves the original encrypted payload, records the replacement event and updates the pending tracking reference. A connection failure between cancellation and the local replacement commit is recoverable by retrying the same reviewed command. History labels the old event `SUPERSEDED`; normal retry cannot resurrect it. This is not a global password-reset operation.
+
+## Delivery operations
+
+- `GET /delivery/notifications` supports category, resourceId, childId, failedOnly and cursor filters. Principal sees authorized school notification metadata; School Office sees school/learning, permitted complaint categories and office threads; Accounts sees fees and fee cases.
+- `GET /delivery/notifications/{id}` returns preparation, push and notification-email states, safe error codes, a separate delivery-command version and the last 20 retry records. It excludes bodies, addresses, tokens and authentication mail. In-app `readAt` is separate from provider confirmation.
+- `POST .../{id}/retry` accepts channel `DISPATCH`, `PUSH` or `EMAIL`, a specific deliveryId for push/email, reason, `If-Match` and a stable command key. It rejects active leases, successful sends, outstanding provider receipts, expired windows and unregistered/removed devices. Case retries require the current owner or Principal. Current recipient access/preferences and the original device/email are checked again; workers repeat eligibility checks. Queued is not delivered. An unconfirmed transport outcome can still have reached an external provider; retries do not promise exactly-once external delivery.
+- `GET /notices/{id}/delivery-summary` returns recipient/read counts and grouped delivery states for Principal/School Office, without exposing private recipient contacts.
+
+## Report catalogues and bounded downloads
+
+Read `GET /school-reports/catalogue`, `GET /reconciliation/reports/catalogue`, and `GET /complaints/reports/catalogue` in the permitted staff preset. Each service reads only its own database. All listed report endpoints take `format=JSON|CSV|PDF` (JSON by default), recheck current access on every request and return no-store responses. JSON generation is synchronous and returns `state: READY`; refreshing the same request regenerates the view. There is no arbitrary report-query builder or background export-job identity.
+
+`GET /school-reports/{kind}` supports:
+
+- ENROLMENTS: sessionId, termId, classId, studentId, department and overlap dates.
+- ATTENDANCE: the same scope; a term or from/to dates is required. Rows represent dated enrolments on configured teaching days; only submitted rows supply attendance. NOT_RECORDED is never absence.
+- TEACHING_ASSIGNMENTS: session, term, class, department and session-overlap dates.
+- ASSESSMENT_COMPLETENESS: session, term, class, cycleId and term-overlap dates; workflow counts do not publish marks.
+- PUBLISHED_BROADSHEET: cycleId plus optional pupil/department scope. It uses the latest **published snapshot** per pupil, including during a correction in progress. Teacher access requires the current class-lead duty. Totals, averages and grades come from the accepted snapshot; no rank is invented.
+- SUBJECT_MARKS: cycleId and assignmentId only; Principal/Office, the assigned subject teacher or class lead can export their permitted working sheet. Draft/submitted working data is labelled and never becomes a family report.
+
+`GET /reconciliation/reports/{kind}` supplies INVOICE_BALANCES (due dates), CONFIRMED_PAYMENTS (confirmation dates), REFUNDS (request dates) and SETTLEMENTS (import dates). Term/student filters apply to the first three; source applies to payments/settlements. Settlement batches may span pupils/terms and reject those filters. Amount columns ending Kobo are integer NGN kobo, calculated on Java/SQL. School Office/family roles cannot use these staff finance exports.
+
+`GET /complaints/reports/{kind}` supplies BACKLOG (all cases not CLOSED, including resolutions awaiting acceptance) and CASE_REGISTER. Category/state/ownerId/from/to filters remain within preset limits: Accounts receives FEES; Office receives GENERAL/ATTENDANCE/ACADEMIC_RECORDS; Principal has the authorized school-wide view. No message body or internal note is exported. Response deadlines remain teaching-day evidence; elapsed hours are a separate description.
+
+All new reports reject more than 1,000 rows instead of silently truncating; use narrower filters. Ordered paired dates span at most 367 days. Existing specific report-card and promotion exports retain their own routes. These are supported report types and formats, not a promise of every possible custom analysis.
+
+## Adopted grading policy approval
+
+`GET /grading-policy` returns the agreed 20/20/60, one-decimal, A-F, no-ranking policy. Weights/bands stay read-only because they are the adopted presentation-school decision. `POST /assessment-cycles/{id}/approve-policy` accepts policyVersion 1, reason, cycle version and a stable command key; Principal can explicitly approve a DRAFT cycle before mark entry. Opening mark entry also records Principal approval when no earlier approval exists, preserving existing clients. The policy is frozen on the cycle and old publications retain it; approval does not rewrite marks, reports or old approval history. Legacy opened cycles receive no invented historical approval actor.

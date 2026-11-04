@@ -35,4 +35,21 @@ public class ProvisioningController {
         Api.version(h.getFirst("If-Match")),
         h.getFirst("Idempotency-Key"));
   }
+
+  @PostMapping("/replacement")
+  Object replacement(
+      @PathVariable UUID school,
+      @PathVariable String type,
+      @PathVariable UUID subject,
+      @RequestBody ProvisioningService.Replacement b,
+      @RequestHeader HttpHeaders h) {
+    return s.replace(
+        Actor.current(),
+        school,
+        type,
+        subject,
+        b,
+        Api.version(h.getFirst("If-Match")),
+        h.getFirst("Idempotency-Key"));
+  }
 }

@@ -857,11 +857,56 @@ public class IdentityService {
         });
   }
 
+  public Object cancelProvisioning(UUID school, UUID event, String type, UUID subject) {
+    Actor.internalOnly("academics");
+    if (event == null
+        || school == null
+        || subject == null
+        || !Set.of("STAFF", "GUARDIAN").contains(Objects.toString(type, "")))
+      throw fail(
+          422,
+          "INVALID_PROVISIONING_CANCELLATION",
+          "Provide an initial school staff or guardian event.");
+    return commands.transaction(
+        () -> {
+          db.queryForObject(
+              "select pg_advisory_xact_lock(hashtextextended(?,0))",
+              Object.class,
+              "identity-provision-event|" + event);
+          if (db.queryForObject("select count(*) from inbox where event_id=?", Integer.class, event)
+              > 0) return map("state", "APPLIED");
+          if (db.queryForObject(
+                  "select count(*) from provisioned_subjects where school_id=? and subject_type=? and subject_id=?",
+                  Integer.class,
+                  school,
+                  type,
+                  subject)
+              > 0) return map("state", "SUBJECT_ALREADY_PROVISIONED");
+          db.update(
+              "insert into cancelled_provisioning_events(event_id,school_id) values (?,?) on conflict do nothing",
+              event,
+              school);
+          return map("state", "CANCELLED");
+        });
+  }
+
   public Object event(UUID eventId, String kind, com.fasterxml.jackson.databind.JsonNode payload) {
     Actor.internalOnly("academics");
     return commands.transaction(
         () -> {
-          String digest = Crypto.hash(json.write(payload));
+          db.queryForObject(
+              "select pg_advisory_xact_lock(hashtextextended(?,0))",
+              Object.class,
+              "identity-provision-event|" + eventId);
+          if (db.queryForObject(
+                  "select count(*) from cancelled_provisioning_events where event_id=?",
+                  Integer.class,
+                  eventId)
+              > 0)
+            throw fail(
+                409,
+                "PROVISIONING_EVENT_SUPERSEDED",
+                "This unapplied event was replaced by a reviewed school command.");
           var previous = db.queryForList("select kind from inbox where event_id=?", eventId);
           if (!previous.isEmpty()) return ack("Event already applied.");
           db.update("insert into inbox(event_id,kind) values (?,?)", eventId, kind);

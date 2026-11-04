@@ -96,4 +96,5 @@ export async function academicTests(u) {
  graduation=await call('PUT',`/promotion-batches/${graduation.id}/students/${grad.studentId}`,{decision:'GRADUATE',reason:'Principal approves school completion without asserting any external examination grade.'},admin.accessToken,grad.version);
  await post(`/promotion-batches/${graduation.id}/confirm`,undefined,{headers:{'If-Match':`"v${graduation.version}"`}});assert.equal((await get(`/students/${children[2].id}`)).status,'GRADUATED');
  passed('JSS3 requires an explicit SSS1 pathway and SSS3 completion is a principal-approved school record');
+ return {school,admin,source,target,classes,future,children,cycles,assignments,t1,t2,englishTeacher,math,parent};
 }

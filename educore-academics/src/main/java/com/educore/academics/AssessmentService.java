@@ -302,22 +302,7 @@ public class AssessmentService {
             throw fail(
                 422, "INVALID_ENTRY_WINDOW", "Provide ordered opening and closing instants.");
           UUID id = UUID.randomUUID();
-          Object policy =
-              map(
-                  "version",
-                  1,
-                  "ca1Maximum",
-                  20,
-                  "ca2Maximum",
-                  20,
-                  "examMaximum",
-                  60,
-                  "decimalPlaces",
-                  1,
-                  "gradeBands",
-                  map("A", 70, "B", 60, "C", 50, "D", 45, "E", 40, "F", 0),
-                  "rankingEnabled",
-                  false);
+          Object policy = SchoolRules.gradingPolicy();
           s.db.update(
               "insert into assessment_cycles(id,school_id,term_id,class_id,policy,opens_at,closes_at,created_by) values (?,?,?,?,?::jsonb,?,?,?)",
               id,
@@ -395,6 +380,69 @@ public class AssessmentService {
         false);
   }
 
+  public Object gradingPolicy(Actor a, UUID school) {
+    a.school(school, "PRINCIPAL", "SCHOOL_OFFICE", "TEACHER");
+    return map(
+        "policy",
+        SchoolRules.gradingPolicy(),
+        "configuration",
+        "ADOPTED_PRESENTATION_SCHOOL_POLICY",
+        "editableWeightsOrBands",
+        false,
+        "approval",
+        "Principal approves the frozen cycle policy explicitly or when opening mark entry.");
+  }
+
+  public record PolicyApproval(int policyVersion, String reason) {}
+
+  public Object approvePolicy(
+      Actor a, UUID school, UUID id, PolicyApproval b, long version, String key) {
+    a.school(school, "PRINCIPAL");
+    return command(
+        a,
+        school,
+        "assessment-cycles/" + id + "/approve-policy",
+        key,
+        map("input", b, "version", version),
+        () -> {
+          var cycle = cycle(a, school, id, true, true);
+          expectVersion(version, ((Number) cycle.get("version")).longValue());
+          if (!"DRAFT".equals(cycle.get("state")) || cycle.get("policy_approved_at") != null)
+            throw fail(
+                409,
+                "POLICY_ALREADY_FROZEN",
+                "The policy is already approved or mark entry has begun.");
+          if (b.policyVersion()
+              != s.json.tree(cycle.get("policy").toString()).path("version").asInt())
+            throw fail(
+                422, "POLICY_VERSION_MISMATCH", "Approve the policy version frozen on this cycle.");
+          String reason = text(b.reason(), 5, 500, "Policy approval reason");
+          s.db.update(
+              "update assessment_cycles set policy_approved_by=?,policy_approved_at=now(),version=version+1 where id=?",
+              a.accountId(),
+              id);
+          s.commands.audit(
+              school,
+              a.accountId(),
+              "ASSESSMENT_POLICY_APPROVED",
+              "ASSESSMENT_CYCLE",
+              id,
+              reason,
+              map("policy", s.json.value(cycle.get("policy").toString())));
+          return map(
+              "id",
+              id,
+              "version",
+              version + 1,
+              "state",
+              "DRAFT",
+              "policyApproved",
+              true,
+              "policy",
+              s.json.value(cycle.get("policy").toString()));
+        });
+  }
+
   public record Window(Instant opensAt, Instant closesAt, String reason) {}
 
   public Object window(Actor a, UUID school, UUID id, Window b, long version, String key) {
@@ -415,6 +463,24 @@ public class AssessmentService {
                 "Use a reasoned report correction before reopening published results.");
           if (b.opensAt() == null || b.closesAt() == null || !b.opensAt().isBefore(b.closesAt()))
             throw fail(422, "INVALID_ENTRY_WINDOW", "Provide ordered mark-entry instants.");
+          if (c.get("policy_approved_at") == null) {
+            s.db.update(
+                "update assessment_cycles set policy_approved_by=?,policy_approved_at=now() where id=?",
+                a.accountId(),
+                id);
+            s.commands.audit(
+                school,
+                a.accountId(),
+                "ASSESSMENT_POLICY_APPROVED",
+                "ASSESSMENT_CYCLE",
+                id,
+                text(b.reason(), 5, 500, "Opening and policy approval reason"),
+                map(
+                    "policy",
+                    s.json.value(c.get("policy").toString()),
+                    "approvedWhenOpening",
+                    true));
+          }
           s.db.update(
               "update assessment_cycles set state='OPEN',opens_at=?,closes_at=?,version=version+1 where id=?",
               java.sql.Timestamp.from(b.opensAt()),
@@ -464,6 +530,10 @@ public class AssessmentService {
         c.get("opens_at"),
         "closesAt",
         c.get("closes_at"),
+        "policyApprovedBy",
+        c.get("policy_approved_by"),
+        "policyApprovedAt",
+        c.get("policy_approved_at"),
         "policy",
         s.json.value(c.get("policy").toString()),
         "rows",
@@ -819,6 +889,10 @@ public class AssessmentService {
         c.get("state"),
         "revision",
         c.get("revision"),
+        "policyApprovedBy",
+        c.get("policy_approved_by"),
+        "policyApprovedAt",
+        c.get("policy_approved_at"),
         "policy",
         s.json.value(c.get("policy").toString()),
         "sheets",

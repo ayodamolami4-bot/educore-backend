@@ -1,6 +1,6 @@
 # Implemented endpoints and request fields
 
-Reviewed 2026-11-04. These 272 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
+Reviewed 2026-11-04. These 285 public operations exist in the Java controllers. Prefix paths with `/api/v1`. Internal routes are excluded.
 
 Start with [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) and [API.md](API.md) for permissions, workflows, versions and response adapters. Views are implemented by the frontend team.
 
@@ -48,6 +48,8 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/students/{studentId}/transfers` | AdministrationService.Transfer | required | required | — |
 | POST | `/schools/{school}/students/{studentId}/withdrawal` | AdministrationService.Withdrawal | required | required | — |
 | POST | `/schools/{school}/students/{studentId}/guardians` | AdministrationService.GuardianLink | required | conditional | — |
+| GET | `/schools/{school}/grading-policy` | — | — | — | — |
+| POST | `/schools/{school}/assessment-cycles/{id}/approve-policy` | AssessmentService.PolicyApproval | required | required | — |
 | POST | `/schools/{school}/assessment-cycles` | AssessmentService.CycleInput | required | — | — |
 | GET | `/schools/{school}/assessment-cycles` | — | — | — | termId, classId |
 | GET | `/schools/{school}/assessment-cycles/{cycleId}` | — | — | — | — |
@@ -138,6 +140,7 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/schools/{school}/students/{studentId}/academic-history` | — | — | — | — |
 | GET | `/schools/{school}/provisioning/{type}/{subject}` | — | — | — | — |
 | POST | `/schools/{school}/provisioning/{type}/{subject}/retry` | ProvisioningService.Retry | required | required | — |
+| POST | `/schools/{school}/provisioning/{type}/{subject}/replacement` | ProvisioningService.Replacement | required | required | — |
 | GET | `/schools/{school}/metadata` | — | — | — | — |
 | PUT | `/schools/{school}/metadata` | SchoolController.MetadataInput | required | required | — |
 | POST | `/schools/{school}/academic-sessions` | SchoolService.SessionInput | required | — | — |
@@ -161,6 +164,8 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/documents/{id}/publish` | — | required | required | — |
 | POST | `/schools/{school}/documents/{id}/archive` | SchoolDocumentService.Reason | required | required | — |
 | GET | `/schools/{school}/documents/{id}/history` | — | — | — | — |
+| GET | `/schools/{school}/school-reports/catalogue` | — | — | — | — |
+| GET | `/schools/{school}/school-reports/{kind}` | — | — | — | sessionId, termId, classId, studentId, department, from, to, cycleId, assignmentId, format |
 | PATCH | `/schools/{school}/academic-sessions/{id}` | SchoolSetupService.Dates | required | required | — |
 | PATCH | `/schools/{school}/terms/{id}` | SchoolSetupService.Dates | required | required | — |
 | PUT | `/schools/{school}/active-academic-session` | SchoolSetupService.ActiveSession | required | required | — |
@@ -208,6 +213,12 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/complaints/{caseId}/status` | CommunicationWorkService.StateChange | required | required | — |
 | PUT | `/schools/{school}/complaints/{caseId}/owner` | CommunicationWorkService.Owner | required | required | — |
 | GET | `/schools/{school}/complaints/{caseId}/history` | — | — | — | — |
+| GET | `/schools/{school}/complaints/reports/catalogue` | — | — | — | — |
+| GET | `/schools/{school}/complaints/reports/{kind}` | — | — | — | category, state, ownerId, from, to, format |
+| GET | `/schools/{school}/delivery/notifications` | — | — | — | category, resourceId, childId, failedOnly, cursor, limit |
+| GET | `/schools/{school}/delivery/notifications/{id}` | — | — | — | — |
+| POST | `/schools/{school}/delivery/notifications/{id}/retry` | DeliveryOperationsService.Retry | required | required | — |
+| GET | `/schools/{school}/notices/{id}/delivery-summary` | — | — | — | — |
 | POST | `/schools/{school}/fee-plans` | FeeAdministrationService.Plan | required | — | — |
 | GET | `/schools/{school}/fee-plans` | — | — | — | termId |
 | PUT | `/schools/{school}/fee-plans/{planId}` | FeeAdministrationService.Plan | required | required | — |
@@ -237,6 +248,8 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | POST | `/schools/{school}/payment-intents/{intentId}/verify` | — | — | — | — |
 | GET | `/schools/{school}/reconciliation/exceptions` | — | — | — | — |
 | POST | `/webhooks/paystack` | — | — | — | — |
+| GET | `/schools/{school}/reconciliation/reports/catalogue` | — | — | — | — |
+| GET | `/schools/{school}/reconciliation/reports/{kind}` | — | — | — | termId, studentId, source, from, to, format |
 | GET | `/schools/{school}/invoices/fee-status` | — | — | — | studentId, termId, cursor, limit |
 | GET | `/schools/{school}/payment-intents` | — | — | — | studentId, invoiceId, state, reference, from, to, cursor, limit |
 | GET | `/schools/{school}/invoices/payment-settings/history` | — | — | — | beforeVersion, limit |
@@ -418,6 +431,13 @@ These are declared property names and Java types. Required/conditional values ar
 | Field | Type |
 | --- | --- |
 | `rows` | `List<Score>` |
+
+### AssessmentService.PolicyApproval
+
+| Field | Type |
+| --- | --- |
+| `policyVersion` | `int` |
+| `reason` | `String` |
 
 ### AssessmentService.Publication
 
@@ -657,6 +677,14 @@ These are declared property names and Java types. Required/conditional values ar
 | `subject` | `String` |
 | `body` | `String` |
 | `fileIds` | `List<UUID>` |
+
+### DeliveryOperationsService.Retry
+
+| Field | Type |
+| --- | --- |
+| `channel` | `String` |
+| `deliveryId` | `UUID` |
+| `reason` | `String` |
 
 ### ExamService.Event
 
@@ -1034,6 +1062,17 @@ These are declared property names and Java types. Required/conditional values ar
 | `sourceSessionId` | `UUID` |
 | `targetSessionId` | `UUID` |
 | `sourceClassId` | `UUID` |
+
+### ProvisioningService.Replacement
+
+| Field | Type |
+| --- | --- |
+| `eventId` | `UUID` |
+| `mode` | `String` |
+| `existingLoginId` | `String` |
+| `relationshipVerified` | `boolean` |
+| `verificationReference` | `String` |
+| `reason` | `String` |
 
 ### ProvisioningService.Retry
 

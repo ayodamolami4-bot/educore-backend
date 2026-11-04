@@ -68,3 +68,9 @@ Internal service routes are excluded from the frontend catalogue. Official grade
 ### Administration controls being verified
 
 The review branch now adds provisioning status/retry, invitation history/revocation (including invalidation after activation review), versioned unused-date edits, the active-session display preference, subject lifecycle and a room catalogue. Java compilation/unit checks and catalogue validation pass locally. New PostgreSQL scenarios are wired into the runner; their runtime result is not yet recorded. The verified checkpoint above remains the last completed full run until those checks finish.
+
+### Later checkpoint
+
+[Run 41884167986](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41884167986), commit `d3b135aecacd94c5d476a10b5c01a2fab97cd4eb`, passed 34 unit tests, 72 PostgreSQL scenario groups, all five Docker builds and both startup checks. This verifies provisioning retry, invitation replacement/revocation and school setup controls.
+
+Further local changes add reviewed unapplied-account repair, scoped delivery operations, bounded report catalogues/PDF/CSV downloads and explicit approval of the adopted fixed grading policy. Their new PostgreSQL scenarios are wired in; the earlier run does not verify these later changes. The full suite must pass before the final review handover is declared ready.

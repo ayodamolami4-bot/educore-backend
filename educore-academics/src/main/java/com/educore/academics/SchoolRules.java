@@ -8,6 +8,17 @@ import java.util.*;
 public final class SchoolRules {
   private SchoolRules() {}
 
+  public static Map<String, Object> gradingPolicy() {
+    return Map.of(
+        "version", 1,
+        "ca1Maximum", 20,
+        "ca2Maximum", 20,
+        "examMaximum", 60,
+        "decimalPlaces", 1,
+        "gradeBands", Map.of("A", 70, "B", 60, "C", 50, "D", 45, "E", 40, "F", 0),
+        "rankingEnabled", false);
+  }
+
   public static void lesson(int weekday, int start, int duration, boolean pt) {
     int end = start + duration;
     if (weekday < 1

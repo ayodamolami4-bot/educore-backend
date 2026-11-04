@@ -3160,6 +3160,148 @@
         }
       }
     },
+    "/schools/{school}/grading-policy": {
+      "get": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "GET /schools/{school}/grading-policy",
+        "operationId": "get_schools_school_grading_policy",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "AssessmentController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/AssessmentController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/assessment-cycles/{id}/approve-policy": {
+      "post": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "POST /schools/{school}/assessment-cycles/{id}/approve-policy",
+        "operationId": "post_schools_school_assessment_cycles_id_approve_policy",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          }
+        ],
+        "x-controller": "AssessmentController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/AssessmentController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentService_PolicyApproval",
+                "x-java-type": "AssessmentService.PolicyApproval"
+              }
+            }
+          }
+        }
+      }
+    },
     "/schools/{school}/assessment-cycles": {
       "post": {
         "tags": [
@@ -10105,6 +10247,104 @@
         }
       }
     },
+    "/schools/{school}/provisioning/{type}/{subject}/replacement": {
+      "post": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "POST /schools/{school}/provisioning/{type}/{subject}/replacement",
+        "operationId": "post_schools_school_provisioning_type_subject_replacement",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          }
+        ],
+        "x-controller": "ProvisioningController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/ProvisioningController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvisioningService_Replacement",
+                "x-java-type": "ProvisioningService.Replacement"
+              }
+            }
+          }
+        }
+      }
+    },
     "/schools/{school}/metadata": {
       "get": {
         "tags": [
@@ -11852,6 +12092,217 @@
         ],
         "x-controller": "SchoolDocumentController",
         "x-source": "educore-academics/src/main/java/com/educore/academics/SchoolDocumentController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/school-reports/catalogue": {
+      "get": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "GET /schools/{school}/school-reports/catalogue",
+        "operationId": "get_schools_school_school_reports_catalogue",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "SchoolReportController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/SchoolReportController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/school-reports/{kind}": {
+      "get": {
+        "tags": [
+          "academics"
+        ],
+        "summary": "GET /schools/{school}/school-reports/{kind}",
+        "operationId": "get_schools_school_school_reports_kind",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "classId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "cycleId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "assignmentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String",
+              "default": "JSON"
+            }
+          }
+        ],
+        "x-controller": "SchoolReportController",
+        "x-source": "educore-academics/src/main/java/com/educore/academics/SchoolReportController.java",
         "responses": {
           "422": {
             "description": "Invalid request or business input.",
@@ -15445,6 +15896,500 @@
         }
       }
     },
+    "/schools/{school}/complaints/reports/catalogue": {
+      "get": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "GET /schools/{school}/complaints/reports/catalogue",
+        "operationId": "get_schools_school_complaints_reports_catalogue",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "ComplaintReportController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/ComplaintReportController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/complaints/reports/{kind}": {
+      "get": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "GET /schools/{school}/complaints/reports/{kind}",
+        "operationId": "get_schools_school_complaints_reports_kind",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "ownerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String",
+              "default": "JSON"
+            }
+          }
+        ],
+        "x-controller": "ComplaintReportController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/ComplaintReportController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/delivery/notifications": {
+      "get": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "GET /schools/{school}/delivery/notifications",
+        "operationId": "get_schools_school_delivery_notifications",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "resourceId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "childId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "failedOnly",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "x-java-type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "x-java-type": "int",
+              "default": 30
+            }
+          }
+        ],
+        "x-controller": "DeliveryOperationsController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/delivery/notifications/{id}": {
+      "get": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "GET /schools/{school}/delivery/notifications/{id}",
+        "operationId": "get_schools_school_delivery_notifications_id",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "DeliveryOperationsController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/delivery/notifications/{id}/retry": {
+      "post": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "POST /schools/{school}/delivery/notifications/{id}/retry",
+        "operationId": "post_schools_school_delivery_notifications_id_retry",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the same command key/body/version for retries."
+          }
+        ],
+        "x-controller": "DeliveryOperationsController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryOperationsService_Retry",
+                "x-java-type": "DeliveryOperationsService.Retry"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schools/{school}/notices/{id}/delivery-summary": {
+      "get": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "GET /schools/{school}/notices/{id}/delivery-summary",
+        "operationId": "get_schools_school_notices_id_delivery_summary",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "DeliveryOperationsController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/DeliveryOperationsController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
     "/schools/{school}/fee-plans": {
       "post": {
         "tags": [
@@ -17501,6 +18446,177 @@
                 "x-java-type": "byte[]"
               }
             }
+          }
+        }
+      }
+    },
+    "/schools/{school}/reconciliation/reports/catalogue": {
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "GET /schools/{school}/reconciliation/reports/catalogue",
+        "operationId": "get_schools_school_reconciliation_reports_catalogue",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "FinanceReportController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceReportController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
+    },
+    "/schools/{school}/reconciliation/reports/{kind}": {
+      "get": {
+        "tags": [
+          "finance"
+        ],
+        "summary": "GET /schools/{school}/reconciliation/reports/{kind}",
+        "operationId": "get_schools_school_reconciliation_reports_kind",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "studentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "x-java-type": "UUID"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "x-java-type": "LocalDate"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "x-java-type": "String",
+              "default": "JSON"
+            }
+          }
+        ],
+        "x-controller": "FinanceReportController",
+        "x-source": "educore-finance/src/main/java/com/educore/finance/FinanceReportController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
           }
         }
       }
@@ -23154,6 +24270,74 @@
         "x-java-record": "InvitationService.Revoke",
         "description": "Declared fields; conditional and cross-record validation is enforced by the service. See API.md.",
         "properties": {
+          "reason": {
+            "type": "string",
+            "x-java-type": "String"
+          }
+        }
+      },
+      "AssessmentService_PolicyApproval": {
+        "type": "object",
+        "x-java-record": "AssessmentService.PolicyApproval",
+        "description": "Declared fields; conditional and cross-record validation is enforced by the service. See API.md.",
+        "properties": {
+          "policyVersion": {
+            "type": "integer",
+            "format": "int32",
+            "x-java-type": "int"
+          },
+          "reason": {
+            "type": "string",
+            "x-java-type": "String"
+          }
+        }
+      },
+      "DeliveryOperationsService_Retry": {
+        "type": "object",
+        "x-java-record": "DeliveryOperationsService.Retry",
+        "description": "Declared fields; conditional and cross-record validation is enforced by the service. See API.md.",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "x-java-type": "String"
+          },
+          "deliveryId": {
+            "type": "string",
+            "format": "uuid",
+            "x-java-type": "UUID"
+          },
+          "reason": {
+            "type": "string",
+            "x-java-type": "String"
+          }
+        }
+      },
+      "ProvisioningService_Replacement": {
+        "type": "object",
+        "x-java-record": "ProvisioningService.Replacement",
+        "description": "Declared fields; conditional and cross-record validation is enforced by the service. See API.md.",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "x-java-type": "UUID"
+          },
+          "mode": {
+            "type": "string",
+            "x-java-type": "String"
+          },
+          "existingLoginId": {
+            "type": "string",
+            "x-java-type": "String"
+          },
+          "relationshipVerified": {
+            "type": "boolean",
+            "x-java-type": "boolean"
+          },
+          "verificationReference": {
+            "type": "string",
+            "x-java-type": "String"
+          },
           "reason": {
             "type": "string",
             "x-java-type": "String"

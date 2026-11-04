@@ -20,6 +20,8 @@ import { resourceTests } from './resource-tests.mjs';
 import { attendanceReviewTests } from './attendance-review-tests.mjs';
 import { financeWorkspaceTests } from './finance-workspace-tests.mjs';
 import { administrationControlTests } from './administration-control-tests.mjs';
+import { reportControlTests } from './report-control-tests.mjs';
+import { deliveryControlTests } from './delivery-control-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
 // Only external Paystack, SMTP and Expo push providers are local test doubles.
@@ -69,7 +71,7 @@ const pushProvider=httpServer(async(req,res)=>{
  try{let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);let data;
  if(req.url==='/push/send'){
    assert.equal(body.title,'EduCore');assert.equal(body.body,'You have a school update. Open EduCore to view it.');
-   pushMessages.push(body);const id=randomUUID();pushTickets.set(id,body.to.includes('DeadDevice')?{status:'error',details:{error:'DeviceNotRegistered'}}:{status:'ok'});data={status:'ok',id};
+   pushMessages.push(body);const id=randomUUID();pushTickets.set(id,body.to.includes('DeadDevice')?{status:'error',details:{error:'DeviceNotRegistered'}}:body.to.includes('RetryDevice')&&pushMessages.filter(p=>p.to===body.to&&p.data.notificationId===body.data.notificationId).length===1?{status:'error',details:{error:'MessageTooBig'}}:{status:'ok'});data={status:'ok',id};
  }else if(req.url==='/push/getReceipts'){data=Object.fromEntries(body.ids.filter(id=>pushTickets.has(id)).map(id=>[id,pushTickets.get(id)]));}
  else {res.writeHead(404).end();return;}
  res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({data}));
@@ -237,6 +239,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds,smtpMessages,pushMessages,initializationReplies};await extendedTests(helpers);await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);await deliveryTests(helpers,finance);await importTests(helpers,finance);await rosterTests(helpers,finance);await workspaceTests(helpers);await resourceTests(helpers);await attendanceReviewTests(helpers);await financeWorkspaceTests(helpers);await administrationControlTests(helpers);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const helpers={bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds,smtpMessages,pushMessages,initializationReplies,identityEvent:(eventId,kind,payload,expected)=>request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_IDENTITY_KEY},body:{eventId,kind,payload},expected})};await extendedTests(helpers);const academic=await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);await deliveryTests(helpers,finance);await importTests(helpers,finance);await rosterTests(helpers,finance);await workspaceTests(helpers);await resourceTests(helpers);await attendanceReviewTests(helpers);await financeWorkspaceTests(helpers);await administrationControlTests(helpers);await reportControlTests(helpers,academic,finance);await deliveryControlTests(helpers,finance);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
 finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();pushProvider.closeAllConnections();pushProvider.close();smtp.close();}

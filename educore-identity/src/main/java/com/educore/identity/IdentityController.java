@@ -243,6 +243,14 @@ public class IdentityController {
     return service.event(b.eventId(), b.kind(), b.payload());
   }
 
+  public record CancelProvisioning(
+      UUID schoolId, UUID eventId, String subjectType, UUID subjectId) {}
+
+  @PostMapping("/internal/provisioning-cancellations")
+  Object cancelProvisioning(@RequestBody CancelProvisioning b) {
+    return service.cancelProvisioning(b.schoolId(), b.eventId(), b.subjectType(), b.subjectId());
+  }
+
   @PostMapping("/internal/audience")
   Object audience(@RequestBody Audience b) {
     return service.internalAudience(b.schoolId(), b.childId(), b.category());

@@ -62,7 +62,7 @@ public class GatewayController {
     if (suffix.matches(
         "/(?:invoices|payments|payment-intents|fee-plans|fee-batches|fee-adjustments|reconciliation)(?:/.*)?"))
       return "finance";
-    if (suffix.matches("/(?:notices|threads|complaints)(?:/.*)?")) return "communication";
+    if (suffix.matches("/(?:notices|threads|complaints|delivery)(?:/.*)?")) return "communication";
     return "academics";
   }
 
