@@ -17,7 +17,7 @@
         "platform/src/main/java/com/educore/platform/Actor.java": "fe2c7aadea659936db7d91dd6e9fe430157bcc9792be8b0964c99b8fc878bda8",
         "platform/src/main/java/com/educore/platform/PlatformSecurity.java": "b9cafafab6294a025fbc0238f7a66a3b62fd0059792188dca1f41968e7067df8",
         "platform/src/main/java/com/educore/platform/Documents.java": "3c85123eee84d0ee1e403a607a15fb820226ffed8db2d20d267735b4de7fabca",
-        "scripts/import-tests.mjs": "002ce020f61778c2ea480dc61e78b1d892d4fccb7ff29ab4fb93e048575f611a"
+        "scripts/import-tests.mjs": "58c87ada41739d443069d01a329148b81db96dfe23e7cad85e91e1b45cf146af"
       }
     }
   ]
