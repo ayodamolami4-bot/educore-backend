@@ -41,7 +41,7 @@ On Windows PowerShell use `./mvnw.cmd verify`. Use a **JDK**, which includes the
 
 The expanded backend is saved on [backend/complete-workflows](https://github.com/ayodamolami4-bot/educore-backend/tree/backend/complete-workflows). It includes school/staff/student/guardian administration, calendars/curriculum, timetable and examination drafts, attendance, marks/report publication, promotion/graduation, materials, app/physical assignments, verified school documents, fee plans and reconciliation, parent communication/complaints, delivery workers and reviewed imports/exports.
 
-The latest verified code passed **35 unit tests, 80 PostgreSQL integration groups, all five Docker builds and two container startup checks**. Core contracts now map 93 pages with one retained help-only recovery-policy boundary. Frontend/provider/device and release work remain; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
+The latest verified code passed **42 Java tests, 10 helper/gate checks, 80 PostgreSQL integration groups, all five Docker builds and two container startup checks**. Setup-file checks also run on Windows. CodeQL gates pass with one explicitly triaged audit-only exception and three medium operator/test data-flow notices retained for review. Core contracts now map 93 pages with one retained help-only recovery-policy boundary. Frontend/provider/device and release work remain; this is not a production-readiness claim. Read [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) before connecting a screen.
 
 ## Frontend handoff
 

@@ -55,6 +55,8 @@ These are fictional presentation details; replace them for your own development 
 
 In the frontend, open **Activate account**, enter that login ID and activation code, choose a private password of 15–128 characters, and save the new recovery code privately. Then sign in. The initial school activation code expires after 48 hours. A reviewed password flow expires after 10 minutes. The app needs the resulting school/role context before accessing school data.
 
+The bootstrap command uses a local loopback origin and atomically publishes private retry/access files. Keep this project on a local filesystem that supports atomic hard links/renames. POSIX modes protect the directory/files; on Windows also keep the folder private through your Windows account permissions. The file checks run in Linux and Windows CI.
+
 The bootstrap command saves retry state. If a request times out, repeat the same command; it reuses the original school and command references. It cannot reset an active principal's password. It is a development/operator tool, not a public registration screen.
 
 ## 5. Connect React Native

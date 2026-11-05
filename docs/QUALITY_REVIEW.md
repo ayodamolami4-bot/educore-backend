@@ -1,6 +1,6 @@
 # EduCore implementation and review record
 
-Reviewed 4 November 2026. This records working checks and remaining review. It is not an independent security audit or a promise that defects cannot remain.
+Reviewed 5 November 2026. This records working checks and remaining review. It is not an independent security audit or a promise that defects cannot remain.
 
 ## Keep the decisions available
 
@@ -49,7 +49,7 @@ The scenario-module convention is one exported `async function` per `*-tests.mjs
 - Complete HTTPS hosting, private service networking, durable secret management, rate/abuse controls, monitoring and a tested backup/restore process.
 - Review file malware scanning, operational limits and load behaviour; existing file type/hash/size checks are not a malware scanner.
 - Have another engineer review critical access, payment, grading and promotion behaviour before release. Automated and AI reviews support that review; they do not supply independent sign-off.
-- Core controls now have 35 unit tests, 80 PostgreSQL scenario groups and full container evidence. Connect/test the React Native role screens and retain SH09 help-only unless a different recovery policy is adopted.
+- Core controls now have 42 Java tests, 10 helper/gate checks, 80 PostgreSQL scenario groups and full container evidence. Connect/test the React Native role screens and retain SH09 help-only unless a different recovery policy is adopted.
 
 No new feature policy, paid hosting, provider delivery or production-data action is authorized by this review record.
 
@@ -59,6 +59,18 @@ No new feature policy, paid hosting, provider delivery or production-data action
 
 The final review corrected the earlier backlog's scope wording: the adopted grading policy is fixed but now explicitly Principal approved; refunds are externally executed and then confirmed; report catalogues supply the supported bounded synchronous previews/PDF/CSV rather than an arbitrary query/export-job builder. These decisions are recorded in the preserved administrator target and the current handover, not silently treated as new missing endpoints.
 
-CodeQL first-run verification is pending publication of its workflow on this review branch. The workflow builds Java for extraction, analyzes JavaScript/TypeScript and prints actual result counts from SARIF. No SARIF file is a failing check. The gate itself was verified with synthetic empty and high-severity results; that is gate validation, not a source-code scan. Dependabot's normal update configuration takes effect on the default branch after the reviewed merge.
+## Security hardening and finding review
+
+[Backend run 42066557989](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42066557989) at `968183344e4b1665c515cf5e322031d0e0e0aaf0` verifies the current 42 Java tests, 4 Node setup-file checks on Linux and Windows, 6 Python gate checks, all 80 PostgreSQL scenario groups, all five container builds and both startup checks. [CodeQL run 42066557885](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42066557885) completes Java and JavaScript analysis with **one reviewed high diagnostic exception, three medium script notices and zero unresolved high/critical findings**. Findings remain uploaded, not dismissed.
+
+The first actual scan at `fa3476ac2ca60241ff454c6531f14e42fe5ca1c2` reported **14 high/critical and 3 medium findings** across Java and JavaScript. The gate reads rule metadata from driver and extension components; missing scan files or rule metadata fail closed. Earlier scan configuration or successful jobs are not evidence of a clean source scan.
+
+The hardening uses fixed component-built gateway origins with redirects disabled, bounded checked encryption allocations that preserve the existing GCM envelope, separate assignment reads/writes, explicit authenticated Spring Security chains and Spring's credential filters. Bootstrap publishes complete retry state exclusively, saves private access files atomically and restricts operator credentials to loopback origins. Regression checks cover denied cookie/session/Basic access, user/peer credential separation, encoded queries, ciphertext compatibility, eight concurrent setup processes and Windows file handling.
+
+**EC-SEC-001 is a visible implementation-triaged diagnostic exception**, pending independent confirmation during review. The student-directory GET reads school-scoped data and appends an export access audit; it does not edit pupils, placements or guardian relationships. Removing that audit or changing the download contract would discard required behaviour. [HTTP semantics, section 9.2.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.1) explicitly permits request logging on safe methods. PostgreSQL regression assertions check two repeated downloads, unchanged domain-table snapshots, exactly one audit per download and parent/Accounts/other-school/cookie-only denials.
+
+[The reviewed-finding record](codeql-reviewed-findings.json) binds this one rule, severity, controller location and seven source/test SHA-256 hashes. Source changes or duplicate matches require fresh review. All other high findings still fail. Every finding is printed and uploaded; the gate does not dismiss GitHub alerts or globally exclude a query. Six gate regression tests cover absent output, missing extension metadata, unknown/moved/duplicate findings and changed source fingerprints.
+
+Three medium JavaScript data-flow notices remain visible: private bootstrap state to a fixed loopback request; private disposable-container state to its fixed local gateway; and a validated setup response to a fixed private access file through an exclusive temporary file and atomic rename. These are intentional operator/test flows, not arbitrary destinations. This triage does not authorize using the helpers with real pupil data, public operator ports or shared folders. No independent security sign-off or complete dependency-vulnerability/SCA review is claimed.
 
 [GitHub's compiled-language CodeQL guidance](https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/manage-your-configuration/codeql-for-compiled-languages) documents the v4 action and manual Java extraction used here.

@@ -1,6 +1,8 @@
 # EduCore backend review handover
 
-**Ready for backend code review.** The verified feature checkpoint passed 35 unit tests, 80 PostgreSQL scenario groups, all five Docker builds and both startup checks. Use `backend/complete-workflows` and pull request #1. This document separates implemented backend work from account setup, frontend implementation and release validation.
+**Ready for backend code review.** The verified feature checkpoint passed 42 Java tests, 10 helper/gate checks, 80 PostgreSQL scenario groups, all five Docker builds and both startup checks. Use `backend/complete-workflows` and pull request #1. This document separates implemented backend work from account setup, frontend implementation and release validation.
+
+The setup-file checks also pass on Windows. CodeQL gates pass with one narrowly triaged export-audit exception and three medium operator/test data-flow notices; the findings remain visible. Review the rationale and frozen-source checks in [QUALITY_REVIEW.md](QUALITY_REVIEW.md). This is implementation triage, not independent security approval.
 
 ## What is being handed over
 

@@ -19,6 +19,8 @@ One PostgreSQL server can hold four databases locally. Each program has its own 
 
 The app sends a bearer access token. Identity owns an opaque token record and verifies the current session/account/context. The other services call Identity's internal introspection endpoint. The service then checks the selected school, allowed role and relevant child/payer or teaching scope before querying or changing school data. Choosing a context never grants a new role.
 
+The ordered Spring Security chains expose only the explicit public methods, require a verified bearer token on user APIs, require a receiver-scoped peer key on internal APIs, and deny other routes. Spring authentication filters install the verified principal; no protected chain uses a blanket permit-all rule. Cookie/session/HTTP Basic credentials cannot authenticate these APIs. CSRF protection remains enabled, with exemptions only for already verified explicit credentials and the public JSON proof commands; browser form/text submissions stay protected.
+
 Opaque tokens were chosen to make immediate session revocation and current school access straightforward. The present build does not use JWTs. A gateway request cannot supply a trusted account ID, role, school or internal service key through a spoofed identity header.
 
 Public access goes through the gateway. Business `/internal/*` endpoints accept only a configured sender and that specific sender-to-receiver key. For example, Finance's key to ask Academics about a student cannot provision an account in Identity. The operator bootstrap key stays outside the app. Deployment must also isolate internal endpoints with private networking and HTTPS where requests leave a trusted local network.

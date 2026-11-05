@@ -1,4 +1,4 @@
-# Backend implementation status — 4 November 2026
+# Backend implementation status — 5 November 2026
 
 **The agreed core backend is ready for code review.** It is saved on `backend/complete-workflows` in PR #1. Frontend role-screen implementation, actual provider/device validation and production release remain separate. Read [REVIEW_HANDOVER.md](REVIEW_HANDOVER.md) for the concrete next steps and your private account inputs.
 
@@ -29,14 +29,17 @@
 
 ## Verified evidence
 
-[GitHub Actions run 41888279723](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/41888279723), code commit `5eb8d421c2407f3f3791ecff164f434973a2f89f`, passed:
+[GitHub Actions run 42066557989](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42066557989), code commit `968183344e4b1665c515cf5e322031d0e0e0aaf0`, passed:
 
-- **35 unit tests**, none skipped and no failures/errors.
+- **42 Java tests**, none skipped and no failures/errors.
+- **4 Node setup-file checks** on Linux and Windows, plus **6 Python scan-gate checks**.
 - **80 real-PostgreSQL integration scenario groups**, exercising HTTP between all five Java programs.
 - API/catalogue/page validation and all **16 scenario modules** imported and awaited.
 - All five Docker image builds and both container startup checks (school activation/sign-in and truthful unconfigured mail).
 
-New evidence covers invitation invalidation after activation review; pending-only global identity boundaries; provisioning retry and reviewed account-match replacement with cancellation/late-replay protection; stale/invalid date edits; subject/room lifecycle and legacy case-insensitive room conflicts; report preset/teacher/class/child isolation; accepted published report revisions and Unicode PDF/CSV; fixed policy approval; safe versioned delivery retry; confirmed/pending-receipt/unregistered-device no-replay boundaries; and notice summaries. Existing payments, calendars, learning, recovery, communication and imports continue through the same run.
+The [completed Java/JavaScript CodeQL run 42066557885](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42066557885) has **zero unresolved high/critical findings after implementation triage**: one source-frozen export-audit exception and three medium operator/test data-flow notices remain visible. This is not a zero-findings scan or independent security sign-off. Read [QUALITY_REVIEW.md](QUALITY_REVIEW.md) and confirm EC-SEC-001 during review.
+
+New evidence covers stateless authentication/CSRF boundaries, fixed gateway origins, encryption compatibility, concurrent bootstrap retries, export immutability/auditing/denials, invitation invalidation after activation review; pending-only global identity boundaries; provisioning retry and reviewed account-match replacement with cancellation/late-replay protection; stale/invalid date edits; subject/room lifecycle and legacy case-insensitive room conflicts; report preset/teacher/class/child isolation; accepted published report revisions and Unicode PDF/CSV; fixed policy approval; safe versioned delivery retry; confirmed/pending-receipt/unregistered-device no-replay boundaries; and notice summaries. Existing payments, calendars, learning, recovery, communication and imports continue through the same run.
 
 Paystack, SMTP and Expo are local provider doubles. Actual provider accounts/mailboxes/native devices and a hosted gateway have not been demonstrated. Fresh PostgreSQL migrations and a targeted legacy-room fixture were exercised; that is not an upgrade/restore trial on a deployed school's dataset.
 
