@@ -424,7 +424,14 @@ public class IdentityService {
   }
 
   private Object flow(UUID account, String mode) {
+    return flow(account, mode, null);
+  }
+
+  private Object flow(UUID account, String mode, UUID invitation) {
     String token = proof(account, null, "FLOW_" + mode, Duration.ofMinutes(10), null);
+    if (invitation != null)
+      db.update(
+          "update proofs set invitation_id=? where token_hash=?", invitation, Crypto.hash(token));
     var a = account(account);
     String login = (String) a.get("login_id");
     return map(
@@ -438,21 +445,40 @@ public class IdentityService {
         login.substring(0, Math.min(8, login.length())) + "***");
   }
 
+  private void activationProof(Map<String, Object> proof) {
+    UUID invitation = (UUID) proof.get("invitation_id");
+    if (invitation != null
+        && db.queryForObject(
+                "select count(*) from school_invitations i where i.id=? and i.state='ISSUED' and exists(select 1 from memberships m where m.account_id=i.account_id and m.school_id=i.school_id and m.subject_id=i.subject_id and m.active)",
+                Integer.class,
+                invitation)
+            == 0) throw invalid();
+  }
+
   public Object activation(String login, String code, String invitation) {
     limit("activation", Objects.toString(login, invitation), 10);
     return commands.transaction(
         () -> {
-          Map<String, Object> p;
-          if (invitation != null) {
-            p = consume(invitation, "ACTIVATION_LINK", null, null);
-          } else {
-            var a = identifier(text(login, 1, 80, "Login ID"));
-            if (a == null) throw invalid();
-            p = consume(code, "ACTIVATION_CODE", (UUID) a.get("id"), null);
-          }
-          UUID id = (UUID) p.get("account_id");
-          if (!"PENDING".equals(account(id).get("status"))) throw invalid();
-          return flow(id, "ACTIVATE");
+          String token = invitation == null ? code : invitation;
+          if (token == null || token.length() > 128) throw invalid();
+          var candidates =
+              db.queryForList(
+                  "select account_id from proofs where token_hash=? and kind=?",
+                  Crypto.hash(token),
+                  invitation == null ? "ACTIVATION_CODE" : "ACTIVATION_LINK");
+          if (candidates.isEmpty()) throw invalid();
+          UUID account = (UUID) candidates.get(0).get("account_id");
+          var locked = one("select * from accounts where id=? for update", account);
+          if (!"PENDING".equals(locked.get("status"))) throw invalid();
+          if (invitation == null
+              && !Objects.equals(
+                  locked.get("login_id"), text(login, 1, 80, "Login ID").toUpperCase(Locale.ROOT)))
+            throw invalid();
+          var p =
+              consume(
+                  token, invitation == null ? "ACTIVATION_CODE" : "ACTIVATION_LINK", account, null);
+          activationProof(p);
+          return flow(account, "ACTIVATE", (UUID) p.get("invitation_id"));
         });
   }
 
@@ -505,13 +531,23 @@ public class IdentityService {
     return commands.transaction(
         () -> {
           if (token == null || token.length() > 128) throw invalid();
+          var candidate =
+              db.queryForList(
+                  "select account_id from proofs where token_hash=?", Crypto.hash(token));
+          if (candidate.isEmpty()) throw invalid();
+          UUID account = (UUID) candidate.get(0).get("account_id");
+          var locked = one("select * from accounts where id=? for update", account);
           var rows =
               db.queryForList(
                   "select * from proofs where token_hash=? and kind in ('FLOW_ACTIVATE','FLOW_RESET_EMAIL','FLOW_RESET_SAVED_CODE') and consumed_at is null and expires_at>now() for update",
                   Crypto.hash(token));
           if (rows.isEmpty()) throw invalid();
           var p = rows.get(0);
-          return savePassword((UUID) p.get("account_id"), password);
+          if ("FLOW_ACTIVATE".equals(p.get("kind"))) {
+            if (!"PENDING".equals(locked.get("status"))) throw invalid();
+            activationProof(p);
+          }
+          return savePassword(account, password);
         });
   }
 
@@ -785,52 +821,6 @@ public class IdentityService {
         a.accountId());
   }
 
-  public Object slip(Actor actor, UUID school, String type, UUID subject, String key) {
-    actor.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
-    return commands.execute(
-        actor.accountId().toString(),
-        school.toString(),
-        "activation-slip/" + type + "/" + subject,
-        key,
-        map("subjectId", subject),
-        () -> {
-          var link =
-              one(
-                  "select account_id from provisioned_subjects where school_id=? and subject_type=? and subject_id=?",
-                  school,
-                  type,
-                  subject);
-          UUID account = (UUID) link.get("account_id");
-          var a = account(account);
-          if (!"PENDING".equals(a.get("status")))
-            throw fail(
-                409,
-                "ALREADY_ACTIVE",
-                "This account is already active. School staff cannot reset its permanent password.");
-          db.update(
-              "update proofs set consumed_at=now() where account_id=? and kind in ('ACTIVATION_CODE','ACTIVATION_LINK') and consumed_at is null",
-              account);
-          String code = proof(account, null, "ACTIVATION_CODE", Duration.ofHours(48), null);
-          commands.audit(
-              school,
-              actor.accountId(),
-              "ACTIVATION_SLIP_ISSUED",
-              type,
-              subject,
-              "School-issued initial access",
-              Map.of());
-          return map(
-              "loginId",
-              a.get("login_id"),
-              "activationCode",
-              code,
-              "expiresAt",
-              Instant.now().plusSeconds(172800),
-              "delivery",
-              "PRIVATE_SCHOOL_HANDOVER");
-        });
-  }
-
   public Object firstPrincipalSlip(UUID school, UUID subject, String key) {
     Actor.internalOnly("academics");
     var link =
@@ -867,11 +857,56 @@ public class IdentityService {
         });
   }
 
+  public Object cancelProvisioning(UUID school, UUID event, String type, UUID subject) {
+    Actor.internalOnly("academics");
+    if (event == null
+        || school == null
+        || subject == null
+        || !Set.of("STAFF", "GUARDIAN").contains(Objects.toString(type, "")))
+      throw fail(
+          422,
+          "INVALID_PROVISIONING_CANCELLATION",
+          "Provide an initial school staff or guardian event.");
+    return commands.transaction(
+        () -> {
+          db.queryForObject(
+              "select pg_advisory_xact_lock(hashtextextended(?,0))",
+              Object.class,
+              "identity-provision-event|" + event);
+          if (db.queryForObject("select count(*) from inbox where event_id=?", Integer.class, event)
+              > 0) return map("state", "APPLIED");
+          if (db.queryForObject(
+                  "select count(*) from provisioned_subjects where school_id=? and subject_type=? and subject_id=?",
+                  Integer.class,
+                  school,
+                  type,
+                  subject)
+              > 0) return map("state", "SUBJECT_ALREADY_PROVISIONED");
+          db.update(
+              "insert into cancelled_provisioning_events(event_id,school_id) values (?,?) on conflict do nothing",
+              event,
+              school);
+          return map("state", "CANCELLED");
+        });
+  }
+
   public Object event(UUID eventId, String kind, com.fasterxml.jackson.databind.JsonNode payload) {
     Actor.internalOnly("academics");
     return commands.transaction(
         () -> {
-          String digest = Crypto.hash(json.write(payload));
+          db.queryForObject(
+              "select pg_advisory_xact_lock(hashtextextended(?,0))",
+              Object.class,
+              "identity-provision-event|" + eventId);
+          if (db.queryForObject(
+                  "select count(*) from cancelled_provisioning_events where event_id=?",
+                  Integer.class,
+                  eventId)
+              > 0)
+            throw fail(
+                409,
+                "PROVISIONING_EVENT_SUPERSEDED",
+                "This unapplied event was replaced by a reviewed school command.");
           var previous = db.queryForList("select kind from inbox where event_id=?", eventId);
           if (!previous.isEmpty()) return ack("Event already applied.");
           db.update("insert into inbox(event_id,kind) values (?,?)", eventId, kind);
@@ -902,29 +937,82 @@ public class IdentityService {
               var guardian = payload.path("guardian");
               UUID guardianId = uuid(guardian.path("id").asText());
               UUID guardianAccount = provision(school, "GUARDIAN", guardianId, guardian);
-              membership(
-                  guardianAccount,
+              guardianVersion(
                   school,
-                  schoolName,
-                  "PARENT",
                   studentId,
-                  student.path("fullName").asText(),
                   guardianId,
-                  true,
-                  true);
+                  1,
+                  () ->
+                      membership(
+                          guardianAccount,
+                          school,
+                          schoolName,
+                          "PARENT",
+                          studentId,
+                          student.path("fullName").asText(),
+                          guardianId,
+                          true,
+                          true));
             }
             case "TEACHER_REGISTERED" -> {
               var teacher = payload.path("teacher");
-              UUID subject = uuid(teacher.path("id").asText());
-              UUID account = provision(school, "STAFF", subject, teacher);
-              membership(account, school, schoolName, "TEACHER", null, null, subject, true, false);
+              applyStaff(school, schoolName, teacher, "TEACHER", true, 1);
             }
-            case "GUARDIAN_LINK_REVOKED" ->
-                db.update(
-                    "update memberships set active=false where school_id=? and child_id=? and subject_id=? and role='PARENT'",
-                    school,
-                    uuid(payload.path("studentId").asText()),
-                    uuid(payload.path("guardianId").asText()));
+            case "STAFF_ACCESS_CHANGED" -> {
+              var staff = payload.path("staff");
+              applyStaff(
+                  school,
+                  schoolName,
+                  staff,
+                  staff.path("role").asText(),
+                  staff.path("active").asBoolean(),
+                  staff.path("version").asLong());
+            }
+            case "GUARDIAN_LINK_UPDATED" -> {
+              var parent = payload.path("guardian");
+              UUID guardian = uuid(parent.path("id").asText()),
+                  child = uuid(payload.path("studentId").asText());
+              UUID account = provision(school, "GUARDIAN", guardian, parent);
+              guardianVersion(
+                  school,
+                  child,
+                  guardian,
+                  payload.path("version").asLong(1),
+                  () -> {
+                    membership(
+                        account,
+                        school,
+                        schoolName,
+                        "PARENT",
+                        child,
+                        payload.path("studentName").asText(),
+                        guardian,
+                        payload.path("learningAccess").asBoolean(),
+                        payload.path("payerAccess").asBoolean());
+                    db.update(
+                        "update memberships set active=true,learning_access=?,payer_access=? where school_id=? and child_id=? and subject_id=? and role='PARENT'",
+                        payload.path("learningAccess").asBoolean(),
+                        payload.path("payerAccess").asBoolean(),
+                        school,
+                        child,
+                        guardian);
+                  });
+            }
+            case "GUARDIAN_LINK_REVOKED" -> {
+              UUID child = uuid(payload.path("studentId").asText()),
+                  guardian = uuid(payload.path("guardianId").asText());
+              guardianVersion(
+                  school,
+                  child,
+                  guardian,
+                  payload.path("version").asLong(2),
+                  () ->
+                      db.update(
+                          "update memberships set active=false where school_id=? and child_id=? and subject_id=? and role='PARENT'",
+                          school,
+                          child,
+                          guardian));
+            }
             default -> throw fail(422, "UNKNOWN_EVENT", "Unsupported identity event.");
           }
           return ack("Event applied.");
@@ -966,6 +1054,16 @@ public class IdentityService {
           text(person.path("fullName").asText(), 2, 120, "Full name"),
           Api.phone(person.path("phone").asText()));
     }
+    if ("STAFF".equals(type)
+        && db.queryForObject(
+                "select count(*) from provisioned_subjects where school_id=? and account_id=? and subject_type='STAFF' and subject_id<>?",
+                Integer.class,
+                school,
+                account,
+                subject)
+            > 0)
+      throw fail(
+          409, "STAFF_ALREADY_LINKED", "This account already has a staff record in this school.");
     db.update(
         "insert into provisioned_subjects(school_id,subject_type,subject_id,account_id) values (?,?,?,?)",
         school,
@@ -973,6 +1071,103 @@ public class IdentityService {
         subject,
         account);
     return account;
+  }
+
+  private void applyStaff(
+      UUID school,
+      String schoolName,
+      com.fasterxml.jackson.databind.JsonNode person,
+      String role,
+      boolean active,
+      long version) {
+    if (!Set.of("PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS", "TEACHER").contains(role) || version < 1)
+      throw fail(422, "INVALID_STAFF_ACCESS", "Unsupported staff preset or source version.");
+    UUID subject = uuid(person.path("id").asText());
+    db.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))",
+        Object.class,
+        "staff-access|" + school);
+    var old =
+        db.queryForList(
+            "select source_version,account_id from provisioned_subjects where school_id=? and subject_type='STAFF' and subject_id=? for update",
+            school,
+            subject);
+    // A v1 teacher registration still needs its initial membership after provision().
+    if (!old.isEmpty()
+        && ((Number) old.get(0).get("source_version")).longValue() >= version
+        && db.queryForObject(
+                "select count(*) from memberships where school_id=? and subject_id=? and role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER')",
+                Integer.class,
+                school,
+                subject)
+            > 0) return;
+    UUID account = provision(school, "STAFF", subject, person);
+    boolean principal =
+        db.queryForObject(
+                "select count(*) from memberships where school_id=? and subject_id=? and role='PRINCIPAL' and active",
+                Integer.class,
+                school,
+                subject)
+            > 0;
+    if (principal
+        && (!active || !"PRINCIPAL".equals(role))
+        && db.queryForObject(
+                "select count(*) from memberships m join accounts a on a.id=m.account_id where m.school_id=? and m.role='PRINCIPAL' and m.active and a.status='ACTIVE' and m.subject_id<>?",
+                Integer.class,
+                school,
+                subject)
+            == 0)
+      throw fail(409, "LAST_PRINCIPAL", "The school must retain an activated principal.");
+    db.update(
+        "update memberships set active=false where school_id=? and subject_id=? and role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER')",
+        school,
+        subject);
+    membership(account, school, schoolName, role, null, null, subject, true, false);
+    db.update(
+        "update memberships set active=? where account_id=? and school_id=? and role=? and subject_id=?",
+        active,
+        account,
+        school,
+        role,
+        subject);
+    db.update(
+        "update provisioned_subjects set source_version=? where school_id=? and subject_type='STAFF' and subject_id=?",
+        version,
+        school,
+        subject);
+  }
+
+  private void guardianVersion(
+      UUID school, UUID child, UUID guardian, long version, Runnable action) {
+    db.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))",
+        Object.class,
+        "guardian-access|" + school + "|" + child + "|" + guardian);
+    var old =
+        db.queryForList(
+            "select source_version from guardian_access_versions where school_id=? and child_id=? and guardian_id=?",
+            school,
+            child,
+            guardian);
+    if (!old.isEmpty() && ((Number) old.get(0).get("source_version")).longValue() >= version)
+      return;
+    action.run();
+    db.update(
+        "insert into guardian_access_versions(school_id,child_id,guardian_id,source_version) values (?,?,?,?) on conflict(school_id,child_id,guardian_id) do update set source_version=excluded.source_version",
+        school,
+        child,
+        guardian,
+        version);
+  }
+
+  public Object activePrincipals(UUID school) {
+    Actor.internalOnly("academics");
+    return map(
+        "subjectIds",
+        db.queryForList(
+            "select distinct m.subject_id from memberships m join accounts a on a.id=m.account_id where m.school_id=? and m.role='PRINCIPAL' and m.active and a.status='ACTIVE'",
+            UUID.class,
+            school));
   }
 
   private void membership(
@@ -999,18 +1194,35 @@ public class IdentityService {
         payer);
   }
 
-  public Object internalAudience(UUID school, UUID child) {
+  public Object internalAudience(UUID school, UUID child, String category) {
     Actor.internalOnly("academics", "finance", "communication");
-    return map(
-        "items",
+    String cat = category == null ? "CASES" : category;
+    var recipients =
         db
             .queryForList(
-                "select distinct account_id from memberships where school_id=? and child_id=? and active and role='PARENT'",
+                "select distinct account_id,role,subject_id from memberships where school_id=? and active and ((role='PARENT' and child_id=? and (case when ?='FEES' then payer_access when ?='LEARNING' then learning_access else true end)) or (role='STUDENT' and subject_id=? and ? in ('LEARNING','SCHOOL')))",
                 school,
-                child)
+                child,
+                cat,
+                cat,
+                child,
+                cat)
             .stream()
-            .map(r -> r.get("account_id"))
-            .toList());
+            .map(
+                r ->
+                    map(
+                        "accountId",
+                        r.get("account_id"),
+                        "role",
+                        r.get("role"),
+                        "subjectId",
+                        r.get("subject_id")))
+            .toList();
+    return map(
+        "items",
+        recipients.stream().map(r -> r.get("accountId")).distinct().toList(),
+        "recipients",
+        recipients);
   }
 
   public Object schoolAudience(UUID school) {
@@ -1019,11 +1231,87 @@ public class IdentityService {
         "items",
         db
             .queryForList(
-                "select distinct on(account_id) account_id,role from memberships where school_id=? and active order by account_id,role",
+                "select account_id,role,subject_id,child_id,learning_access,payer_access from memberships where school_id=? and active order by account_id,role,child_id",
                 school)
             .stream()
-            .map(row -> map("accountId", row.get("account_id"), "role", row.get("role")))
+            .map(
+                r ->
+                    map(
+                        "accountId",
+                        r.get("account_id"),
+                        "role",
+                        r.get("role"),
+                        "subjectId",
+                        r.get("subject_id"),
+                        "childId",
+                        r.get("child_id"),
+                        "learningAccess",
+                        r.get("learning_access"),
+                        "payerAccess",
+                        r.get("payer_access")))
             .toList());
+  }
+
+  public Object subjectAccount(UUID school, UUID subject, String role, UUID child) {
+    Actor.internalOnly("communication");
+    return db
+        .queryForList(
+            "select account_id as \"accountId\",subject_id as \"subjectId\",role from memberships where school_id=? and subject_id=? and role=? and active and (?::uuid is null or child_id=?::uuid)",
+            school,
+            subject,
+            role,
+            child,
+            child)
+        .stream()
+        .findFirst()
+        .orElseThrow(() -> fail(404, "NOT_FOUND", "The recipient account is not available."));
+  }
+
+  public Object deliveryContext(UUID account, UUID school, UUID child, String category) {
+    Actor.internalOnly("communication");
+    var rows = db.queryForList("select * from accounts where id=? and status='ACTIVE'", account);
+    if (rows.isEmpty()) return map("allowed", false);
+    var p = rows.get(0);
+    if (db.queryForObject(
+            "select count(*) from memberships where account_id=? and school_id=? and active and (?::uuid is null or (role='PARENT' and child_id=?::uuid and (case when ?='FEES' then payer_access when ?='LEARNING' then learning_access else true end)) or (role='STUDENT' and subject_id=?::uuid and ? in ('LEARNING','SCHOOL')) or role in ('PRINCIPAL','SCHOOL_OFFICE','ACCOUNTS','TEACHER'))",
+            Integer.class,
+            account,
+            school,
+            child,
+            child,
+            category,
+            category,
+            child,
+            category)
+        == 0) return map("allowed", false);
+    boolean categoryOn = false;
+    for (var n : json.tree(p.get("categories").toString()))
+      if (n.asText().equals(category)) categoryOn = true;
+    var devices = new ArrayList<Object>();
+    if (Boolean.TRUE.equals(p.get("push_enabled")) && categoryOn)
+      for (var d :
+          db.queryForList(
+              "select d.id,d.token_cipher from push_devices d join sessions s on s.id=d.session_id where d.account_id=? and d.enabled and s.revoked_at is null and s.refresh_expires_at>now()",
+              account))
+        devices.add(map("id", d.get("id"), "token", crypto.open(d.get("token_cipher").toString())));
+    return map(
+        "allowed",
+        true,
+        "devices",
+        devices,
+        "email",
+        Boolean.TRUE.equals(p.get("email_optional_enabled")) && categoryOn
+            ? p.get("verified_email")
+            : null);
+  }
+
+  public Object disablePush(UUID account, UUID device) {
+    Actor.internalOnly("communication");
+    db.update(
+        "update push_devices set enabled=false,version=version+1 where account_id=? and id=?",
+        account,
+        device);
+    return map("accepted", true);
   }
 
   public static Object ack(String message) {

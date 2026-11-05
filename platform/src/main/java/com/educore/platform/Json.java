@@ -11,6 +11,7 @@ public final class Json {
       new ObjectMapper()
           .registerModule(new JavaTimeModule())
           .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+          .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
           .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
 
   public String write(Object value) {

@@ -326,6 +326,17 @@ public class AttendanceService {
               register,
               mark.studentId());
           s.db.update("update attendance_registers set version=version+1 where id=?", register);
+          s.db.update(
+              "insert into attendance_correction_events(id,school_id,register_id,student_id,register_version,before_status,after_status,reason,actor_id) values (?,?,?,?,?,?,?,?,?)",
+              UUID.randomUUID(),
+              school,
+              register,
+              mark.studentId(),
+              version + 1,
+              old.get("status"),
+              mark.status(),
+              why,
+              a.accountId());
           s.commands.audit(
               school,
               a.accountId(),

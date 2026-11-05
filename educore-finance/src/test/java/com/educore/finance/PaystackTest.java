@@ -11,6 +11,53 @@ import org.junit.jupiter.api.Test;
 
 class PaystackTest {
   @Test
+  void malformedProviderResponsesBecomeUnknownOutcomesRatherThanLosingTheSavedReference()
+      throws Exception {
+    var body = new java.util.concurrent.atomic.AtomicReference<String>("not-json");
+    var server =
+        com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        "/transaction/initialize",
+        exchange -> {
+          exchange.getRequestBody().readAllBytes();
+          byte[] bytes = body.get().getBytes(StandardCharsets.UTF_8);
+          exchange.getResponseHeaders().set("Content-Type", "application/json");
+          exchange.sendResponseHeaders(200, bytes.length);
+          try (var stream = exchange.getResponseBody()) {
+            stream.write(bytes);
+          }
+        });
+    server.start();
+    try {
+      var provider =
+          new Paystack(
+              "sk_test_synthetic_invalid_response",
+              "http://127.0.0.1:" + server.getAddress().getPort(),
+              new Json());
+      for (String response :
+          new String[] {
+            "not-json",
+            "null",
+            "{}",
+            "{\"status\":true,\"data\":null}",
+            "{\"status\":\"true\",\"data\":{}}"
+          }) {
+        body.set(response);
+        assertEquals(
+            "PROVIDER_RESPONSE_INVALID",
+            assertThrows(
+                    Api.Failure.class,
+                    () ->
+                        provider.initialize(
+                            "stable-reference", 100, "fixture@example.invalid", "ACCT_TEST"))
+                .code);
+      }
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
   void signatureCoversOriginalBytesNotReserializedJson() throws Exception {
     String key = "sk_test_synthetic_unit_test_key";
     Paystack p = new Paystack(key, "https://api.paystack.co", new Json());

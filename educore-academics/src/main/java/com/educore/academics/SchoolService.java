@@ -44,6 +44,35 @@ public class SchoolService {
     return commands.execute(a.accountId().toString(), school.toString(), path, key, body, action);
   }
 
+  String room(UUID school, String value) {
+    if (value == null) return null;
+    String code = text(value, 1, 40, "Room").toUpperCase(Locale.ROOT);
+    // Legacy text entry creates a stable catalogue item without changing historical labels.
+    db.update(
+        "insert into school_rooms(id,school_id,code,name) values (?,?,?,?) on conflict(school_id,code) do nothing",
+        UUID.randomUUID(),
+        school,
+        code,
+        code);
+    return activeRoom(school, code);
+  }
+
+  String activeRoom(UUID school, String value) {
+    String code = text(value, 1, 40, "Room").toUpperCase(Locale.ROOT);
+    var room =
+        one("select active from school_rooms where school_id=? and code=? for share", school, code);
+    if (!Boolean.TRUE.equals(room.get("active")))
+      throw fail(422, "ROOM_INACTIVE", "Choose an active room.");
+    return code;
+  }
+
+  void activeSubject(UUID school, UUID id) {
+    var subject =
+        one("select active from subjects where school_id=? and id=? for share", school, id);
+    if (!Boolean.TRUE.equals(subject.get("active")))
+      throw fail(422, "SUBJECT_INACTIVE", "Choose an active subject.");
+  }
+
   public record Principal(String fullName, String phone) {}
 
   public record Bootstrap(UUID schoolId, String code, String name, Principal principal) {}
@@ -69,7 +98,7 @@ public class SchoolService {
           UUID staff = UUID.randomUUID();
           db.update("insert into schools(id,code,name) values (?,?,?)", id, code, name);
           db.update(
-              "insert into staff(id,school_id,full_name,phone) values (?,?,?,?)",
+              "insert into staff(id,school_id,full_name,phone,staff_role) values (?,?,?,?,'PRINCIPAL')",
               staff,
               id,
               fullName,
@@ -134,6 +163,10 @@ public class SchoolService {
         school,
         "schoolName",
         s.get("name"),
+        "logoFileId",
+        s.get("logo_file_id"),
+        "activeSessionId",
+        s.get("active_session_id"),
         "timezone",
         s.get("timezone"),
         "currency",
@@ -222,7 +255,7 @@ public class SchoolService {
           dates(b.startsOn(), b.endsOn());
           var s =
               one(
-                  "select * from academic_sessions where school_id=? and id=?",
+                  "select * from academic_sessions where school_id=? and id=? for update",
                   school,
                   b.sessionId());
           if (b.number() < 1
@@ -303,14 +336,30 @@ public class SchoolService {
         key,
         map("teacherId", teacher, "version", expected),
         () -> {
+          lockPlacements(school);
           var c =
               one("select * from classes where school_id=? and id=? for update", school, classId);
           expectVersion(expected, ((Number) c.get("version")).longValue());
-          one("select id from staff where school_id=? and id=? and active", school, teacher);
+          one(
+              "select id from staff where school_id=? and id=? and active and staff_role='TEACHER'",
+              school,
+              teacher);
           db.update(
               "update classes set attendance_teacher_id=?,version=version+1 where id=?",
               teacher,
               classId);
+          if (!Objects.equals(teacher, c.get("attendance_teacher_id")))
+            db.update(
+                "update assessment_cycles set state='OPEN',version=version+1 where class_id=? and state='REVIEW'",
+                classId);
+          commands.audit(
+              school,
+              a.accountId(),
+              "CLASS_TEACHER_DUTY_CHANGED",
+              "CLASS",
+              classId,
+              "Class attendance and report duty updated",
+              map("previousTeacherId", c.get("attendance_teacher_id"), "teacherId", teacher));
           return map("id", classId, "version", expected + 1, "attendanceTeacherId", teacher);
         });
   }
@@ -336,7 +385,7 @@ public class SchoolService {
               code,
               text(b.name(), 2, 100, "Subject name"),
               b.core());
-          return map("id", id, "code", code, "name", b.name());
+          return map("id", id, "code", code, "name", b.name(), "active", true, "version", 1);
         });
   }
 
@@ -345,7 +394,8 @@ public class SchoolService {
     return map(
         "items",
         db.queryForList(
-            "select id,code,name,core from subjects where school_id=? order by name", school),
+            "select id,code,name,core,active,version from subjects where school_id=? order by name",
+            school),
         "hasMore",
         false);
   }
@@ -394,13 +444,15 @@ public class SchoolService {
               phone,
               b.email() == null ? null : email(b.email()));
           for (String level : new HashSet<>(b.eligibleLevels()))
-            for (UUID subject : new HashSet<>(b.subjectIds()))
+            for (UUID subject : new HashSet<>(b.subjectIds())) {
+              activeSubject(school, subject);
               db.update(
                   "insert into staff_qualifications(school_id,staff_id,subject_id,level) values (?,?,?,?)",
                   school,
                   id,
                   subject,
                   level);
+            }
           for (var assignment : b.assignments()) assignment(school, id, assignment);
           UUID event =
               outbox.add(
@@ -435,8 +487,11 @@ public class SchoolService {
         });
   }
 
-  private UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
-    var c = one("select level from classes where school_id=? and id=?", school, b.classId());
+  UUID assignment(UUID school, UUID teacher, AssignmentInput b) {
+    lockPlacements(school);
+    activeSubject(school, b.subjectId());
+    var c =
+        one("select level from classes where school_id=? and id=? for update", school, b.classId());
     String department = b.department();
     if (department != null) {
       department = SchoolRules.department((String) c.get("level"), department);
@@ -453,8 +508,27 @@ public class SchoolService {
           422,
           "TEACHER_NOT_ELIGIBLE",
           "This teacher is not eligible for the selected subject and level.");
+    if (db.queryForObject(
+            "select count(*) from teaching_assignments where class_id=? and subject_id=? and active and (department is null or ?::text is null or department=?::text)",
+            Integer.class,
+            b.classId(),
+            b.subjectId(),
+            department,
+            department)
+        > 0)
+      throw fail(
+          409,
+          "SUBJECT_SCOPE_OVERLAP",
+          "A common or matching-department teaching assignment already covers this subject; use the reasoned handover action.");
     if (b.weeklyPeriods() < 1 || b.weeklyPeriods() > 10)
       throw fail(422, "INVALID_WEEKLY_TARGET", "Weekly periods must be between 1 and 10.");
+    if (db.queryForObject(
+            "select count(*) from assessment_cycles where class_id=?", Integer.class, b.classId())
+        > 0)
+      throw fail(
+          409,
+          "ASSESSMENT_SCOPE_EXISTS",
+          "This class already has frozen assessment subjects. Use teacher handover for an existing subject; prepare new subjects before assessment cycles.");
     UUID id = UUID.randomUUID();
     db.update(
         "insert into teaching_assignments(id,school_id,class_id,subject_id,teacher_id,department,weekly_periods) values (?,?,?,?,?,?,?)",
@@ -468,14 +542,44 @@ public class SchoolService {
     return id;
   }
 
-  public Object teachers(Actor a, UUID school, UUID cursor, int limit) {
+  String search(String value) {
+    String q = value == null ? "" : value.strip();
+    if (q.length() > 80) throw fail(422, "SEARCH_TOO_LONG", "Use at most 80 search characters.");
+    return q;
+  }
+
+  public Object teachers(
+      Actor a,
+      UUID school,
+      UUID cursor,
+      int limit,
+      String search,
+      String level,
+      UUID subject,
+      UUID classId,
+      Boolean active) {
     a.school(school, "PRINCIPAL", "SCHOOL_OFFICE");
+    if (level != null && !Set.of("JSS1", "JSS2", "JSS3", "SSS1", "SSS2", "SSS3").contains(level))
+      throw fail(422, "INVALID_LEVEL", "Choose a secondary-school level.");
+    String q = search(search);
     var rows =
         db.queryForList(
-            "select id,full_name as \"fullName\",phone,email,active,version from staff where school_id=? and (?::uuid is null or id>?::uuid) order by id limit ?",
+            "select st.id,st.full_name as \"fullName\",st.staff_number as \"staffNumber\",st.phone,st.email,st.active,st.version from staff st where st.school_id=? and st.staff_role='TEACHER' and (?::uuid is null or st.id>?::uuid) and (st.full_name ilike ? or st.staff_number ilike ?) and (?::boolean is null or st.active=?::boolean) and ((?::text is null and ?::uuid is null) or exists(select 1 from staff_qualifications q where q.staff_id=st.id and (?::text is null or q.level=?::text) and (?::uuid is null or q.subject_id=?::uuid))) and (?::uuid is null or exists(select 1 from teaching_assignments ta where ta.teacher_id=st.id and ta.active and ta.class_id=?::uuid)) order by st.id limit ?",
             school,
             cursor,
             cursor,
+            "%" + q + "%",
+            "%" + q + "%",
+            active,
+            active,
+            level,
+            subject,
+            level,
+            level,
+            subject,
+            subject,
+            classId,
+            classId,
             limit + 1);
     return page(rows, limit, r -> r.get("id").toString());
   }
@@ -500,7 +604,10 @@ public class SchoolService {
       String department,
       long metadataVersion,
       Map<String, Object> fields,
-      GuardianInput guardian) {}
+      GuardianInput guardian,
+      String admissionType,
+      String legacyReference,
+      List<UUID> subjectIds) {}
 
   public Object enrol(Actor a, UUID school, EnrolInput b, String key) {
     return command(
@@ -510,11 +617,42 @@ public class SchoolService {
         key,
         b,
         () -> {
+          lockPlacements(school);
           var c =
               one(
-                  "select c.*,s.starts_on as session_start,s.ends_on as session_end from classes c join academic_sessions s on s.id=c.session_id where c.school_id=? and c.id=?",
+                  "select c.*,s.starts_on as session_start,s.ends_on as session_end from classes c join academic_sessions s on s.id=c.session_id where c.school_id=? and c.id=? for update of c",
                   school,
                   b.classId());
+          String admissionType = b.admissionType() == null ? "FRESH" : b.admissionType();
+          if (!Set.of("FRESH", "TRANSFER_IN", "LEGACY_MIGRATION").contains(admissionType))
+            throw fail(
+                422, "INVALID_ADMISSION_TYPE", "Choose FRESH, TRANSFER_IN or LEGACY_MIGRATION.");
+          if ("LEGACY_MIGRATION".equals(admissionType)) {
+            a.school(school, "PRINCIPAL");
+            text(b.legacyReference(), 5, 160, "Existing-school admission evidence");
+          } else {
+            if (b.admissionNumber() != null && !b.admissionNumber().isBlank())
+              throw fail(
+                  422,
+                  "ADMISSION_NUMBER_AUTOMATIC",
+                  "Fresh and incoming transfer admissions receive an automatic school admission number.");
+            if ("SSS3".equals(c.get("level"))
+                && !((java.sql.Date) c.get("session_start"))
+                    .toLocalDate()
+                    .isBefore(LocalDate.of(2026, 9, 1)))
+              throw fail(
+                  422,
+                  "EXTERNAL_SSS3_ADMISSION_RESTRICTED",
+                  "New external SSS3 admission is restricted for this cohort. Record an existing school pupil through a principal-reviewed legacy migration or use internal promotion from SSS2.");
+          }
+          if (c.get("capacity") != null
+              && db.queryForObject(
+                      "select count(*) from enrolments where class_id=? and (ends_on is null or ends_on>=?::date)",
+                      Integer.class,
+                      b.classId(),
+                      b.startsOn())
+                  >= ((Number) c.get("capacity")).intValue())
+            throw fail(409, "CLASS_FULL", "This class has reached its configured capacity.");
           LocalDate start = b.startsOn();
           if (start == null
               || start.isBefore(((java.sql.Date) c.get("session_start")).toLocalDate())
@@ -591,8 +729,34 @@ public class SchoolService {
                     true);
           }
           UUID student = UUID.randomUUID(), enrolment = UUID.randomUUID();
-          String admission =
-              text(b.admissionNumber(), 1, 40, "Admission number").toUpperCase(Locale.ROOT);
+          String admission;
+          if ("LEGACY_MIGRATION".equals(admissionType))
+            admission =
+                text(b.admissionNumber(), 1, 40, "Existing admission number")
+                    .toUpperCase(Locale.ROOT);
+          else {
+            String code = school(school).get("code").toString();
+            if (code.length() > 20) code = code.substring(0, 20);
+            do {
+              long n =
+                  db.queryForObject(
+                      "insert into student_number_sequences(school_id,session_id,next_number) values (?,?,2) on conflict(school_id,session_id) do update set next_number=student_number_sequences.next_number+1 returning next_number-1",
+                      Long.class,
+                      school,
+                      c.get("session_id"));
+              admission =
+                  code
+                      + "/"
+                      + ((java.sql.Date) c.get("session_start")).toLocalDate().getYear()
+                      + "/"
+                      + String.format(Locale.ROOT, "%06d", n);
+            } while (db.queryForObject(
+                    "select count(*) from students where school_id=? and admission_number=?",
+                    Integer.class,
+                    school,
+                    admission)
+                > 0);
+          }
           if (!admission.matches("[A-Z0-9/-]+"))
             throw fail(
                 422, "INVALID_ADMISSION_NUMBER", "Use letters, numbers, slashes or hyphens.");
@@ -615,7 +779,14 @@ public class SchoolService {
               department,
               start);
           db.update(
-              "insert into guardian_links(school_id,student_id,guardian_id,relationship) values (?,?,?,?)",
+              "update students set admission_type=?,legacy_reference=? where id=?",
+              admissionType,
+              b.legacyReference(),
+              student);
+          enrolChoices(
+              school, student, (UUID) c.get("session_id"), b.classId(), department, b.subjectIds());
+          db.update(
+              "insert into guardian_links(school_id,student_id,guardian_id,relationship,primary_contact) values (?,?,?,?,true)",
               school,
               student,
               guardian,
@@ -665,7 +836,72 @@ public class SchoolService {
         });
   }
 
-  private void validateFields(JsonNode definition, Map<String, Object> values) {
+  void lockPlacements(UUID school) {
+    db.queryForObject(
+        "select pg_advisory_xact_lock(hashtextextended(?,0))",
+        Object.class,
+        "school-placements:" + school);
+  }
+
+  void validateChoices(UUID classId, String department, List<UUID> choices) {
+    var templates =
+        db.queryForList(
+            "select ct.definition from class_curricula cc join curriculum_templates ct on ct.id=cc.curriculum_id where cc.class_id=? and cc.department in ('',coalesce(?::text,''))",
+            classId,
+            department);
+    if (templates.isEmpty()) {
+      if (choices != null && !choices.isEmpty())
+        throw fail(
+            422,
+            "CURRICULUM_REQUIRED",
+            "Publish and apply the class curriculum before choosing alternatives.");
+      return;
+    }
+    Set<UUID> selected = new HashSet<>(choices == null ? List.of() : choices);
+    Map<String, Integer> groups = new HashMap<>();
+    Set<UUID> allowed = new HashSet<>();
+    for (var template : templates)
+      for (var r : json.tree(template.get("definition").toString()))
+        if (!r.path("required").asBoolean()) {
+          UUID id = UUID.fromString(r.path("subjectId").asText());
+          allowed.add(id);
+          String group = r.path("choiceGroup").asText();
+          groups.putIfAbsent(group, 0);
+          if (selected.contains(id)) groups.merge(group, 1, Integer::sum);
+        }
+    if (selected.size() != (choices == null ? 0 : choices.size())
+        || !allowed.containsAll(selected)
+        || groups.values().stream().anyMatch(n -> n != 1))
+      throw fail(
+          422,
+          "INVALID_SUBJECT_CHOICES",
+          "Select exactly one alternative from every published language, religion or trade choice group.");
+  }
+
+  void enrolChoices(
+      UUID school,
+      UUID student,
+      UUID session,
+      UUID classId,
+      String department,
+      List<UUID> choices) {
+    validateChoices(classId, department, choices);
+    Set<UUID> selected = new HashSet<>(choices == null ? List.of() : choices);
+    for (UUID sub : selected)
+      db.update(
+          "insert into student_subject_choices(school_id,student_id,session_id,subject_id) values (?,?,?,?)",
+          school,
+          student,
+          session,
+          sub);
+    db.update(
+        "insert into student_choice_versions(school_id,student_id,session_id) values (?,?,?) on conflict do nothing",
+        school,
+        student,
+        session);
+  }
+
+  void validateFields(JsonNode definition, Map<String, Object> values) {
     Set<String> allowed = new HashSet<>();
     for (JsonNode f : definition.path("studentFields")) {
       String key = f.path("key").asText();
@@ -690,7 +926,7 @@ public class SchoolService {
     if ("PARENT".equals(c.role())) {
       a.child(student, false);
       if (db.queryForObject(
-              "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active",
+              "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and learning_access",
               Integer.class,
               school,
               student,
@@ -703,7 +939,7 @@ public class SchoolService {
     if ("STUDENT".equals(c.role()) && student.equals(c.subjectId())) return;
     if ("TEACHER".equals(c.role())
         && db.queryForObject(
-                "select count(*) from enrolments e join classes c on c.id=e.class_id left join teaching_assignments t on t.class_id=c.id where e.school_id=? and e.student_id=? and (c.attendance_teacher_id=? or t.teacher_id=?) and e.starts_on<=current_date and (e.ends_on is null or e.ends_on>=current_date)",
+                "select count(*) from enrolments e join classes c on c.id=e.class_id left join teaching_assignments t on t.class_id=c.id and t.active where e.school_id=? and e.student_id=? and (c.attendance_teacher_id=? or t.teacher_id=?) and e.starts_on<=current_date and (e.ends_on is null or e.ends_on>=current_date)",
                 Integer.class,
                 school,
                 student,
@@ -761,7 +997,7 @@ public class SchoolService {
     if ("TEACHER".equals(c.role())) {
       if (classId == null
           || db.queryForObject(
-                  "select count(*) from classes c left join teaching_assignments t on t.class_id=c.id where c.school_id=? and c.id=? and (c.attendance_teacher_id=? or t.teacher_id=?)",
+                  "select count(*) from classes c left join teaching_assignments t on t.class_id=c.id and t.active where c.school_id=? and c.id=? and (c.attendance_teacher_id=? or t.teacher_id=?)",
                   Integer.class,
                   school,
                   classId,
@@ -813,7 +1049,7 @@ public class SchoolService {
               student,
               guardian);
           db.update(
-              "update guardian_links set active=false where school_id=? and student_id=? and guardian_id=?",
+              "update guardian_links set active=false,version=version+1 where school_id=? and student_id=? and guardian_id=?",
               school,
               student,
               guardian);
@@ -829,7 +1065,14 @@ public class SchoolService {
                       "studentId",
                       student,
                       "guardianId",
-                      guardian));
+                      guardian,
+                      "version",
+                      one(
+                              "select version from guardian_links where school_id=? and student_id=? and guardian_id=?",
+                              school,
+                              student,
+                              guardian)
+                          .get("version")));
           commands.audit(
               school,
               a.accountId(),

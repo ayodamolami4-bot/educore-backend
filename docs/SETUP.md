@@ -1,5 +1,11 @@
 # Run EduCore on your computer
 
+## Demo sign-in or a real admin account
+
+For the separate frontend's default demo mode, press **Fill demo sign-in details** and **Sign in**, then choose the **Principal** context. The fictional login is `EC-DEMO-001` and its password is `EduCore learning demo 2026!`. This uses the frontend's in-memory demo transport and does not create a backend account or call its business APIs. At the 4 November 2026 handoff, the role modules on frontend main are placeholders until their developers connect their screens; the shared sign-in, context, notifications and settings screens are implemented.
+
+For a real local development admin, follow steps 1–4 below. The bootstrap command creates the school's first **Principal**, writes a private one-time activation slip, and lets you choose your own password. There is no public form that allows someone to grant themselves school-admin access, and no reusable default backend password. A hosted EduCore API and a complete connected role interface have not been demonstrated.
+
 ## 1. Tools
 
 Install Git, Node.js 24 and Docker with the Compose plugin. Start Docker before continuing. The commands below work from the backend folder in a terminal or PowerShell. Building Java inside Docker does not need a separate JDK installation. To work on Java outside Docker, install a Java 17+ **JDK**.
@@ -7,11 +13,11 @@ Install Git, Node.js 24 and Docker with the Compose plugin. Start Docker before 
 Clone the backend into its own working folder:
 
 ```sh
-git clone https://github.com/ayodamolami4-bot/educore-backend.git
+git clone --branch backend/complete-workflows https://github.com/ayodamolami4-bot/educore-backend.git
 cd educore-backend
 ```
 
-Keep your React Native frontend in its separate folder. The backend repository is private, so the lead must give each teammate GitHub access before they can clone it.
+Keep your React Native frontend in its separate folder. This command selects the expanded implementation branch. The default main branch still contains the earlier foundation until the remaining work is reviewed. Give contributors their own GitHub access when they need to push changes.
 
 ## 2. Generate your local configuration
 
@@ -49,6 +55,8 @@ These are fictional presentation details; replace them for your own development 
 
 In the frontend, open **Activate account**, enter that login ID and activation code, choose a private password of 15–128 characters, and save the new recovery code privately. Then sign in. The initial school activation code expires after 48 hours. A reviewed password flow expires after 10 minutes. The app needs the resulting school/role context before accessing school data.
 
+The bootstrap command uses a local loopback origin and atomically publishes private retry/access files. Keep this project on a local filesystem that supports atomic hard links/renames. POSIX modes protect the directory/files; on Windows also keep the folder private through your Windows account permissions. The file checks run in Linux and Windows CI.
+
 The bootstrap command saves retry state. If a request times out, repeat the same command; it reuses the original school and command references. It cannot reset an active principal's password. It is a development/operator tool, not a public registration screen.
 
 ## 5. Connect React Native
@@ -79,7 +87,7 @@ Use the implemented APIs in [API.md](API.md), in this order:
 7. Build the weekly timetable, review every assignment target, then publish it.
 8. Activate the teacher and parent accounts to test their permitted attendance, child, timetable, invoice and complaint views.
 
-Creating a class/teacher/student record does not mean its role screen has already been implemented by the frontend team. Office and accounts presets are recognised by permissions, but staff onboarding and role management for those presets are still to build. Use the principal account for currently supported office/finance demonstration operations.
+Creating a class/teacher/student record does not mean its role screen has already been implemented by the frontend team. Principal can register School Office/Accounts staff through `POST /staff`, issue their `STAFF` activation slips, then sign in under each staff preset. The principal must retain another activated principal before removing their own school access. Use [SCREEN_CONNECTIONS.md](SCREEN_CONNECTIONS.md) for covered pages and remaining controls.
 
 ## 7. Payments and email
 
@@ -87,7 +95,7 @@ Local operation does not need a payment account or an email provider. Manual cas
 
 Hosted checkout is **test mode only**. Configure a Paystack `sk_test_` secret in backend `.env` and configure the school's approved test subaccount through the principal payment-settings endpoint. Recreate Finance after configuration changes. The app opens the returned hosted checkout URL and polls the payment intent; a browser redirect is not a paid receipt. A reachable HTTPS webhook URL is needed for external webhook testing. Local automated tests use a fake provider and do not contact Paystack.
 
-Email stays disabled until a provider is configured. Add the optional SMTP variables listed in `.env.example`, set `EDUCORE_EMAIL_ENABLED=true`, and recreate Communication. Remote SMTP requires TLS. The sender mailbox/domain must be authorised by your provider. Without configuration, mail remains `WAITING_CONFIGURATION`; the app must not claim it was delivered. Native push delivery is not implemented yet, even though registering a device is supported.
+Email stays disabled until a provider is configured. Add the optional SMTP variables listed in `.env.example`, set `EDUCORE_EMAIL_ENABLED=true`, and recreate Communication. Remote SMTP requires TLS. The sender mailbox/domain must be authorised by your provider. Without configuration, mail remains `WAITING_CONFIGURATION`; the app must not claim it was delivered. The configured Expo push worker is implemented and tested with a local provider double. Actual native-device delivery, Expo credentials and app links still need separate validation; an Expo provider receipt does not prove the person read the message.
 
 ## 8. Stop, update and diagnose
 
@@ -115,4 +123,4 @@ PowerShell: `./mvnw.cmd spotless:check verify`. To format changed Java: `./mvnw 
 
 The GitHub workflow creates fresh PostgreSQL test databases and runs `scripts/integration.mjs` with local Paystack/SMTP test doubles. It then builds all Docker images, starts Compose, bootstraps a fictional school and checks sign-in and unconfigured mail. Those tests create fictional records and change credentials/settings. Run them only with a dedicated test configuration, never against your development school or an actual school's database. `scripts/container-check.mjs` is a disposable CI-only check, not a development-school setup command. Do not run `scripts/init-databases.mjs` against an existing database; it is a fresh-database CI helper.
 
-No cloud API is deployed by these steps. Moving to hosting requires private networking, HTTPS, durable secret management, backups/restores, provider configuration, access controls and the unfinished features listed in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+No cloud API is deployed by these steps. Moving to hosting requires private networking, HTTPS, durable secret management, backups/restores, provider configuration, access controls and the release validation listed in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).

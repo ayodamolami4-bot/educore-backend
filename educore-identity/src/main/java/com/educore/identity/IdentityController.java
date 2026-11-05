@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.*;
 public class IdentityController {
   public record SchoolAudience(UUID schoolId) {}
 
+  @PostMapping("/internal/active-principals")
+  Object activePrincipals(@RequestBody SchoolAudience b) {
+    return service.activePrincipals(b.schoolId());
+  }
+
   @PostMapping("/internal/school-audience")
   Object schoolAudience(@RequestBody SchoolAudience b) {
     return service.schoolAudience(b.schoolId());
@@ -22,9 +27,11 @@ public class IdentityController {
   }
 
   private final IdentityService service;
+  private final InvitationService invitations;
 
-  public IdentityController(IdentityService service) {
+  public IdentityController(IdentityService service, InvitationService invitations) {
     this.service = service;
+    this.invitations = invitations;
   }
 
   public record Login(
@@ -65,7 +72,7 @@ public class IdentityController {
 
   public record Event(UUID eventId, String kind, JsonNode payload) {}
 
-  public record Audience(UUID schoolId, UUID childId) {}
+  public record Audience(UUID schoolId, UUID childId, String category) {}
 
   @PostMapping("/api/v1/auth/login")
   Object login(@RequestBody Login b) {
@@ -207,7 +214,7 @@ public class IdentityController {
       @PathVariable String type,
       @PathVariable UUID subject,
       @RequestHeader(value = "Idempotency-Key", required = false) String key) {
-    return service.slip(Actor.current(), school, type.toUpperCase(Locale.ROOT), subject, key);
+    return invitations.issue(Actor.current(), school, type, subject, key);
   }
 
   @GetMapping("/api/v1/public/access-help")
@@ -236,8 +243,37 @@ public class IdentityController {
     return service.event(b.eventId(), b.kind(), b.payload());
   }
 
+  public record CancelProvisioning(
+      UUID schoolId, UUID eventId, String subjectType, UUID subjectId) {}
+
+  @PostMapping("/internal/provisioning-cancellations")
+  Object cancelProvisioning(@RequestBody CancelProvisioning b) {
+    return service.cancelProvisioning(b.schoolId(), b.eventId(), b.subjectType(), b.subjectId());
+  }
+
   @PostMapping("/internal/audience")
   Object audience(@RequestBody Audience b) {
-    return service.internalAudience(b.schoolId(), b.childId());
+    return service.internalAudience(b.schoolId(), b.childId(), b.category());
+  }
+
+  public record SubjectAccount(UUID schoolId, UUID subjectId, String role, UUID childId) {}
+
+  @PostMapping("/internal/subject-account")
+  Object subjectAccount(@RequestBody SubjectAccount b) {
+    return service.subjectAccount(b.schoolId(), b.subjectId(), b.role(), b.childId());
+  }
+
+  public record Delivery(UUID accountId, UUID schoolId, UUID childId, String category) {}
+
+  @PostMapping("/internal/delivery-context")
+  Object delivery(@RequestBody Delivery b) {
+    return service.deliveryContext(b.accountId(), b.schoolId(), b.childId(), b.category());
+  }
+
+  public record DisableDevice(UUID accountId, UUID deviceId) {}
+
+  @PostMapping("/internal/disable-push-device")
+  Object disable(@RequestBody DisableDevice b) {
+    return service.disablePush(b.accountId(), b.deviceId());
   }
 }
