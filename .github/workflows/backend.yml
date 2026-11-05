@@ -10,6 +10,16 @@ concurrency:
   group: backend-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  bootstrap-portability:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Verify local setup file safety on Windows
+        run: node --test scripts/bootstrap-files.test.mjs
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -52,6 +62,7 @@ jobs:
           chmod +x mvnw
           ./mvnw -B spotless:check verify
           python3 scripts/check-api-catalogue.py
+          node --test scripts/*.test.mjs
       - name: Run five-service PostgreSQL integration tests
         env:
           EDUCORE_TEST_CONFIG: .dev/local-runtime.json

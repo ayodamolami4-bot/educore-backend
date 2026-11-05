@@ -33,4 +33,35 @@ class GatewayTest {
           "/api/v1//auth/login"
         }) assertNull(GatewayController.route(path));
   }
+
+  @Test
+  void encodedQueriesStayQueriesAtTheConfiguredOrigin() {
+    var origin = GatewayController.origin("http://academics:8092");
+    String query = "name=A%26B&next=https%3A%2F%2Fevil.invalid%2F&literal=%252f";
+    var target = GatewayController.target(origin, school + "/students", query);
+    assertEquals("academics", target.getHost());
+    assertEquals(8092, target.getPort());
+    assertEquals(query, target.getRawQuery());
+    assertEquals(school + "/students", target.getRawPath());
+    assertNull(target.getRawFragment());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> GatewayController.target(origin, "//evil.invalid/path", null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> GatewayController.target(origin, school + "/students", "name=value#fragment"));
+  }
+
+  @Test
+  void upstreamConfigurationCannotEmbedCredentialsOrRequestComponents() {
+    for (String invalid :
+        new String[] {
+          "file:///tmp/data",
+          "http://user@academics:8092",
+          "http://academics:8092/api",
+          "http://academics:8092?next=elsewhere",
+          "http://academics:8092#fragment",
+          "http://academics:0"
+        }) assertThrows(IllegalArgumentException.class, () -> GatewayController.origin(invalid));
+  }
 }

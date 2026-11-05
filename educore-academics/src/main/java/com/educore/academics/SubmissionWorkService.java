@@ -71,7 +71,7 @@ public class SubmissionWorkService {
           String note = b.note() == null ? "" : b.note().strip();
           if (note.length() > 3000)
             throw fail(422, "RECEIPT_NOTE_TOO_LONG", "Use at most 3,000 characters.");
-          var sub = work.submission(school, assignment, student, true);
+          var sub = work.ensureSubmission(school, assignment, student);
           expectVersion(version, ((Number) sub.get("version")).longValue());
           if (!Set.of("DRAFT", "RETURNED").contains(sub.get("state")))
             throw fail(
@@ -96,7 +96,7 @@ public class SubmissionWorkService {
           @SuppressWarnings("unchecked")
           var snapshot =
               new LinkedHashMap<>(
-                  (Map<String, Object>) work.mySubmission(a, school, assignment, student, false));
+                  (Map<String, Object>) work.mySubmission(a, school, assignment, student));
           snapshot.put("receiptReason", reason);
           snapshot.put("recordedByTeacherId", a.context().subjectId());
           snapshot.put(
@@ -125,7 +125,7 @@ public class SubmissionWorkService {
               id,
               reason,
               map("receivedOn", b.receivedOn(), "revision", revision));
-          return work.mySubmission(a, school, assignment, student, false);
+          return work.mySubmission(a, school, assignment, student);
         });
   }
 
@@ -161,7 +161,7 @@ public class SubmissionWorkService {
   public Object getDraft(Actor a, UUID school, UUID assignment, UUID student) {
     var w = work.work(school, assignment, false);
     work.owner(a, school, w);
-    var sub = work.submission(school, assignment, student, false);
+    var sub = work.submission(school, assignment, student);
     if (sub == null) throw fail(404, "NOT_FOUND", "There is no accepted work to review.");
     return wire(draft((UUID) sub.get("id"), false));
   }
@@ -185,7 +185,7 @@ public class SubmissionWorkService {
           s.lockPlacements(school);
           var w = work.work(school, assignment, true);
           work.owner(a, school, w);
-          var sub = work.submission(school, assignment, student, false);
+          var sub = work.submission(school, assignment, student);
           if (sub == null) throw fail(404, "NOT_FOUND", "There is no accepted work to review.");
           work.validateFeedback(w, sub, b);
           UUID id = (UUID) sub.get("id");
@@ -228,7 +228,7 @@ public class SubmissionWorkService {
           s.lockPlacements(school);
           var w = work.work(school, assignment, true);
           work.owner(a, school, w);
-          var sub = work.submission(school, assignment, student, false);
+          var sub = work.submission(school, assignment, student);
           if (sub == null) throw fail(404, "NOT_FOUND", "The work is unavailable.");
           UUID id = (UUID) sub.get("id");
           var d = draft(id, true);

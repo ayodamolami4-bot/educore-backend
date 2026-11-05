@@ -11,13 +11,14 @@ import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Fixed routing only: identity, school selection and authorisation remain service responsibilities.
  */
 @RestController
 public class GatewayController {
-  private final Map<String, String> upstreams;
+  private final Map<String, URI> upstreams;
   private final HttpClient client =
       HttpClient.newBuilder()
           .connectTimeout(Duration.ofSeconds(3))
@@ -32,13 +33,46 @@ public class GatewayController {
     upstreams =
         Map.of(
             "identity",
-            identity,
+            origin(identity),
             "academics",
-            academics,
+            origin(academics),
             "finance",
-            finance,
+            origin(finance),
             "communication",
-            communication);
+            origin(communication));
+  }
+
+  static URI origin(String configured) {
+    URI value = URI.create(configured);
+    if (!Set.of("http", "https").contains(value.getScheme())
+        || value.getHost() == null
+        || value.getRawUserInfo() != null
+        || value.getRawQuery() != null
+        || value.getRawFragment() != null
+        || !(value.getRawPath().isEmpty() || value.getRawPath().equals("/"))
+        || value.getPort() == 0
+        || value.getPort() > 65535)
+      throw new IllegalArgumentException("An upstream must be a fixed HTTP(S) origin.");
+    return value;
+  }
+
+  static URI target(URI origin, String path, String rawQuery) {
+    if (route(path) == null) throw new IllegalArgumentException("Unavailable route.");
+    URI target =
+        UriComponentsBuilder.fromUri(origin)
+            .replacePath(path)
+            .replaceQuery(rawQuery)
+            .build(true)
+            .toUri();
+    // The request may set only the encoded path/query; authority and scheme stay operator
+    // configured.
+    if (!origin.getScheme().equals(target.getScheme())
+        || !origin.getHost().equals(target.getHost())
+        || origin.getPort() != target.getPort()
+        || target.getRawUserInfo() != null
+        || target.getRawFragment() != null)
+      throw new IllegalArgumentException("The upstream origin cannot be changed.");
+    return target;
   }
 
   public static String route(String path) {
@@ -79,11 +113,14 @@ public class GatewayController {
     byte[] body = request.getInputStream().readNBytes(maximum + 1);
     if (body.length > maximum)
       return problem(413, "REQUEST_TOO_LARGE", "The request exceeds the permitted size.");
-    String query = request.getQueryString();
-    String url =
-        upstreams.get(route) + request.getRequestURI() + (query == null ? "" : "?" + query);
+    URI destination;
+    try {
+      destination = target(upstreams.get(route), request.getRequestURI(), request.getQueryString());
+    } catch (IllegalArgumentException ex) {
+      return problem(400, "INVALID_REQUEST", "The request URL is invalid.");
+    }
     HttpRequest.Builder builder =
-        HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(15));
+        HttpRequest.newBuilder(destination).timeout(Duration.ofSeconds(15));
     for (String header :
         List.of(
             "Authorization",

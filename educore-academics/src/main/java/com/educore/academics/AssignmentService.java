@@ -289,7 +289,7 @@ public class AssignmentService {
                 "select f.id,f.filename,f.media_type as \"mediaType\",f.expected_size as size from file_links l join school_files f on f.id=l.file_id where l.resource_type='ASSIGNMENT' and l.resource_id=? and l.active",
                 id));
     if (Set.of("PARENT", "STUDENT").contains(a.context().role()))
-      result.put("submission", mySubmission(a, school, id, learner(a), false));
+      result.put("submission", mySubmission(a, school, id, learner(a)));
     return result;
   }
 
@@ -387,32 +387,34 @@ public class AssignmentService {
     return page(items, limit, item -> item.get("id").toString());
   }
 
-  Map<String, Object> submission(UUID school, UUID assignment, UUID student, boolean create) {
+  Map<String, Object> submission(UUID school, UUID assignment, UUID student) {
     var rows =
         s.db.queryForList(
             "select * from assignment_submissions where school_id=? and assignment_id=? and student_id=?",
             school,
             assignment,
             student);
-    if (rows.isEmpty() && create) {
-      UUID id = UUID.randomUUID();
-      s.db.update(
-          "insert into assignment_submissions(id,school_id,assignment_id,student_id) values (?,?,?,?) on conflict(assignment_id,student_id) do nothing",
-          id,
-          school,
-          assignment,
-          student);
-      return s.one(
-          "select * from assignment_submissions where school_id=? and assignment_id=? and student_id=?",
-          school,
-          assignment,
-          student);
-    }
     return rows.isEmpty() ? null : rows.get(0);
   }
 
-  Object mySubmission(Actor a, UUID school, UUID assignment, UUID student, boolean create) {
-    var sub = submission(school, assignment, student, create);
+  Map<String, Object> ensureSubmission(UUID school, UUID assignment, UUID student) {
+    var existing = submission(school, assignment, student);
+    if (existing != null) return existing;
+    s.db.update(
+        "insert into assignment_submissions(id,school_id,assignment_id,student_id) values (?,?,?,?) on conflict(assignment_id,student_id) do nothing",
+        UUID.randomUUID(),
+        school,
+        assignment,
+        student);
+    return s.one(
+        "select * from assignment_submissions where school_id=? and assignment_id=? and student_id=?",
+        school,
+        assignment,
+        student);
+  }
+
+  Object mySubmission(Actor a, UUID school, UUID assignment, UUID student) {
+    var sub = submission(school, assignment, student);
     if (sub == null) return map("state", "NOT_STARTED", "version", 1);
     if (!"STUDENT".equals(a.context().role())
         && Set.of("DRAFT", "RETURNED").contains(sub.get("state"))) {
@@ -483,7 +485,7 @@ public class AssignmentService {
   public Object getSubmission(Actor a, UUID school, UUID id, UUID student) {
     var w = work(school, id, false);
     submissionScope(a, school, w, student);
-    return mySubmission(a, school, id, student, false);
+    return mySubmission(a, school, id, student);
   }
 
   public record Draft(String responseText, List<UUID> fileIds) {}
@@ -526,7 +528,7 @@ public class AssignmentService {
         map("input", b, "version", version),
         () -> {
           var w = work(school, id, true);
-          var sub = submission(school, id, student, true);
+          var sub = ensureSubmission(school, id, student);
           expectVersion(version, ((Number) sub.get("version")).longValue());
           writable(w, sub);
           String response = b.responseText() == null ? "" : b.responseText();
@@ -541,7 +543,7 @@ public class AssignmentService {
               "update assignment_submissions set response_text=?,state='DRAFT',version=version+1 where id=?",
               response,
               subId);
-          return mySubmission(a, school, id, student, false);
+          return mySubmission(a, school, id, student);
         });
   }
 
@@ -559,7 +561,7 @@ public class AssignmentService {
         map("version", version),
         () -> {
           var w = work(school, id, true);
-          var sub = submission(school, id, student, false);
+          var sub = submission(school, id, student);
           if (sub == null)
             throw fail(422, "SUBMISSION_EMPTY", "Save a response or attachment first.");
           expectVersion(version, ((Number) sub.get("version")).longValue());
@@ -581,7 +583,7 @@ public class AssignmentService {
               UUID.randomUUID(),
               sub.get("id"),
               revision,
-              s.json.write(mySubmission(a, school, id, student, false)),
+              s.json.write(mySubmission(a, school, id, student)),
               a.accountId());
           s.db.update(
               "update assignment_submissions set state='SUBMITTED',submitted_at=now(),score=null,feedback=null,version=version+1 where id=?",
@@ -594,7 +596,7 @@ public class AssignmentService {
               (UUID) sub.get("id"),
               null,
               map("revision", revision, "assignmentId", id));
-          return mySubmission(a, school, id, student, false);
+          return mySubmission(a, school, id, student);
         });
   }
 
@@ -669,7 +671,7 @@ public class AssignmentService {
   Object applyFeedback(Actor a, UUID school, UUID id, UUID student, Feedback b, long version) {
     var w = work(school, id, true);
     owner(a, school, w);
-    var sub = submission(school, id, student, false);
+    var sub = submission(school, id, student);
     if (sub == null) throw fail(404, "NOT_FOUND", "The submission is unavailable.");
     expectVersion(version, ((Number) sub.get("version")).longValue());
     var checked = validateFeedback(w, sub, b);
@@ -722,13 +724,13 @@ public class AssignmentService {
             "Your school posted learning feedback. Open the app to view it.",
             "target",
             map("screenId", "PA01", "schoolId", school, "childId", student, "resourceId", id)));
-    return mySubmission(a, school, id, student, false);
+    return mySubmission(a, school, id, student);
   }
 
   public Object history(Actor a, UUID school, UUID id, UUID student) {
     var w = work(school, id, false);
     submissionScope(a, school, w, student);
-    var sub = submission(school, id, student, false);
+    var sub = submission(school, id, student);
     if (sub == null) throw fail(404, "NOT_FOUND", "The submission is unavailable.");
     var revisions =
         s.db.queryForList(
