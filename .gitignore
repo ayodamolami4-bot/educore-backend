@@ -8,3 +8,5 @@
 *.log
 .DS_Store
 .neon
+__pycache__/
+*.pyc

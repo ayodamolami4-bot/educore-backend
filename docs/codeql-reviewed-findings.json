@@ -1,0 +1,24 @@
+{
+  "findings": [
+    {
+      "id": "EC-SEC-001",
+      "rule": "java/csrf-unprotected-request-type",
+      "severity": 8.8,
+      "path": "educore-academics/src/main/java/com/educore/academics/SchoolWorkspaceController.java",
+      "line": 106,
+      "reason": "The authenticated school-scoped GET only reads the student directory and appends an access audit. It does not change pupil, placement or guardian records. RFC 9110 section 9.2.1 permits access logging on safe requests. Protected APIs reject cookie/session/Basic-only authentication; parents, Accounts and other schools cannot export this directory.",
+      "reviewScope": "Implementation triage by Codex on 2026-11-05; independent confirmation remains part of code/release review. The uploaded CodeQL alert is retained, not dismissed.",
+      "evidence": "scripts/import-tests.mjs checks two successful reads, unchanged SQL snapshots, one audit per read and cross-role/school/cookie-only denials; PlatformSecurityTest checks stateless credential boundaries. Backend CI must also pass.",
+      "reference": "https://www.rfc-editor.org/rfc/rfc9110.html#section-9.2.1",
+      "sourceSha256": {
+        "educore-academics/src/main/java/com/educore/academics/SchoolWorkspaceController.java": "b82a56bff86182a497fe9beb13bf1009d6230de719afbd04ec41ee2a14660ef2",
+        "educore-academics/src/main/java/com/educore/academics/SchoolWorkspaceService.java": "cecdb2178a072db57cab85c6590788058225b93925c8699fe7cbaaf48b85ae05",
+        "platform/src/main/java/com/educore/platform/Commands.java": "d0ffbad6e225df48ce405d5e8000a2bfdef3ce8184862e43e01d2fd09550450b",
+        "platform/src/main/java/com/educore/platform/Actor.java": "fe2c7aadea659936db7d91dd6e9fe430157bcc9792be8b0964c99b8fc878bda8",
+        "platform/src/main/java/com/educore/platform/PlatformSecurity.java": "b9cafafab6294a025fbc0238f7a66a3b62fd0059792188dca1f41968e7067df8",
+        "platform/src/main/java/com/educore/platform/Documents.java": "3c85123eee84d0ee1e403a607a15fb820226ffed8db2d20d267735b4de7fabca",
+        "scripts/import-tests.mjs": "002ce020f61778c2ea480dc61e78b1d892d4fccb7ff29ab4fb93e048575f611a"
+      }
+    }
+  ]
+}

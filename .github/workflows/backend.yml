@@ -62,6 +62,7 @@ jobs:
           chmod +x mvnw
           ./mvnw -B spotless:check verify
           python3 scripts/check-api-catalogue.py
+          python3 -m unittest discover -s scripts -p '*_test.py'
           node --test scripts/*.test.mjs
       - name: Run five-service PostgreSQL integration tests
         env:

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 export async function importTests(u,f){
- const {request,key,day,poll,passed}=u;const {school,admin,parent,classB,session,term,accounts,children,invoice}=f;
+ const {request,key,day,poll,passed,academicsSql}=u;const {school,admin,parent,classB,session,term,accounts,children,invoice}=f;
  const call=async(method,path,body,version,expected=200,token=admin.accessToken,k=key())=>(await request(`/api/v1/schools/${school}${path}`,{method,body,token,expected,headers:{'Idempotency-Key':k,...(version===undefined?{}:{'If-Match':`"v${version}"`})}})).body;
  const get=path=>call('GET',path);
  const csv=(headers,rows)=>[headers,...rows.map(r=>headers.map(h=>r[h]??''))].map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n')+'\r\n';
@@ -33,7 +33,20 @@ export async function importTests(u,f){
  let opening=await call('POST','/invoices/opening-balances',{termId:term.id,csv:csv(openingHeaders,openingData)},undefined,200,accounts.accessToken);assert.equal(opening.rows[0].action,'ISSUE');await call('POST',`/invoices/opening-balances/${opening.id}/confirm`,{reason:'Principal checked the original school opening ledger'},opening.version,403,accounts.accessToken);const approved=await call('POST',`/invoices/opening-balances/${opening.id}/confirm`,{reason:'Principal independently checked the original school opening ledger'},opening.version);assert.equal(approved.state,'CONFIRMED');const openingInvoice=approved.rows[0].invoiceId;assert.ok(openingInvoice);
  opening=await call('POST','/invoices/opening-balances',{termId:term.id,csv:csv(openingHeaders,openingData)},undefined,200,accounts.accessToken);assert.equal(opening.rows[0].action,'ALREADY_IMPORTED');await call('POST',`/invoices/opening-balances/${opening.id}/confirm`,{reason:'Principal reviewed a duplicate source reference without recharging the child'},opening.version);assert.equal((await get('/invoices/opening-balances/'+opening.id)).rows[0].invoiceId,openingInvoice);
  await call('POST',`/invoices/${invoice}/manual-payments`,{amountMinor:1.5,method:'CASH',reference:'FRACTIONAL-'+key(),verificationReference:'Synthetic invalid fractional kobo input',reason:'Fractional kobo must never be silently truncated'},1,422);
- const exported=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/students/export.csv`,{headers:{Authorization:'Bearer '+admin.accessToken}});assert.equal(exported.status,200);assert.match(await exported.text(),/Imported Pupil One/);
+ const snapshot=()=>academicsSql("select jsonb_build_object('students',(select md5(coalesce(jsonb_agg(to_jsonb(r) order by id)::text,'')) from students r where school_id='"+school+"'),'placements',(select md5(coalesce(jsonb_agg(to_jsonb(r) order by id)::text,'')) from enrolments r where school_id='"+school+"'),'guardians',(select md5(coalesce(jsonb_agg(to_jsonb(r) order by id)::text,'')) from guardians r where school_id='"+school+"'),'links',(select md5(coalesce(jsonb_agg(to_jsonb(r) order by id)::text,'')) from guardian_links r where school_id='"+school+"'))").trim();
+ const auditCount=()=>Number(academicsSql("select count(*) from audit_entries where school_id='"+school+"' and action='STUDENT_DIRECTORY_EXPORTED'"));
+ const directoryBefore=snapshot(),auditsBefore=auditCount();
+ for(let repeat=0;repeat<2;repeat++){
+  const exported=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/students/export.csv`,{headers:{Authorization:'Bearer '+admin.accessToken}});
+  assert.equal(exported.status,200);assert.match(await exported.text(),/Imported Pupil One/);assert.equal(exported.headers.get('cache-control'),'no-store');
+ }
+ assert.equal(snapshot(),directoryBefore,'GET exports must not change pupils, placements or guardian relationships.');
+ assert.equal(auditCount(),auditsBefore+2,'Each successful export retains its access audit.');
+ await call('GET','/students/export.csv',undefined,undefined,403,parent.accessToken);
+ await call('GET','/students/export.csv',undefined,undefined,403,accounts.accessToken);
+ await request(`/api/v1/schools/${key()}/students/export.csv`,{token:admin.accessToken,expected:404});
+ const anonymous=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/students/export.csv`,{headers:{Cookie:'JSESSIONID=forged-browser-session'}});
+ assert.equal(anonymous.status,401);assert.equal(auditCount(),auditsBefore+2);assert.equal(snapshot(),directoryBefore);
  await call('GET','/activity/finance',undefined,undefined,403,parent.accessToken);assert.ok((await get('/activity/finance')).items.some(x=>x.action==='OPENING_BALANCE_BATCH_CONFIRMED'));
  passed('opening balances require an independent principal review and stable references; financial input rejects fractional kobo, while exports and service-owned activity histories stay authorised');
 }

@@ -10,12 +10,17 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationConverter;
+import org.springframework.security.web.authentication.AuthenticationFilter;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -72,7 +77,7 @@ public class PlatformSecurity {
       throws Exception {
     return boundary(http, json)
         .securityMatcher("/internal/**")
-        .addFilterBefore(new ServiceAuthenticationFilter(env), CsrfFilter.class)
+        .addFilterBefore(serviceAuthentication(env, json), CsrfFilter.class)
         .csrf(c -> c.ignoringRequestMatchers(request -> verifiedPrincipal(Actor.Internal.class)))
         .authorizeHttpRequests(a -> a.anyRequest().authenticated())
         .build();
@@ -84,7 +89,7 @@ public class PlatformSecurity {
       throws Exception {
     return boundary(http, json)
         .securityMatcher("/api/v1/**")
-        .addFilterBefore(new BearerAuthenticationFilter(verifier), CsrfFilter.class)
+        .addFilterBefore(bearerAuthentication(verifier, json), CsrfFilter.class)
         .csrf(c -> c.ignoringRequestMatchers(request -> verifiedPrincipal(Actor.class)))
         .authorizeHttpRequests(a -> a.anyRequest().authenticated())
         .build();
@@ -140,12 +145,6 @@ public class PlatformSecurity {
         && type.isInstance(authentication.getPrincipal());
   }
 
-  private static void authenticate(Object principal) {
-    var context = SecurityContextHolder.createEmptyContext();
-    context.setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, List.of()));
-    SecurityContextHolder.setContext(context);
-  }
-
   private static void problem(
       HttpServletRequest request, HttpServletResponse response, Json json, Api.Failure ex)
       throws IOException {
@@ -190,45 +189,74 @@ public class PlatformSecurity {
     }
   }
 
-  private static final class BearerAuthenticationFilter extends OncePerRequestFilter {
-    private final AccessVerifier verifier;
-
-    BearerAuthenticationFilter(AccessVerifier verifier) {
-      this.verifier = verifier;
-    }
-
-    @Override
-    protected void doFilterInternal(
-        HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-        throws ServletException, IOException {
-      String header = request.getHeader("Authorization");
-      if (header == null || !header.startsWith("Bearer ") || header.length() > 512)
-        throw Api.fail(401, "SIGN_IN_REQUIRED", "Sign in to continue.");
-      Actor actor = verifier.verify(header.substring(7));
-      if (actor == null) throw Api.fail(401, "SIGN_IN_REQUIRED", "Sign in to continue.");
-      authenticate(actor);
-      chain.doFilter(request, response);
-    }
+  private static AuthenticationFilter bearerAuthentication(AccessVerifier verifier, Json json) {
+    AuthenticationManager manager =
+        credentials -> {
+          Actor actor = verifier.verify((String) credentials.getCredentials());
+          if (actor == null) throw Api.fail(401, "SIGN_IN_REQUIRED", "Sign in to continue.");
+          return UsernamePasswordAuthenticationToken.authenticated(actor, null, List.of());
+        };
+    AuthenticationConverter converter =
+        request -> {
+          String header = request.getHeader("Authorization");
+          if (header == null || !header.startsWith("Bearer ") || header.length() > 512)
+            throw Api.fail(401, "SIGN_IN_REQUIRED", "Sign in to continue.");
+          return UsernamePasswordAuthenticationToken.unauthenticated(
+              "opaque-session", header.substring(7));
+        };
+    return credentialFilter(manager, converter, json);
   }
 
-  private static final class ServiceAuthenticationFilter extends OncePerRequestFilter {
-    private final Environment env;
+  private static AuthenticationFilter serviceAuthentication(Environment env, Json json) {
+    AuthenticationManager manager =
+        credentials -> {
+          String name = credentials.getName(), key = (String) credentials.getCredentials();
+          String expected =
+              name.matches("[a-z]+") ? env.getProperty("educore.peers." + name) : null;
+          if (expected == null || expected.length() < 32 || !Crypto.equal(expected, key))
+            throw Api.fail(401, "INVALID_SERVICE", "Service authentication required.");
+          return UsernamePasswordAuthenticationToken.authenticated(
+              new Actor.Internal(name), null, List.of());
+        };
+    AuthenticationConverter converter =
+        request ->
+            UsernamePasswordAuthenticationToken.unauthenticated(
+                Objects.requireNonNullElse(request.getHeader("X-Service-Name"), ""),
+                Objects.requireNonNullElse(request.getHeader("X-Service-Key"), ""));
+    return credentialFilter(manager, converter, json);
+  }
 
-    ServiceAuthenticationFilter(Environment env) {
-      this.env = env;
-    }
+  private static AuthenticationFilter credentialFilter(
+      AuthenticationManager manager, AuthenticationConverter converter, Json json) {
+    // Spring performs the verification and installs the verified context. A null conversion
+    // still cannot pass the chain's authenticated() authorization rule.
+    var filter = new AuthenticationFilter(manager, converter);
+    filter.setSecurityContextRepository(new NullSecurityContextRepository());
+    filter.setSuccessHandler(
+        new AuthenticationSuccessHandler() {
+          @Override
+          public void onAuthenticationSuccess(
+              HttpServletRequest request,
+              HttpServletResponse response,
+              Authentication authentication) {}
 
-    @Override
-    protected void doFilterInternal(
-        HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-        throws ServletException, IOException {
-      String name = request.getHeader("X-Service-Name"), key = request.getHeader("X-Service-Key");
-      String expected =
-          name != null && name.matches("[a-z]+") ? env.getProperty("educore.peers." + name) : null;
-      if (expected == null || expected.length() < 32 || !Crypto.equal(expected, key))
-        throw Api.fail(401, "INVALID_SERVICE", "Service authentication required.");
-      authenticate(new Actor.Internal(name));
-      chain.doFilter(request, response);
-    }
+          @Override
+          public void onAuthenticationSuccess(
+              HttpServletRequest request,
+              HttpServletResponse response,
+              FilterChain chain,
+              Authentication authentication)
+              throws IOException, ServletException {
+            chain.doFilter(request, response);
+          }
+        });
+    filter.setFailureHandler(
+        (request, response, failure) ->
+            problem(
+                request,
+                response,
+                json,
+                Api.fail(401, "SIGN_IN_REQUIRED", "Sign in to continue.")));
+    return filter;
   }
 }
