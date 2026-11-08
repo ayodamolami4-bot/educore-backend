@@ -27,6 +27,8 @@ The last command saves the principal's private activation instructions to `.dev/
 
 Read [SETUP.md](docs/SETUP.md) for first sign-in, Windows, frontend configuration and troubleshooting.
 
+When the frontend role screens are still being built, [prepare the fictional team school](docs/DEMO_DATA.md) with `node scripts/seed-demo.mjs --demo`. The helper creates separate private role logins and sample records through the existing APIs; it does not deploy a public backend.
+
 ## Build Java directly
 
 Install Java 17 or a compatible later JDK. The Maven wrapper downloads Maven; a separate Maven installation is not required.

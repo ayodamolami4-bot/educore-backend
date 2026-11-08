@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '24'
       - name: Verify local setup file safety on Windows
-        run: node --test scripts/bootstrap-files.test.mjs
+        run: node --test scripts/*.test.mjs
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -77,10 +77,12 @@ jobs:
           POSTGRES_PORT: '55432'
           EDUCORE_MAIL_DELAY_MS: '1000'
           EDUCORE_CONTAINER_TEST: 'true'
+          EDUCORE_DEMO_CHECK: 'true'
         run: |
           docker compose up -d --wait --wait-timeout 180
           node scripts/bootstrap.mjs CONTAINER "EduCore Container Test School" "Demo Principal" "08012345678"
           node scripts/container-check.mjs
+          node scripts/demo-seed-check.mjs
       - name: Container diagnostics on failure
         if: failure()
         run: docker compose logs --tail 250

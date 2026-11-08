@@ -61,6 +61,14 @@ The bootstrap command saves retry state. If a request times out, repeat the same
 
 ## 5. Connect React Native
 
+If the role screens are still being built, you can prepare the fictional school without the frontend:
+
+```sh
+node scripts/seed-demo.mjs --demo
+```
+
+This activates the pending demo Principal and creates separate per-role test logins, saved privately in `.dev/demo-credentials.json`. It populates sample school records through the gateway. Read [DEMO_DATA.md](DEMO_DATA.md) for its exact scope, retries and team connection plan. Only use it with the saved fictional `DEMO` / `EduCore Presentation School` bootstrap. Active credentials are not reset.
+
 In your **separate frontend** `.env`, set:
 
 ```dotenv
