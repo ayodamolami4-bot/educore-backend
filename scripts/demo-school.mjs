@@ -153,17 +153,20 @@ export async function seedDemoSchool(options) {
     const published = await post('publish-reports', '/assessment-cycles/' + cycle.id + '/publish',
       {principalRemark: 'Fictional presentation report; continue practising your skills.',
         nextResumptionOn: p.terms[1][1]}, admin, review.version);
-    await post('notice', '/notices', {title: 'Welcome to the EduCore presentation school',
-      body: 'All pupils, names, attendance and payment records here are fictional integration examples.'});
+    const notice = await post('notice', '/notices', {title: 'Welcome to the EduCore presentation school',
+      body: 'All pupils, names, attendance and payment records here are fictional integration examples.',
+      scope: 'SCHOOL', fileIds: []});
+    await post('publish-notice', '/notices/' + notice.id + '/publish', undefined, admin, notice.version);
     const complaint = await post('complaint', '/complaints', {studentId: students[0].id,
       category: 'FEES', subject: 'Demo question about the development levy',
-      body: 'Please explain what the fictional development levy covers in this test school.'}, parent);
+      body: 'Please explain what the fictional development levy covers in this test school.',
+      fileIds: []}, parent);
     d.state.records = {sessionId: session.id, termIds: terms.map(t => t.id),
       classIds: classes.map(c => c.id), subjectIds: subjects.map(s => s.id),
       teacherIds: teachers.map(t => t.id), studentIds: students.map(s => s.id),
       assignmentId: work.id, timetableId: plan.id, registerId: register.id,
       invoiceIds: invoices.map(i => i.id), reportIds: published.reports.map(r => r.id),
-      complaintId: complaint.id};
+      noticeId: notice.id, complaintId: complaint.id};
     // Exercise the primary family reads before declaring the setup complete.
     await d.get('/students/' + students[0].id, studentActor);
     await d.get('/students/' + students[0].id + '/reports', parent);

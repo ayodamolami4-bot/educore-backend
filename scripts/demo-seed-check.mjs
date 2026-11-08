@@ -60,6 +60,7 @@ assert.equal((await d.get('/classes', actors.teacher)).items.length, 3);
 const [child, sibling, foreign] = first.records.studentIds;
 assert.equal((await d.get('/students/' + child, actors.student)).id, child);
 assert.equal((await d.get('/students/' + child + '/reports', actors.parent)).items.length, 1);
+assert.ok((await d.get('/notices', actors.parent)).items.some(n => n.id === first.records.noticeId));
 assert.equal((await d.get('/invoices/' + first.records.invoiceIds[0], actors.parent)).invoice.balanceMinor, 2500000);
 await assert.rejects(d.get('/students/' + foreign, actors.parent),
   error => error instanceof DemoHttpError && error.status === 404);
