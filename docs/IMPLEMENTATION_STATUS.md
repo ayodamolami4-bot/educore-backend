@@ -1,4 +1,4 @@
-# Backend implementation status — 5 November 2026
+# Backend implementation status — 8 November 2026
 
 **The agreed core backend is ready for code review.** It is saved on `backend/complete-workflows` in PR #1. Frontend role-screen implementation, actual provider/device validation and production release remain separate. Read [REVIEW_HANDOVER.md](REVIEW_HANDOVER.md) for the concrete next steps and your private account inputs.
 
@@ -26,8 +26,15 @@
 | Final administration controls | Provisioning status/retry and reviewed unapplied account repair; invitation history/replacement/revocation; versioned session/term edits, active-session preference, subjects and room catalogue |
 | Reports/delivery | Role-scoped catalogues, coherent bounded JSON/PDF/CSV reports, accepted broadsheets and own subject sheets; safe delivery console, notice summaries and reasoned eligibility-checked retries |
 | Grading approval | Readable adopted fixed policy, explicit Principal approval or approval at mark opening, frozen cycle policy and retained publication history |
+| Fictional team data | Local operator API client activates six distinct test logins and creates linked sample school records; private retry state preserves accepted work without depending on unfinished role screens |
 
 ## Verified evidence
+
+The [8 November backend run 42470308154](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42470308154) verifies code commit `b4b805054f5515c46bcdc4a644ea92bf87623834`: **42 Java tests, 10 Node helper checks on Linux and Windows, 6 Python gate checks, all 80 PostgreSQL scenario groups, five Docker builds and both existing startup checks**. The new demo check also seeds a separate school twice, confirms that the second run performs no school-record mutations, signs in all six exported accounts, switches the parent's children and checks published reports, fee balances, notices and role denials.
+
+[CodeQL run 42470308143](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42470308143) completes Java and JavaScript analysis at that source. Java retains the unchanged EC-SEC-001 audit-only diagnostic exception; JavaScript reports zero results in this run. There are zero unresolved high/critical findings after implementation triage. The prior medium notices below describe the earlier scanner/run, not new results at this checkpoint. Independent review remains required.
+
+[DEMO_DATA.md](DEMO_DATA.md) documents the new helper's exact records, generated private account handovers and resume limits. This check populated disposable CI containers, not Ayo's laptop. No public EduCore URL or paid hosting resource was created. Shared free development access is planned through a temporary gateway tunnel; the proposed permanent private-service deployment needs a hosting budget.
 
 [GitHub Actions run 42066557989](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42066557989), code commit `968183344e4b1665c515cf5e322031d0e0e0aaf0`, passed:
 

@@ -92,6 +92,8 @@ References checked 8 November 2026:
 
 ## Verification
 
+[Completed backend run 42470308154](https://github.com/ayodamolami4-bot/educore-backend/actions/runs/42470308154) verifies the helper at source `b4b805054f5515c46bcdc4a644ea92bf87623834`, including the full PostgreSQL/container check described below. It also passes the ten Node helper checks on Linux and Windows. This is disposable test evidence; the operator must still run the command on the intended local demo database.
+
 `node --test scripts/demo-seed.test.mjs` checks unknown-result replay, unchanged original body/version, scope restrictions, loopback-only destinations, redirect refusal, private credential output, mutual exclusion and Lagos dates. These are helper tests, not a live-school test.
 
 The Backend checks workflow also runs `scripts/demo-seed-check.mjs` against the disposable PostgreSQL containers. It seeds twice, checks that the second run performs no school-record mutations, signs in all six accounts and exercises family/teacher/admin reads, parent switching, published reports, invoice balances and role denials. The check requires `EDUCORE_DEMO_CHECK=true` and creates a separate test school. Do not run that CI-only check on the lead's database.
