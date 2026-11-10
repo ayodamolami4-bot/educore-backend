@@ -7,5 +7,5 @@
   <properties><java.version>17</java.version><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding></properties>
   <modules><module>platform</module><module>educore-identity</module><module>educore-academics</module><module>educore-finance</module><module>educore-communication</module><module>api-gateway</module></modules>
   <build><pluginManagement><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></pluginManagement>
-  <plugins><plugin><groupId>com.diffplug.spotless</groupId><artifactId>spotless-maven-plugin</artifactId><version>2.43.0</version><configuration><java><googleJavaFormat><version>1.24.0</version></googleJavaFormat><removeUnusedImports/></java></configuration></plugin></plugins></build>
+  <plugins><plugin><groupId>com.diffplug.spotless</groupId><artifactId>spotless-maven-plugin</artifactId><version>3.11.0</version><configuration><java><googleJavaFormat><version>1.24.0</version></googleJavaFormat><removeUnusedImports/></java></configuration></plugin></plugins></build>
 </project>
