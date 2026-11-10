@@ -112,8 +112,14 @@ public class SchoolController {
   Object teachers(
       @PathVariable UUID s,
       @RequestParam(required = false) UUID cursor,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String level,
+      @RequestParam(required = false) UUID subjectId,
+      @RequestParam(required = false) UUID classId,
+      @RequestParam(required = false) Boolean active,
       @RequestParam(defaultValue = "30") int limit) {
-    return service.teachers(Actor.current(), s, cursor, Api.pageSize(limit));
+    return service.teachers(
+        Actor.current(), s, cursor, Api.pageSize(limit), search, level, subjectId, classId, active);
   }
 
   @PostMapping("/api/v1/schools/{s}/students")
@@ -240,15 +246,29 @@ public class SchoolController {
   Object guardians(
       @PathVariable UUID s,
       @RequestParam(required = false) UUID cursor,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) UUID childId,
+      @RequestParam(required = false) Boolean activeLink,
       @RequestParam(defaultValue = "30") int limit) {
     Actor.current().school(s, "PRINCIPAL", "SCHOOL_OFFICE");
     int size = Api.pageSize(limit);
+    String q = service.search(search);
     var rows =
         service.db.queryForList(
-            "select id,full_name as \"fullName\",phone,email,version from guardians where school_id=? and (?::uuid is null or id>?::uuid) order by id limit ?",
+            "select g.id,g.full_name as \"fullName\",g.phone,g.email,g.version from guardians g where g.school_id=? and (?::uuid is null or g.id>?::uuid) and (g.full_name ilike ? or g.phone ilike ? or exists(select 1 from guardian_links gl join students st on st.id=gl.student_id where gl.guardian_id=g.id and (st.full_name ilike ? or st.admission_number ilike ?))) and ((?::uuid is null and ?::boolean is null) or exists(select 1 from guardian_links gl where gl.guardian_id=g.id and (?::uuid is null or gl.student_id=?::uuid) and (?::boolean is null or gl.active=?::boolean))) order by g.id limit ?",
             s,
             cursor,
             cursor,
+            "%" + q + "%",
+            "%" + q + "%",
+            "%" + q + "%",
+            "%" + q + "%",
+            childId,
+            activeLink,
+            childId,
+            childId,
+            activeLink,
+            activeLink,
             size + 1);
     return Api.page(rows, size, row -> row.get("id").toString());
   }

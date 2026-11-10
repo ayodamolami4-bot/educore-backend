@@ -1,0 +1,3125 @@
+{
+  "reviewedOn": "2026-11-04",
+  "screenCount": 94,
+  "meaning": "MAPPED describes core backend contract coverage, not completed React Native screens or production readiness. SH09 retains its POLICY_DEFERRED help/contact boundary.",
+  "sharedFiles": [
+    {
+      "method": "POST",
+      "path": "/schools/{school}/files"
+    },
+    {
+      "method": "GET",
+      "path": "/schools/{school}/files/{fileId}"
+    },
+    {
+      "method": "PUT",
+      "path": "/schools/{school}/files/{fileId}/content"
+    },
+    {
+      "method": "GET",
+      "path": "/schools/{school}/files/{fileId}/content"
+    }
+  ],
+  "screens": [
+    {
+      "id": "AD01",
+      "title": "Admin home",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/dashboard"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/me/notifications"
+        }
+      ],
+      "notes": "Compose cards by the selected preset; Accounts cannot request academic dashboard records. Use finance overview for Accounts.",
+      "remaining": ""
+    },
+    {
+      "id": "AD02",
+      "title": "Student list",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/export.csv"
+        }
+      ],
+      "notes": "Use search/class filters and cursor pagination. Shared export downloads are direct responses.",
+      "remaining": ""
+    },
+    {
+      "id": "AD03",
+      "title": "Register or edit a student",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/metadata"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/academic-sessions"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/guardians"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/students"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/students/{studentId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
+        }
+      ],
+      "notes": "Enrol once, then use the saved event for provisioning status/retry. A reviewed replacement can correct only an unapplied staff/guardian account match; pupil identity and enrolment stay stable. Attach documents to the accepted pupil ID. Invitations are pending-account access, never an active global password reset.",
+      "remaining": ""
+    },
+    {
+      "id": "AD04",
+      "title": "Student profile",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/students/{studentId}/transfers"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/students/{studentId}/withdrawal"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/attendance"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/external-results"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/students/{studentId}/external-results"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/academic-history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/fee-status"
+        }
+      ],
+      "notes": "School Office uses /invoices/fee-status for a selected pupil and optional term. It receives read-only balances/status, not invoice lines, payer details or payment evidence. Principal/Accounts retain full invoice permissions.",
+      "remaining": ""
+    },
+    {
+      "id": "AD05",
+      "title": "Parents and guardians list",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/guardians"
+        }
+      ],
+      "notes": "Search by guardian name/phone or child name/admission number. Existing global-account linking needs the exact supplied login and school verification; no global account search is exposed.",
+      "remaining": ""
+    },
+    {
+      "id": "AD06",
+      "title": "Guardian profile and child links",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/guardians/{guardianId}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/guardians/{guardianId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/students/{studentId}/guardians"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/students/{studentId}/guardians/{guardianId}/revoke"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
+        }
+      ],
+      "notes": "Read invitation/account state before issuing private activation instructions. Replacement/revocation invalidates reviewed activation flows too. Accepted global accounts keep their private recovery proofs. A failed unapplied guardian account match has a reviewed replacement action; child-link revocation remains separate.",
+      "remaining": ""
+    },
+    {
+      "id": "AD07",
+      "title": "Teachers list",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teachers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teachers/export.csv"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "AD08",
+      "title": "Register or edit a teacher",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/schools/{school}/teachers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/staff/{staffId}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/staff/{staffId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/staff/{staffId}/teaching-scope"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/subjects"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/teaching-assignments"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
+        }
+      ],
+      "notes": "Registration returns the saved provisioning event; status/retry and reviewed unapplied-account repair retain the staff ID. Office manages teacher records; Principal manages administrator access. Credentials have private document purpose and explicit self visibility.",
+      "remaining": ""
+    },
+    {
+      "id": "AD09",
+      "title": "Teacher profile and responsibilities",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/staff/{staffId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teaching-assignments"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/teaching-assignments/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/staff/{staffId}/access"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        }
+      ],
+      "notes": "Handover teaching/attendance duties before removing teacher access. Teacher timetable reads can be filtered locally by selected teacher from authorised office data.",
+      "remaining": ""
+    },
+    {
+      "id": "AD10",
+      "title": "School settings and admin access",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/settings"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/settings"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/staff"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/staff"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/staff/{staffId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/staff/{staffId}/access"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/metadata"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/metadata-versions"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subjectId}/activation-slips"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/invoices/payment-settings"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/payment-settings"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/invoices/payment-settings"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/payment-settings/history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/provisioning/{type}/{subject}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/retry"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/provisioning/{type}/{subject}/replacement"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/onboarding/{type}/{subject}/invitations/{id}/revoke"
+        }
+      ],
+      "notes": "Principal manages administrator provisioning/invitations and versioned settlement settings; Accounts reads payment settings/history. Pausing checkout preserves existing verification. A settings/subaccount format check is not bank-ownership verification. Secrets remain backend configuration.",
+      "remaining": ""
+    },
+    {
+      "id": "AD11",
+      "title": "School calendar and daily times",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/academic-sessions"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/academic-sessions"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/terms"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/terms"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/calendar"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/calendar-plans"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/calendar-plans"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/calendar-plans/{id}/publish"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/terms/{termId}/activities"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/terms/{termId}/activities"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/academic-sessions/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/terms/{id}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/active-academic-session"
+        }
+      ],
+      "notes": "Existing unused term/session dates use reviewed versions and reasons. Terms with dated school work keep their boundaries; published calendar revisions handle exceptions. Principal selects activeSessionId using the school-settings version; it is a display default and cannot override dated placement or permissions.",
+      "remaining": ""
+    },
+    {
+      "id": "AD12",
+      "title": "Classes, subjects and departments",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/classes"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/classes/{classId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/subjects"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/subjects"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/curricula"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/curricula"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/curricula/{curriculumId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/curricula/{curriculumId}/publish"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/classes/{classId}/curriculum"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/students/{studentId}/subject-choices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/rooms"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/rooms"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/rooms/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/subjects/{id}"
+        }
+      ],
+      "notes": "Subjects support versioned rename/deactivation while immutable codes and historical reports remain stable. Current/future assignment/curriculum use blocks retirement. Rooms have stable uppercase codes, display names, capacity, active state and versions. New uses reject inactive resources; legacy room labels retain their spelling with canonical conflict matching.",
+      "remaining": ""
+    },
+    {
+      "id": "AD13",
+      "title": "One class and its student list",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes/{classId}/workspace"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/subject-choices"
+        }
+      ],
+      "notes": "Parents/students receive only their own eligible pupil row; teacher and office rosters are scoped. Do not treat a family roster as the whole class.",
+      "remaining": ""
+    },
+    {
+      "id": "AD14",
+      "title": "Build the weekly timetable",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teachers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teaching-assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable-plans"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/timetable-plans"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/timetable-plans/{planId}/lessons"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/timetable-plans/{planId}/lessons/{lessonId}/remove"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable-plans/{planId}/review"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/rooms"
+        }
+      ],
+      "notes": "Choose an active room catalogue code. Legacy text saves create a matching catalogue record. Canonical room conflicts and review checks prevent case variants or cloned inactive rooms from bypassing scheduling rules. Eligibility remains separate from actual teaching assignments.",
+      "remaining": ""
+    },
+    {
+      "id": "AD15",
+      "title": "Review and publish the timetable",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable-plans"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable-plans/{planId}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/timetable-plans/{planId}/publish"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        }
+      ],
+      "notes": "Publish only after review passes. Use schedule/day for dated exam replacements; use timetable for the weekly pattern.",
+      "remaining": ""
+    },
+    {
+      "id": "AD16",
+      "title": "Attendance and absence follow-up",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-ups"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{registerId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{registerId}/absence-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/decision"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        }
+      ],
+      "notes": "Submitted-only attendance, teacher requests, stale-source office decisions, reviewed family alerts and private follow-up notes have explicit workflows. Staff use child/category/resource delivery filters and a separate delivery-command version. Retry rechecks current recipient/device/preferences and cannot replay confirmed, expired, invalid-device or pending-receipt sends.",
+      "remaining": ""
+    },
+    {
+      "id": "AD17",
+      "title": "View or correct a class register",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{registerId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{registerId}/corrections"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{registerId}/absence-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/decision"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-alerts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/follow-up-cases"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "PATCH",
+          "path": "/schools/{school}/attendance/follow-up-cases/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        }
+      ],
+      "notes": "Submitted-only attendance, teacher requests, stale-source office decisions, reviewed family alerts and private follow-up notes have explicit workflows. Staff use child/category/resource delivery filters and a separate delivery-command version. Retry rechecks current recipient/device/preferences and cannot replay confirmed, expired, invalid-device or pending-receipt sends.",
+      "remaining": ""
+    },
+    {
+      "id": "AD18",
+      "title": "Set exams and grading rules",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/open"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/roster/sync"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/exam-schedules"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/exam-schedules"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/exam-schedules/{scheduleId}/events"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/exam-schedules/{scheduleId}/events/{eventId}/remove"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/exam-schedules/{scheduleId}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/exam-schedules/{scheduleId}/publish"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/grading-policy"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{id}/approve-policy"
+        }
+      ],
+      "notes": "The adopted 20/20/60, one-decimal, A-F and no-rank policy is read-only and frozen per cycle. Principal explicitly approves it in DRAFT or records approval when opening marks. A configurable rule builder is outside the adopted presentation-school policy; no setting can rewrite accepted reports.",
+      "remaining": ""
+    },
+    {
+      "id": "AD19",
+      "title": "Review and publish results",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/return"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/return-review"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/reopen"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/roster/sync"
+        }
+      ],
+      "notes": "Subject sheets → class-lead remarks/ratings → submit-review → principal publish. Late placement changes require roster/sync, and published cycles must be reopened first.",
+      "remaining": ""
+    },
+    {
+      "id": "AD20",
+      "title": "Reports",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}/pdf"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/broadsheet.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/overview"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/export.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/promotion-batches/{batchId}/outcomes.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/{kind}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/{kind}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/{kind}"
+        }
+      ],
+      "notes": "Select permitted academic, finance or complaint catalogues by staff preset. JSON previews return READY synchronously; the same report request with format=PDF or CSV produces a protected download. Specific filters, current role/class-lead/subject scope, accepted report snapshots and 1,000-row bounds are enforced. Refresh regenerates the view; arbitrary queries/background export jobs are outside these supported report types.",
+      "remaining": ""
+    },
+    {
+      "id": "AD21",
+      "title": "Set fees and issue bills",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/fee-plans"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-plans"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/fee-plans/{planId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/fee-plans/{planId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-plans/{planId}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-plans/{planId}/batches"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/fee-batches/{batchId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-batches/{batchId}/confirm"
+        }
+      ],
+      "notes": "Edit only a fee-plan draft, publish it, preview a batch and confirm the reviewed roster hash.",
+      "remaining": ""
+    },
+    {
+      "id": "AD22",
+      "title": "Student invoices",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/export.csv"
+        }
+      ],
+      "notes": "Use current invoice balances; never recompute the official balance from original total minus gross payments alone.",
+      "remaining": ""
+    },
+    {
+      "id": "AD23",
+      "title": "Invoice detail and office payment",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/{invoiceId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/invoices/{invoiceId}/manual-payments"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/invoices/{invoiceId}/adjustments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/fee-adjustments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/fee-adjustments/{adjustmentId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-adjustments/{adjustmentId}/decision"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/{invoiceId}/pdf"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payments/{paymentId}/receipt"
+        }
+      ],
+      "notes": "Accounts records payments; a different principal approves the requesting principal’s financial adjustment. Money is integer NGN kobo.",
+      "remaining": ""
+    },
+    {
+      "id": "AD24",
+      "title": "Payments and money checks",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/overview"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/reconciliation/statements"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/reconciliation/paystack-sync"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/settlements"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/exceptions"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payment-intents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/{kind}"
+        }
+      ],
+      "notes": "Confirmed payments, checkout attempts and bank/provider settlement remain separate. Accounts/Principal can inspect attempt history, fee delivery states and bounded finance reports. Safe delivery metadata excludes payer contact/proofs and message content; retry does not turn queued mail into a confirmed delivery.",
+      "remaining": ""
+    },
+    {
+      "id": "AD25",
+      "title": "Payment detail and refund review",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/{invoiceId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payments/{paymentId}/receipt"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/fee-adjustments/{adjustmentId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-adjustments/{adjustmentId}/decision"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/fee-adjustments/{adjustmentId}/confirm-refund"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/settlements/{settlementId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/reconciliation/settlements/{settlementId}/rows/{rowId}/resolution"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reconciliation/reports/{kind}"
+        }
+      ],
+      "notes": "Prepare/request and independently approve refunds, execute through the bank/provider, then confirm with evidence/authoritative provider outcome. This is the agreed external-disbursement workflow; this API does not automatically send refund money. Refund report states distinguish request/approval from confirmed return.",
+      "remaining": ""
+    },
+    {
+      "id": "AD26",
+      "title": "Preview promotion or completion",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/academic-sessions"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/promotion-batches"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/promotion-batches"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/promotion-batches/{batchId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/promotion-batches/{batchId}/students/{studentId}"
+        }
+      ],
+      "notes": "Preview only from the published source evidence. JSS3 needs an explicit SSS1 pathway; missing evidence stays REVIEW.",
+      "remaining": ""
+    },
+    {
+      "id": "AD27",
+      "title": "Approve promotion and graduation",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/promotion-batches/{batchId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/promotion-batches/{batchId}/confirm"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/promotion-batches/{batchId}/outcomes.csv"
+        }
+      ],
+      "notes": "The source academic year must have ended. Confirmation rejects changed source results and cannot duplicate a prior source-year outcome.",
+      "remaining": ""
+    },
+    {
+      "id": "AD28",
+      "title": "School announcements",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/notices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices/{id}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/notices/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/notices/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/notices/{id}/archive"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices/{id}/delivery-summary"
+        }
+      ],
+      "notes": "Principal/Office can inspect a published notice recipient/read summary and per-notification channel states. Manual retry targets a failed delivery with reason/version and preserves current access/preferences, leases and expiry. Provider receipt and in-app reading remain different evidence.",
+      "remaining": ""
+    },
+    {
+      "id": "AD29",
+      "title": "School messages",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/contacts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads"
+        }
+      ],
+      "notes": "Contacts and permitted thread participants come from the server; no arbitrary account-ID recipient picker.",
+      "remaining": ""
+    },
+    {
+      "id": "AD30",
+      "title": "One private conversation",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/{threadId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads/{threadId}/messages"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/threads/{threadId}/read"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads/{threadId}/close"
+        }
+      ],
+      "notes": "Private child-linked threads; current participants only. File reads require their owning thread/case/assignment permissions.",
+      "remaining": ""
+    },
+    {
+      "id": "AD31",
+      "title": "Complaints list",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/complaints"
+        }
+      ],
+      "notes": "Walk-in/phone intake belongs to office staff. Staff-conduct complaints are restricted to Principal.",
+      "remaining": ""
+    },
+    {
+      "id": "AD32",
+      "title": "Complaint details and resolution",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/{caseId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/complaints/{caseId}/replies"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/complaints/{caseId}/owner"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/complaints/{caseId}/status"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/{caseId}/history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/delivery/notifications/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/delivery/notifications/{id}/retry"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/reports/{kind}"
+        }
+      ],
+      "notes": "Case ownership/category and private-note rules apply. Staff can inspect permitted case delivery metadata; only the current owner or Principal retries a case delivery. Complaint register/backlog exports retain preset limits and omit message bodies/private notes.",
+      "remaining": ""
+    },
+    {
+      "id": "AD33",
+      "title": "Bring in or download school data",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/imports/templates/{kind}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/imports"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/imports"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/imports/{jobId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/imports/{jobId}/rows/{rowId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/imports/{jobId}/confirm"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/imports/{jobId}/errors.csv"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/invoices/opening-balances"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/opening-balances/{batchId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/invoices/opening-balances/{batchId}/confirm"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/export.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teachers/export.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/export.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/documents/{id}/archive"
+        }
+      ],
+      "notes": "Verified historical document copies use /documents and do not generate official marks. Only published permitted copies are returned. CSV imports use their specific preview/job/confirm routes.",
+      "remaining": ""
+    },
+    {
+      "id": "AD34",
+      "title": "School change history",
+      "role": "Administrator",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/activity/{domain}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/activity/{domain}/export.csv"
+        }
+      ],
+      "notes": "Request the permitted service domain separately: academics, finance, identity or communication. Do not join databases in the app.",
+      "remaining": ""
+    },
+    {
+      "id": "TE01",
+      "title": "Teacher home",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        },
+        {
+          "method": "GET",
+          "path": "/me/notifications"
+        }
+      ],
+      "notes": "The Presenter composes this home from existing scoped APIs; there is no separate teacher-dashboard endpoint.",
+      "remaining": ""
+    },
+    {
+      "id": "TE02",
+      "title": "My classes and subjects",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teaching-assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/terms"
+        }
+      ],
+      "notes": "Eligibility does not assign work. teaching-assignments returns actual current assignments; my-classes identifies class-lead duty.",
+      "remaining": ""
+    },
+    {
+      "id": "TE03",
+      "title": "Class workspace",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes/{classId}/workspace"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/materials/{id}/publish"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/materials/{id}/archive"
+        }
+      ],
+      "notes": "Class/subject material reads are scoped. Families see the accepted snapshot while the teacher edits the next draft; attachments require the same audience.",
+      "remaining": ""
+    },
+    {
+      "id": "TE04",
+      "title": "Student learning profile",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/attendance"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        }
+      ],
+      "notes": "Learning profile access follows a current dated class assignment. Complete class reports are restricted to the class lead, not every subject teacher.",
+      "remaining": ""
+    },
+    {
+      "id": "TE05",
+      "title": "Timetable and calendar",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/calendar"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/examinations"
+        }
+      ],
+      "notes": "Daily view shows teaching/invigilation and supervised activities. Examinations lists relevant published exam schedules.",
+      "remaining": ""
+    },
+    {
+      "id": "TE06",
+      "title": "Attendance centre",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{registerId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-requests"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/cancel"
+        }
+      ],
+      "notes": "The assigned class teacher submits registers and requests later corrections. Pending requests do not change accepted attendance; the office approves or declines after review.",
+      "remaining": ""
+    },
+    {
+      "id": "TE07",
+      "title": "Daily class register",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{registerId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/attendance/registers/{registerId}/marks"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{registerId}/submit"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-requests"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/attendance/correction-requests/{id}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/attendance/correction-requests/{id}/cancel"
+        }
+      ],
+      "notes": "The assigned class teacher submits registers and requests later corrections. Pending requests do not change accepted attendance; the office approves or declines after review.",
+      "remaining": ""
+    },
+    {
+      "id": "TE08",
+      "title": "Assignments",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "TE09",
+      "title": "Create or edit assignment",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teaching-assignments"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignmentId}/publish"
+        }
+      ],
+      "notes": "Use only actual assigned class/subject IDs. File upload and publish are separate accepted actions.",
+      "remaining": ""
+    },
+    {
+      "id": "TE10",
+      "title": "Assignment and submissions",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}/submissions"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignmentId}/changes"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/physical-receipt"
+        }
+      ],
+      "notes": "Choose APP or PHYSICAL when creating the assignment. Only the assigned teacher records physical receipt with its school date, reason and optional private evidence.",
+      "remaining": ""
+    },
+    {
+      "id": "TE11",
+      "title": "Review student submission",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}/submissions/{studentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/feedback"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignment}/submissions/{student}/review-draft/release"
+        }
+      ],
+      "notes": "Review drafts are teacher-only. Release checks the accepted submission version; parents and students see only released feedback.",
+      "remaining": ""
+    },
+    {
+      "id": "TE12",
+      "title": "Marks and submission status",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}"
+        }
+      ],
+      "notes": "Cycle/list plus the teacher’s sheet is sufficient for subject status; full class review is class-lead only.",
+      "remaining": ""
+    },
+    {
+      "id": "TE13",
+      "title": "Enter assessment scores",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/marks"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/submit"
+        }
+      ],
+      "notes": "Save drafts, resolve make-up/absent-zero evidence, then submit. Teacher cannot edit submitted sheets without a return.",
+      "remaining": ""
+    },
+    {
+      "id": "TE14",
+      "title": "Class report preparation",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/review"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/sheets/{assignmentId}/return"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/remarks/{student}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/submit-review"
+        }
+      ],
+      "notes": "The class lead also submits their own subject sheet before reviewing the whole class; submit-review locks the package for principal review.",
+      "remaining": ""
+    },
+    {
+      "id": "TE15",
+      "title": "Teaching reports",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assessment-cycles/{cycleId}/broadsheet.csv"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}/pdf"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/catalogue"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/school-reports/{kind}"
+        }
+      ],
+      "notes": "The catalogue exposes only teacher-permitted reports. PUBLISHED_BROADSHEET uses the current class-lead scope and latest accepted snapshots; SUBJECT_MARKS uses cycleId/assignmentId and the assigned-subject/class-lead scope. Working sheets are labelled; they do not become family reports. PDF/CSV downloads repeat authorization.",
+      "remaining": ""
+    },
+    {
+      "id": "TE16",
+      "title": "School notices",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices/{id}"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "TE17",
+      "title": "Messages inbox",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/contacts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "TE18",
+      "title": "Conversation",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/{threadId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads/{threadId}/messages"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/threads/{threadId}/read"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads/{threadId}/close"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "TE19",
+      "title": "Profile and responsibilities",
+      "role": "Teacher",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/staff/{staffId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/teaching-assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        }
+      ],
+      "notes": "School profile changes go through the office; personal login settings use SH07.",
+      "remaining": ""
+    },
+    {
+      "id": "ST01",
+      "title": "Student home",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        },
+        {
+          "method": "GET",
+          "path": "/me/notifications"
+        }
+      ],
+      "notes": "Compose the home from own class/work/report/notification reads. The app chooses useful cards; Java supplies official data.",
+      "remaining": ""
+    },
+    {
+      "id": "ST02",
+      "title": "My class and subjects",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes/{classId}/workspace"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/subject-choices"
+        }
+      ],
+      "notes": "Class workspace and subject choices reflect dated placement. Families cannot change their own official class/department.",
+      "remaining": ""
+    },
+    {
+      "id": "ST03",
+      "title": "Subject workspace",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes/{classId}/workspace"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}/history"
+        }
+      ],
+      "notes": "Class/subject material reads are scoped. Families see the accepted snapshot while the teacher edits the next draft; attachments require the same audience.",
+      "remaining": ""
+    },
+    {
+      "id": "ST04",
+      "title": "Timetable and calendar",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/calendar"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/examinations"
+        }
+      ],
+      "notes": "Use the daily projection for examination dates. Weekly view remains the recurring pattern; honour Africa/Lagos.",
+      "remaining": ""
+    },
+    {
+      "id": "ST05",
+      "title": "My assignments",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "ST06",
+      "title": "Assignment details",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "ST07",
+      "title": "Prepare and submit",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/assignments/{assignmentId}/my-submission"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/assignments/{assignmentId}/submit"
+        }
+      ],
+      "notes": "Save a private draft, upload accepted files, then submit an immutable revision. Do not mark work submitted until the server accepts it.",
+      "remaining": ""
+    },
+    {
+      "id": "ST08",
+      "title": "Submission and feedback",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history"
+        }
+      ],
+      "notes": "Use the authenticated own student ID. History and accepted feedback are server-owned; local drafts stay private.",
+      "remaining": ""
+    },
+    {
+      "id": "ST09",
+      "title": "My results",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        }
+      ],
+      "notes": "Group the returned published reports by session/term from report details; the staff academic-session directory is not a family API.",
+      "remaining": ""
+    },
+    {
+      "id": "ST10",
+      "title": "My term report",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}/pdf"
+        }
+      ],
+      "notes": "Use the report snapshot and PDF. Do not calculate official totals, grades or attendance percentages in TypeScript.",
+      "remaining": ""
+    },
+    {
+      "id": "ST11",
+      "title": "My attendance",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/attendance"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
+        }
+      ],
+      "notes": "Show submitted attendance, missing-register coverage and official corrections for this selected pupil. Private teacher requests and office follow-up notes are not returned.",
+      "remaining": ""
+    },
+    {
+      "id": "ST12",
+      "title": "School notices",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices/{id}"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "ST13",
+      "title": "Profile and academic history",
+      "role": "Student",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/academic-history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/external-results"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        }
+      ],
+      "notes": "Verified historical document copies use /documents and do not generate official marks. Only published permitted copies are returned. CSV imports use their specific preview/job/confirm routes.",
+      "remaining": ""
+    },
+    {
+      "id": "PA01",
+      "title": "Parent home",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me/contexts"
+        },
+        {
+          "method": "PUT",
+          "path": "/me/context"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        },
+        {
+          "method": "GET",
+          "path": "/me/notifications"
+        }
+      ],
+      "notes": "Children are active PARENT contexts in /me/contexts. Set the selected school/role/child before requesting that child’s records.",
+      "remaining": ""
+    },
+    {
+      "id": "PA02",
+      "title": "My children",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me/contexts"
+        },
+        {
+          "method": "PUT",
+          "path": "/me/context"
+        }
+      ],
+      "notes": "Use contexts for child selection, including one global login across schools. Phone matching never merges accounts.",
+      "remaining": ""
+    },
+    {
+      "id": "PA03",
+      "title": "Child overview",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/my-classes"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/academic-history"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/external-results"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/documents/{id}/history"
+        }
+      ],
+      "notes": "Verified historical document copies use /documents and do not generate official marks. Only published permitted copies are returned. CSV imports use their specific preview/job/confirm routes.",
+      "remaining": ""
+    },
+    {
+      "id": "PA04",
+      "title": "Child timetable and calendar",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/timetable"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/schedule/day"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/calendar"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/examinations"
+        }
+      ],
+      "notes": "Daily projection is child/department/choice-scoped. Do not pass another child’s class ID.",
+      "remaining": ""
+    },
+    {
+      "id": "PA05",
+      "title": "Child learning",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/classes/{classId}/workspace"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/materials/{id}/history"
+        }
+      ],
+      "notes": "Class/subject material reads are scoped. Families see the accepted snapshot while the teacher edits the next draft; attachments require the same audience.",
+      "remaining": ""
+    },
+    {
+      "id": "PA06",
+      "title": "Assignment and feedback",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/assignments/{assignmentId}/submissions/{studentId}/history"
+        }
+      ],
+      "notes": "Read accepted versions/feedback only. Parents cannot submit or grade student work.",
+      "remaining": ""
+    },
+    {
+      "id": "PA07",
+      "title": "Child attendance",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/attendance"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/contacts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/attendance/registers/{register}/correction-history"
+        }
+      ],
+      "notes": "Show submitted attendance, missing-register coverage and official corrections for this selected pupil. Private teacher requests and office follow-up notes are not returned.",
+      "remaining": ""
+    },
+    {
+      "id": "PA08",
+      "title": "Child results",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/students/{studentId}/reports"
+        }
+      ],
+      "notes": "List published reports for the selected child and group by their snapshot session/term fields.",
+      "remaining": ""
+    },
+    {
+      "id": "PA09",
+      "title": "Child report card",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/reports/{reportId}/pdf"
+        }
+      ],
+      "notes": "Download the server PDF for the exact report revision; old issued revisions remain readable.",
+      "remaining": ""
+    },
+    {
+      "id": "PA10",
+      "title": "Child fees and payment history",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payments"
+        }
+      ],
+      "notes": "Requires payer permission. Pass selected child ID where the endpoint accepts studentId.",
+      "remaining": ""
+    },
+    {
+      "id": "PA11",
+      "title": "Invoice and payment",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/{invoiceId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/invoices/{invoiceId}/checkout"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/{invoiceId}/pdf"
+        }
+      ],
+      "notes": "Open the returned Paystack hosted URL in the app browser. App does not collect card/bank credentials.",
+      "remaining": ""
+    },
+    {
+      "id": "PA12",
+      "title": "Payment status and receipt",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payment-intents/{intentId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/payment-intents/{intentId}/verify"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/invoices/{invoiceId}"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/payments/{paymentId}/receipt"
+        }
+      ],
+      "notes": "A browser return is not payment confirmation. Poll/verify the intent and use the confirmed receipt. The provider webhook is backend-only.",
+      "remaining": ""
+    },
+    {
+      "id": "PA13",
+      "title": "Messages",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/contacts"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads"
+        }
+      ],
+      "notes": "Parent recipients are the current class lead or office. No public parent group or arbitrary teacher contact.",
+      "remaining": ""
+    },
+    {
+      "id": "PA14",
+      "title": "Private conversation",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/threads/{threadId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads/{threadId}/messages"
+        },
+        {
+          "method": "PUT",
+          "path": "/schools/{school}/threads/{threadId}/read"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/threads/{threadId}/close"
+        }
+      ],
+      "notes": "Keep selected child/school in navigation and requests. Current participant checks also apply to attachments.",
+      "remaining": ""
+    },
+    {
+      "id": "PA15",
+      "title": "School notices",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/notices/{id}"
+        }
+      ],
+      "notes": "",
+      "remaining": ""
+    },
+    {
+      "id": "PA16",
+      "title": "My complaints",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints"
+        }
+      ],
+      "notes": "List only the selected parent’s permitted child-linked cases, not school-wide complaint records.",
+      "remaining": ""
+    },
+    {
+      "id": "PA17",
+      "title": "Submit a complaint",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/schools/{school}/complaints"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/metadata"
+        }
+      ],
+      "notes": "Category determines permitted owner and scope. Upload private evidence only when its complaint resource can own it.",
+      "remaining": ""
+    },
+    {
+      "id": "PA18",
+      "title": "Complaint and resolution",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/{caseId}"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/complaints/{caseId}/replies"
+        },
+        {
+          "method": "POST",
+          "path": "/schools/{school}/complaints/{caseId}/status"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/complaints/{caseId}/history"
+        }
+      ],
+      "notes": "Resolve is a staff action; parent uses ACCEPT or REQUEST_REVIEW with the required reason. Private staff notes are never shown.",
+      "remaining": ""
+    },
+    {
+      "id": "PA19",
+      "title": "Profile and relationships",
+      "role": "Parent",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "GET",
+          "path": "/me/contexts"
+        }
+      ],
+      "notes": "School guardian contacts and global login contacts are separate records. Child/payer relationships are school-managed.",
+      "remaining": ""
+    },
+    {
+      "id": "SH01",
+      "title": "Sign in",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/auth/login"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/refresh"
+        },
+        {
+          "method": "GET",
+          "path": "/me/contexts"
+        },
+        {
+          "method": "GET",
+          "path": "/public/access-help"
+        }
+      ],
+      "notes": "No public signup. School hands over login ID and one-time activation instructions; normal login can also use a verified email.",
+      "remaining": ""
+    },
+    {
+      "id": "SH02",
+      "title": "Activate school account",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/auth/activation/review"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/password/setup"
+        }
+      ],
+      "notes": "Validate the school code/link, receive a short-lived flow token, set a private password and save the new personal recovery code.",
+      "remaining": ""
+    },
+    {
+      "id": "SH03",
+      "title": "Create or change password",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/auth/password/setup"
+        },
+        {
+          "method": "POST",
+          "path": "/me/password/change"
+        },
+        {
+          "method": "POST",
+          "path": "/me/reauthenticate"
+        },
+        {
+          "method": "POST",
+          "path": "/me/recovery-code/rotate"
+        }
+      ],
+      "notes": "Activation/recovery uses proof setup. An authenticated password change needs the current password and signs out old sessions.",
+      "remaining": ""
+    },
+    {
+      "id": "SH04",
+      "title": "Recover your account",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/auth/recovery/email"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/recovery/email/review"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/recovery/code/review"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/password/setup"
+        }
+      ],
+      "notes": "Email requests return a generic response. Email/saved proofs are single-use; successful reset revokes old sessions and outstanding proofs.",
+      "remaining": ""
+    },
+    {
+      "id": "SH05",
+      "title": "Choose school and role",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me/contexts"
+        },
+        {
+          "method": "PUT",
+          "path": "/me/context"
+        },
+        {
+          "method": "GET",
+          "path": "/schools/{school}/metadata"
+        }
+      ],
+      "notes": "List allowed server contexts; never invent role/child choices in the app. Context changes remain server-checked on subsequent requests.",
+      "remaining": ""
+    },
+    {
+      "id": "SH06",
+      "title": "Notifications",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me/notifications"
+        },
+        {
+          "method": "PUT",
+          "path": "/me/notifications/{notificationId}/read"
+        },
+        {
+          "method": "GET",
+          "path": "/me/notifications/{notificationId}/delivery"
+        },
+        {
+          "method": "POST",
+          "path": "/me/push-devices"
+        }
+      ],
+      "notes": "Push tickets/receipts do not prove a person read the message. Only in-app read acknowledgement changes app-read state.",
+      "remaining": ""
+    },
+    {
+      "id": "SH07",
+      "title": "Account settings",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/me"
+        },
+        {
+          "method": "PATCH",
+          "path": "/me"
+        },
+        {
+          "method": "POST",
+          "path": "/me/password/change"
+        },
+        {
+          "method": "POST",
+          "path": "/me/reauthenticate"
+        },
+        {
+          "method": "GET",
+          "path": "/me/sessions"
+        },
+        {
+          "method": "POST",
+          "path": "/me/sessions/revoke-others"
+        },
+        {
+          "method": "POST",
+          "path": "/me/recovery-code/rotate"
+        },
+        {
+          "method": "GET",
+          "path": "/me/notification-preferences"
+        },
+        {
+          "method": "PATCH",
+          "path": "/me/notification-preferences"
+        },
+        {
+          "method": "POST",
+          "path": "/me/email-change-requests"
+        },
+        {
+          "method": "POST",
+          "path": "/me/push-devices"
+        },
+        {
+          "method": "DELETE",
+          "path": "/me/push-devices/{deviceId}"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/logout"
+        },
+        {
+          "method": "GET",
+          "path": "/me/security-history"
+        }
+      ],
+      "notes": "Use secure device token storage in the shared frontend. Sensitive recovery/email/session changes require recent authentication when the endpoint declares it.",
+      "remaining": ""
+    },
+    {
+      "id": "SH08",
+      "title": "Verify email",
+      "role": "Shared",
+      "coverage": "MAPPED",
+      "endpoints": [
+        {
+          "method": "POST",
+          "path": "/me/email-change-requests"
+        },
+        {
+          "method": "POST",
+          "path": "/me/email-change-requests/resend"
+        },
+        {
+          "method": "POST",
+          "path": "/auth/email-verifications/confirm"
+        }
+      ],
+      "notes": "An email address changes login/recovery ownership only after the link is accepted. Merely entering it does not verify it.",
+      "remaining": ""
+    },
+    {
+      "id": "SH09",
+      "title": "Access help",
+      "role": "Shared",
+      "coverage": "POLICY_DEFERRED",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/public/access-help"
+        }
+      ],
+      "notes": "",
+      "remaining": "Assisted global-account recovery is intentionally unavailable until a verification policy is adopted. The agreed page is contact/help only; school staff cannot reset an active global identity."
+    }
+  ]
+}

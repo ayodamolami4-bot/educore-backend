@@ -1,0 +1,60 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+
+export async function learningTests(u) {
+ const {bootstrap,activate,login,choose,request,schoolPost,poll,passed,key,day}=u;
+ const setup=await bootstrap('Learning work');await activate(setup.slip);const school=setup.schoolId,admin=await login(setup.slip.loginId);await choose(admin,school,'PRINCIPAL');
+ const post=(path,body,extra={})=>schoolPost(admin,school,path,body,extra);
+ const call=async(method,path,body,token,version,expected=200,commandKey=key())=>(await request(`/api/v1/schools/${school}${path}`,{method,body,token,expected,headers:{'Idempotency-Key':commandKey,...(version===undefined?{}:{'If-Match':`"v${version}"`})}})).body;
+ const get=(path,token)=>call('GET',path,undefined,token);
+ const slip=(type,id)=>poll(async()=>{const r=await request(`/api/v1/schools/${school}/onboarding/${type}/${id}/activation-slips`,{method:'POST',body:{},token:admin.accessToken,headers:{'Idempotency-Key':key()},expected:null});return r.status===200?r.body:false;},'learning account provision');
+ const session=await post('/academic-sessions',{name:'Learning current session',startsOn:day(-40),endsOn:day(200)});
+ const term=await post('/terms',{sessionId:session.id,number:1,startsOn:day(-30),endsOn:day(60)});
+ const classA=await post('/classes',{sessionId:session.id,level:'JSS1',arm:'A'}),classB=await post('/classes',{sessionId:session.id,level:'JSS1',arm:'B'});
+ const english=await post('/subjects',{code:'ENGLISH',name:'English Language',core:true}),math=await post('/subjects',{code:'MATHEMATICS',name:'Mathematics',core:true});
+ const teacher=await post('/teachers',{fullName:'Learning Teacher',phone:'08112345678',eligibleLevels:['JSS1'],subjectIds:[english.id],assignments:[{classId:classA.id,subjectId:english.id,weeklyPeriods:4},{classId:classB.id,subjectId:english.id,weeklyPeriods:4}]});
+ const otherTeacher=await post('/teachers',{fullName:'Other Teacher',phone:'08122345678',eligibleLevels:['JSS1'],subjectIds:[math.id],assignments:[{classId:classA.id,subjectId:math.id,weeklyPeriods:4}]});
+ const children=[];for(const [i,c]of [classA,classB].entries())children.push(await post('/students',{admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'WORK-'+i,fullName:i?'Other Pupil':'Learning Pupil',dateOfBirth:'2013-02-03',sex:'FEMALE',classId:c.id,startsOn:day(-20),metadataVersion:1,fields:{},guardian:{fullName:i?'Other Parent':'Learning Parent',phone:i?'08142345678':'08132345678',relationship:'MOTHER',relationshipVerified:true,verificationReference:'Synthetic school visit'}},{expected:202}));
+ const teacherSlip=await slip('TEACHER',teacher.id);await activate(teacherSlip);const t=await login(teacherSlip.loginId);await choose(t,school,'TEACHER');
+ const otherSlip=await slip('TEACHER',otherTeacher.id);await activate(otherSlip);const t2=await login(otherSlip.loginId);await choose(t2,school,'TEACHER');
+ const studentSlip=await slip('STUDENT',children[0].id);await activate(studentSlip);const pupil=await login(studentSlip.loginId);await choose(pupil,school,'STUDENT');
+ const otherStudentSlip=await slip('STUDENT',children[1].id);await activate(otherStudentSlip);const otherPupil=await login(otherStudentSlip.loginId);await choose(otherPupil,school,'STUDENT');
+ const parentSlip=await slip('GUARDIAN',children[0].guardianId);await activate(parentSlip);const parent=await login(parentSlip.loginId);await choose(parent,school,'PARENT',children[0].id);
+ const assignmentScope=(await get('/teaching-assignments?classId='+classA.id,admin.accessToken)).items.find(x=>x.subjectId===english.id);
+ const data=Buffer.from('%PDF-1.7\nSynthetic protected school attachment\n%%EOF');
+ async function file(token,purpose,studentId,classId){
+  const meta=await call('POST','/files',{purpose,...(studentId?{studentId}:{}),...(classId?{classId}:{}),filename:'school-work.pdf',mediaType:'application/pdf',size:data.length,sha256:createHash('sha256').update(data).digest('hex')},token);
+  let r=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/files/${meta.id}/content`,{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/octet-stream','If-Match':'"v1"'},body:data});assert.equal(r.status,200);let saved=await r.json();assert.equal(saved.state,'READY');
+  r=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/files/${meta.id}/content`,{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/octet-stream','If-Match':'"v1"'},body:data});assert.equal(r.status,200);assert.equal((await r.json()).id,meta.id);return saved;
+ }
+ const handout=await file(t.accessToken,'ASSIGNMENT',undefined,classA.id);
+ const assignment=await call('POST','/assignments',{teachingAssignmentId:assignmentScope.id,termId:term.id,title:'Reading and written response',instructions:'Read the passage and explain your understanding in your own words.',dueAt:new Date(Date.now()+86400000).toISOString(),maximumScore:20,fileIds:[handout.id]},t.accessToken);
+ await call('GET',`/assignments/${assignment.id}`,undefined,pupil.accessToken,undefined,404);
+ await call('POST',`/assignments/${assignment.id}/publish`,undefined,t2.accessToken,assignment.version,404);
+ const published=await call('POST',`/assignments/${assignment.id}/publish`,undefined,t.accessToken,assignment.version);
+ assert.equal((await get('/assignments',pupil.accessToken)).items.length,1);assert.equal((await get('/assignments',otherPupil.accessToken)).items.length,0);
+ const handoutResponse=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/files/${handout.id}/content`,{headers:{Authorization:'Bearer '+pupil.accessToken}});assert.equal(handoutResponse.status,200);assert.deepEqual(Buffer.from(await handoutResponse.arrayBuffer()),data);
+ await call('GET',`/files/${handout.id}`,undefined,otherPupil.accessToken,undefined,404);
+ passed('published class assignments and encrypted handouts are limited to the eligible class and cannot be published by another subject teacher');
+ const answer=await file(pupil.accessToken,'SUBMISSION',children[0].id,classA.id);
+ let draft=await call('PUT',`/assignments/${assignment.id}/my-submission`,{responseText:'PRIVATE UNSUBMITTED LEARNER DRAFT',fileIds:[answer.id]},pupil.accessToken,1);
+ const teacherDraft=await get(`/assignments/${assignment.id}/submissions/${children[0].id}`,t.accessToken);assert.equal(teacherDraft.draftContentVisible,false);assert.ok(!JSON.stringify(teacherDraft).includes('PRIVATE UNSUBMITTED'));
+ await call('GET',`/files/${answer.id}`,undefined,t.accessToken,undefined,404);
+ await call('PUT',`/assignments/${assignment.id}/my-submission`,{responseText:'Parent impersonation attempt',fileIds:[]},parent.accessToken,1,403);
+ const submitKey=key();const submitted=await call('POST',`/assignments/${assignment.id}/submit`,undefined,pupil.accessToken,draft.version,200,submitKey);
+ assert.equal(submitted.state,'SUBMITTED');assert.deepEqual(await call('POST',`/assignments/${assignment.id}/submit`,undefined,pupil.accessToken,draft.version,200,submitKey),submitted);
+ await call('PUT',`/assignments/${assignment.id}/my-submission`,{responseText:'Attempt to replace accepted work',fileIds:[]},pupil.accessToken,submitted.version,409);
+ assert.equal((await get(`/assignments/${assignment.id}/submissions/${children[0].id}`,t.accessToken)).responseText,'PRIVATE UNSUBMITTED LEARNER DRAFT');
+ await call('GET',`/files/${answer.id}`,undefined,t.accessToken);
+ await call('GET',`/assignments/${assignment.id}/submissions/${children[1].id}`,undefined,parent.accessToken,undefined,404);
+ passed('learner drafts stay private, parents cannot submit for pupils, accepted responses are immutable and retries create one submission');
+ const returned=await call('POST',`/assignments/${assignment.id}/submissions/${children[0].id}/feedback`,{action:'RETURN',feedback:'Please expand the explanation with an example.',reason:'An additional example is required.',extraDeadline:new Date(Date.now()+172800000).toISOString()},t.accessToken,submitted.version);
+ assert.equal(returned.state,'RETURNED');draft=await call('PUT',`/assignments/${assignment.id}/my-submission`,{responseText:'Revised answer with the requested explanation and example.',fileIds:[answer.id]},pupil.accessToken,returned.version);
+ const revised=await call('POST',`/assignments/${assignment.id}/submit`,undefined,pupil.accessToken,draft.version);
+ await call('POST',`/assignments/${assignment.id}/submissions/${children[0].id}/feedback`,{action:'GRADE',score:21,feedback:'Invalid oversized score.'},t.accessToken,revised.version,422);
+ const graded=await call('POST',`/assignments/${assignment.id}/submissions/${children[0].id}/feedback`,{action:'GRADE',score:18.5,feedback:'Clear explanation and a relevant example.'},t.accessToken,revised.version);assert.equal(graded.state,'GRADED');assert.equal(graded.score,18.5);
+ const parentView=await get(`/assignments/${assignment.id}/submissions/${children[0].id}`,parent.accessToken);assert.equal(parentView.score,18.5);
+ const history=await get(`/assignments/${assignment.id}/submissions/${children[0].id}/history`,pupil.accessToken);assert.equal(history.revisions.length,2);assert.equal(history.revisions[0].snapshot.responseText,'PRIVATE UNSUBMITTED LEARNER DRAFT');assert.equal(history.reviews.length,2);
+ passed('returned work gets an explicit extension, feedback respects score limits and accepted submission/review history remains intact');
+ return {school,admin,teacher:t,otherTeacher:t2,pupil,otherPupil,parent,children,classA,classB,english,math,term,session,assignment};
+}

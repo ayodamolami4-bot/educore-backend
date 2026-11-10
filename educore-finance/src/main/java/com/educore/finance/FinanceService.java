@@ -13,14 +13,15 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class FinanceService {
-  private final JdbcTemplate db;
-  private final Commands commands;
-  private final Json json;
-  private final Crypto crypto;
-  private final ServiceHttp http;
-  private final Outbox outbox;
-  private final Paystack paystack;
-  private final String academics;
+  final JdbcTemplate db;
+  final Commands commands;
+  final Json json;
+  final Crypto crypto;
+  final ServiceHttp http;
+  final Outbox outbox;
+  final Paystack paystack;
+  final PaymentSettingsService paymentSettings;
+  final String academics;
 
   public FinanceService(
       JdbcTemplate db,
@@ -30,6 +31,7 @@ public class FinanceService {
       ServiceHttp http,
       Outbox outbox,
       Paystack paystack,
+      PaymentSettingsService paymentSettings,
       @Value("${educore.academics-url}") String academics) {
     this.db = db;
     this.commands = commands;
@@ -38,16 +40,17 @@ public class FinanceService {
     this.http = http;
     this.outbox = outbox;
     this.paystack = paystack;
+    this.paymentSettings = paymentSettings;
     this.academics = academics;
   }
 
-  private Map<String, Object> one(String sql, Object... args) {
+  Map<String, Object> one(String sql, Object... args) {
     var rows = db.queryForList(sql, args);
     if (rows.isEmpty()) throw fail(404, "NOT_FOUND", "The financial record is unavailable.");
     return rows.get(0);
   }
 
-  private Object child(Actor a, UUID school, UUID student) {
+  Object child(Actor a, UUID school, UUID student) {
     var context = a.school(school, "PRINCIPAL", "ACCOUNTS", "PARENT");
     UUID guardian = null;
     if ("PARENT".equals(context.role())) {
@@ -61,7 +64,7 @@ public class FinanceService {
         Object.class);
   }
 
-  private Map<String, Object> invoice(Actor a, UUID school, UUID id) {
+  Map<String, Object> invoice(Actor a, UUID school, UUID id) {
     var row = one("select * from invoices where school_id=? and id=?", school, id);
     child(a, school, (UUID) row.get("student_id"));
     return row;
@@ -141,9 +144,21 @@ public class FinanceService {
           422, "INVALID_AMOUNT", "Use a positive amount in kobo within the supported limit.");
   }
 
+  static long balance(Map<String, Object> i) {
+    return Math.max(
+        0,
+        ((Number) i.get("total_minor")).longValue()
+            - ((Number) i.get("credit_minor")).longValue()
+            - ((Number) i.get("paid_minor")).longValue()
+            + ((Number) i.get("refunded_minor")).longValue());
+  }
+
   private Object wire(Map<String, Object> i) {
     long total = ((Number) i.get("total_minor")).longValue(),
-        paid = ((Number) i.get("paid_minor")).longValue();
+        paid =
+            ((Number) i.get("paid_minor")).longValue()
+                - ((Number) i.get("refunded_minor")).longValue();
+    long credits = ((Number) i.get("credit_minor")).longValue(), charge = total - credits;
     return map(
         "id",
         i.get("id"),
@@ -163,10 +178,20 @@ public class FinanceService {
         total,
         "paidMinor",
         paid,
+        "grossPaidMinor",
+        i.get("paid_minor"),
+        "creditMinor",
+        credits,
+        "refundedMinor",
+        i.get("refunded_minor"),
+        "chargeMinor",
+        charge,
+        "creditBalanceMinor",
+        Math.max(0, paid - charge),
         "balanceMinor",
-        total - paid,
+        Math.max(0, charge - paid),
         "status",
-        paid == total ? "PAID" : paid == 0 ? "UNPAID" : "PART_PAID",
+        paid >= charge ? "PAID" : paid == 0 ? "UNPAID" : "PART_PAID",
         "dueOn",
         i.get("due_on"),
         "partialAllowed",
@@ -232,9 +257,7 @@ public class FinanceService {
         () -> {
           var i = one("select * from invoices where school_id=? and id=? for update", school, id);
           expectVersion(version, ((Number) i.get("version")).longValue());
-          long balance =
-              ((Number) i.get("total_minor")).longValue()
-                  - ((Number) i.get("paid_minor")).longValue();
+          long balance = balance(i);
           if (b.amountMinor() > balance
               || !Boolean.TRUE.equals(i.get("partial_allowed")) && b.amountMinor() != balance)
             throw fail(
@@ -320,31 +343,7 @@ public class FinanceService {
   }
 
   public Object setting(Actor a, UUID school, String subaccount, String key) {
-    a.school(school, "PRINCIPAL");
-    if (subaccount == null || !subaccount.matches("ACCT_[A-Za-z0-9]{4,70}"))
-      throw fail(
-          422, "INVALID_SUBACCOUNT", "Provide the school's approved Paystack test subaccount.");
-    return commands.execute(
-        a.accountId().toString(),
-        school.toString(),
-        "payment-settings",
-        key,
-        map("subaccount", subaccount),
-        () -> {
-          db.update(
-              "insert into school_payment_settings(school_id,paystack_subaccount) values (?,?) on conflict(school_id) do update set paystack_subaccount=excluded.paystack_subaccount,version=school_payment_settings.version+1",
-              school,
-              subaccount);
-          commands.audit(
-              school,
-              a.accountId(),
-              "PAYMENT_SETTINGS_UPDATED",
-              "SCHOOL",
-              school,
-              "Approved test settlement configuration",
-              Map.of());
-          return map("schoolId", school, "testMode", true, "configured", true);
-        });
+    return paymentSettings.create(a, school, subaccount, key);
   }
 
   public record Checkout(long amountMinor, String email) {}
@@ -366,42 +365,41 @@ public class FinanceService {
                   "select * from invoices where school_id=? and id=? for update",
                   school,
                   invoiceId);
-          long balance =
-              ((Number) i.get("total_minor")).longValue()
-                  - ((Number) i.get("paid_minor")).longValue();
+          long balance = balance(i);
           if (b.amountMinor() > balance
               || !Boolean.TRUE.equals(i.get("partial_allowed")) && b.amountMinor() != balance)
             throw fail(
                 422,
                 "PAYMENT_AMOUNT",
                 "Choose an amount permitted by the current invoice balance.");
-          var settings =
-              db.queryForList(
-                  "select paystack_subaccount from school_payment_settings where school_id=?",
-                  school);
-          if (settings.isEmpty())
-            throw fail(
-                503,
-                "SCHOOL_SETTLEMENT_NOT_CONFIGURED",
-                "The school has not configured its approved Paystack test settlement account.");
+          var settings = paymentSettings.checkout(school);
+          Object payerSnapshot =
+              http.post(
+                  academics,
+                  "/internal/finance-context",
+                  map("schoolId", school, "actor", a, "studentId", i.get("student_id")),
+                  Object.class);
           UUID id = UUID.randomUUID();
           String reference = "EC-" + id;
           db.update(
-              "insert into payment_intents(id,school_id,invoice_id,actor_id,reference,amount_minor,email_cipher) values (?,?,?,?,?,?,?)",
+              "insert into payment_intents(id,school_id,invoice_id,actor_id,reference,amount_minor,email_cipher,settlement_subaccount,settlement_settings_version,payer_snapshot) values (?,?,?,?,?,?,?,?,?,?::jsonb)",
               id,
               school,
               invoiceId,
               a.accountId(),
               reference,
               b.amountMinor(),
-              crypto.seal(email));
+              crypto.seal(email),
+              settings.get("paystack_subaccount"),
+              settings.get("version"),
+              json.write(payerSnapshot));
           try {
             JsonNode response =
                 paystack.initialize(
                     reference,
                     b.amountMinor(),
                     email,
-                    (String) settings.get(0).get("paystack_subaccount"));
+                    (String) settings.get("paystack_subaccount"));
             String authorization = response.path("authorization_url").asText();
             if (!reference.equals(response.path("reference").asText())
                 || !authorization.startsWith("https://checkout.paystack.com/"))
@@ -491,7 +489,9 @@ public class FinanceService {
           var i = one("select * from invoices where id=? for update", locked.get("invoice_id"));
           long amount = result.path("amount").asLong(-1),
               expected = ((Number) locked.get("amount_minor")).longValue();
-          if (!reference.equals(result.path("reference").asText())
+          if (!result.path("amount").isIntegralNumber()
+              || !result.path("amount").canConvertToLong()
+              || !reference.equals(result.path("reference").asText())
               || !"NGN".equals(result.path("currency").asText())
               || amount != expected
               || !"test".equals(result.path("domain").asText())) {
@@ -501,11 +501,7 @@ public class FinanceService {
                 locked.get("id"));
             return null;
           }
-          long
-              balance =
-                  ((Number) i.get("total_minor")).longValue()
-                      - ((Number) i.get("paid_minor")).longValue(),
-              allocated = Math.min(balance, amount);
+          long balance = balance(i), allocated = Math.min(balance, amount);
           record(
               i,
               "PAYSTACK",

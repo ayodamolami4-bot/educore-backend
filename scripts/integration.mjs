@@ -2,13 +2,29 @@ import assert from 'node:assert/strict';
 import { createServer as httpServer } from 'node:http';
 import { createServer as tcpServer } from 'node:net';
 import { randomBytes, randomUUID, createHmac } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, createWriteStream } from 'node:fs';
 import { once } from 'node:events';
 import { resolve } from 'node:path';
+import { extendedTests } from './extended-tests.mjs';
+import { academicTests } from './academic-tests.mjs';
+import { learningTests } from './learning-tests.mjs';
+import { planningTests } from './planning-tests.mjs';
+import { financeTests } from './finance-tests.mjs';
+import { communicationTests } from './communication-tests.mjs';
+import { deliveryTests } from './delivery-tests.mjs';
+import { importTests } from './import-tests.mjs';
+import { rosterTests } from './roster-tests.mjs';
+import { workspaceTests } from './workspace-tests.mjs';
+import { resourceTests } from './resource-tests.mjs';
+import { attendanceReviewTests } from './attendance-review-tests.mjs';
+import { financeWorkspaceTests } from './finance-workspace-tests.mjs';
+import { administrationControlTests } from './administration-control-tests.mjs';
+import { reportControlTests } from './report-control-tests.mjs';
+import { deliveryControlTests } from './delivery-control-tests.mjs';
 
 // This test uses real PostgreSQL and real HTTP between the five programs.
-// Only the external Paystack and SMTP providers are local test doubles.
+// Only external Paystack, SMTP and Expo push providers are local test doubles.
 const root = resolve(import.meta.dirname, '..');
 const runtime = { ...process.env, ...(process.env.EDUCORE_TEST_CONFIG ? JSON.parse(readFileSync(process.env.EDUCORE_TEST_CONFIG, 'utf8')) : {}) };
 const names = ['identity', 'academics', 'finance', 'communication'];
@@ -19,7 +35,7 @@ for (const name of names) {
   for (const suffix of ['DATABASE_URL', 'DATABASE_USER', 'DATABASE_PASSWORD']) assert.ok(runtime[name.toUpperCase() + '_' + suffix], `Configure ${name.toUpperCase()}_${suffix}`);
 }
 const temp = resolve(root, '.dev'); mkdirSync(temp, { recursive: true });
-const checks = []; const services = []; const smtpMessages = []; const transactions = new Map();
+const checks = []; const services = []; const smtpMessages = []; const transactions = new Map(); const settlements = new Map(); const refunds=new Map(); const pushMessages=[]; const pushTickets=new Map(); const initializationReplies=new Map();
 const providerKey = 'sk_test_' + randomBytes(24).toString('hex');
 const passed = name => { checks.push(name); console.log('PASS', name); };
 const pause = ms => new Promise(r => setTimeout(r, ms));
@@ -35,13 +51,31 @@ const provider = httpServer(async (req,res) => {
       let raw = ''; for await (const chunk of req) raw += chunk;
       const body = JSON.parse(raw); assert.equal(body.currency,'NGN'); assert.match(body.subaccount,/^ACCT_/); assert.ok(Number(body.amount)>0);
       transactions.set(body.reference,{ ...body, amount:Number(body.amount), status:'pending', domain:'test' });
+      if(initializationReplies.has(body.email)){res.writeHead(200,{'Content-Type':'application/json'}).end(initializationReplies.get(body.email));return;}
       data = { reference:body.reference, authorization_url:'https://checkout.paystack.com/' + body.reference, access_code:'synthetic-test-code' };
     } else if (req.method === 'GET' && req.url.startsWith('/transaction/verify/')) {
       const reference = req.url.slice('/transaction/verify/'.length); data = transactions.get(reference);
       if (!data) {res.writeHead(404).end(); return;}
+    } else if(req.method==='GET'&&req.url.startsWith('/settlement?')){
+      const url=new URL(req.url,'http://localhost');data=(settlements.get(url.searchParams.get('subaccount'))||[]).map(({transactions,...x})=>x);
+    } else if(req.method==='GET'&&/^\/settlement\/\d+\/transactions/.test(req.url)){
+      const id=req.url.split('/')[2];data=[...settlements.values()].flat().find(x=>String(x.id)===id)?.transactions||[];
+    } else if(req.method==='GET'&&req.url.startsWith('/refund/')){
+      data=refunds.get(req.url.slice('/refund/'.length));if(!data){res.writeHead(404).end();return;}
     } else {res.writeHead(404).end(); return;}
     res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({status:true,data}));
   } catch {res.writeHead(500,{'Content-Type':'application/json'}).end(JSON.stringify({status:false}));}
+});
+
+const pushProvider=httpServer(async(req,res)=>{
+ try{let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);let data;
+ if(req.url==='/push/send'){
+   assert.equal(body.title,'EduCore');assert.equal(body.body,'You have a school update. Open EduCore to view it.');
+   pushMessages.push(body);const id=randomUUID();pushTickets.set(id,body.to.includes('DeadDevice')?{status:'error',details:{error:'DeviceNotRegistered'}}:body.to.includes('RetryDevice')&&pushMessages.filter(p=>p.to===body.to&&p.data.notificationId===body.data.notificationId).length===1?{status:'error',details:{error:'MessageTooBig'}}:{status:'ok'});if(body.to.includes('PendingReceiptDevice'))pushTickets.delete(id);data={status:'ok',id};
+ }else if(req.url==='/push/getReceipts'){data=Object.fromEntries(body.ids.filter(id=>pushTickets.has(id)).map(id=>[id,pushTickets.get(id)]));}
+ else {res.writeHead(404).end();return;}
+ res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({data}));
+ }catch{res.writeHead(500).end();}
 });
 
 const smtp = tcpServer(socket => {
@@ -73,15 +107,16 @@ async function request(path,{method='GET',body,token,headers={},expected=200,bas
 }
 async function poll(fn,label,attempts=60){let last;for(let i=0;i<attempts;i++){last=await fn();if(last)return last;await pause(500);}throw new Error('Timed out: '+label);}
 async function start() {
-  provider.listen(0,'127.0.0.1');smtp.listen(0,'127.0.0.1');await Promise.all([once(provider,'listening'),once(smtp,'listening')]);
+  provider.listen(0,'127.0.0.1');smtp.listen(0,'127.0.0.1');pushProvider.listen(0,'127.0.0.1');await Promise.all([once(provider,'listening'),once(smtp,'listening'),once(pushProvider,'listening')]);
   runtime.PAYSTACK_SECRET_KEY=providerKey;runtime.PAYSTACK_BASE_URL=`http://127.0.0.1:${provider.address().port}`;
+  runtime.EDUCORE_PUSH_ENABLED='true';runtime.EDUCORE_EXPO_BASE_URL=`http://127.0.0.1:${pushProvider.address().port}`;runtime.EDUCORE_PUSH_RECEIPT_DELAY_MS='0';
   runtime.EDUCORE_EMAIL_ENABLED='true';runtime.SMTP_HOST='127.0.0.1';runtime.SMTP_PORT=String(smtp.address().port);runtime.SMTP_AUTH='false';runtime.SMTP_TLS='false';runtime.SMTP_FROM='no-reply@example.invalid';
   for(const module of [...names.map(n=>'educore-'+n),'api-gateway']) {
     const config=readFileSync(resolve(root,module,'src/main/resources/application.properties'),'utf8');
     const required=[...config.matchAll(/\$\{([A-Z_]+)/g)].map(m=>m[1]);const env={...process.env};
     for(const name of Object.keys(env))if(/_(?:DATABASE_(?:URL|USER|PASSWORD)|RESULT_ENCRYPTION_KEY|TO_[A-Z_]+_KEY)$/.test(name)||pairs.some(p=>name===p+'_KEY'))delete env[name];
     for(const variable of required)if(runtime[variable]!==undefined)env[variable]=runtime[variable];
-    env.EDUCORE_OUTBOX_DELAY_MS='500';env.EDUCORE_MAIL_DELAY_MS='500';env.EDUCORE_PAYMENT_VERIFICATION_DELAY_MS='1000';
+    env.EDUCORE_DELIVERY_DELAY_MS='500';env.EDUCORE_PUSH_DELAY_MS='500';env.EDUCORE_OUTBOX_DELAY_MS='500';env.EDUCORE_MAIL_DELAY_MS='500';env.EDUCORE_PAYMENT_VERIFICATION_DELAY_MS='1000';
     for(const variable of Object.keys(env))if(variable.endsWith('_DATABASE_URL')) {
       env[variable]=env[variable].replace('-pooler.','.');
     }
@@ -117,7 +152,7 @@ async function test(){
  const english=await schoolPost(admin,school,'/subjects',{code:'ENGLISH',name:'English Language',core:true});const math=await schoolPost(admin,school,'/subjects',{code:'MATHEMATICS',name:'Mathematics',core:true});
  const teacher=await schoolPost(admin,school,'/teachers',{fullName:'Ibrahim Demo',phone:'08022345678',eligibleLevels:['JSS1'],subjectIds:[english.id,math.id],assignments:[{classId:armA.id,subjectId:english.id,weeklyPeriods:2},{classId:armB.id,subjectId:math.id,weeklyPeriods:1}]});
  const teacherTwo=await schoolPost(admin,school,'/teachers',{fullName:'Bisi Demo',phone:'08032345678',eligibleLevels:['JSS1'],subjectIds:[math.id],assignments:[{classId:armA.id,subjectId:math.id,weeklyPeriods:1}]});
- const enrolBody={admissionNumber:'SMK-001',fullName:'Zainab Demo',dateOfBirth:'2010-06-12',sex:'FEMALE',classId:armA.id,startsOn:day(-20),metadataVersion:1,fields:{homeAddress:'Fictional test address'},guardian:{fullName:'Ada Demo',phone:'08042345678',relationshipVerified:true,verificationReference:'Synthetic school verification',relationship:'Mother'}};
+ const enrolBody={admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'SMK-001',fullName:'Zainab Demo',dateOfBirth:'2010-06-12',sex:'FEMALE',classId:armA.id,startsOn:day(-20),metadataVersion:1,fields:{homeAddress:'Fictional test address'},guardian:{fullName:'Ada Demo',phone:'08042345678',relationshipVerified:true,verificationReference:'Synthetic school verification',relationship:'Mother'}};
  const enrolKey=key();const students=await Promise.all([1,2].map(()=>schoolPost(admin,school,'/students',enrolBody,{headers:{'Idempotency-Key':enrolKey},expected:202})));assert.equal(students[0].id,students[1].id);const student=students[0];
  await schoolPost(admin,school,'/students',{...enrolBody,fullName:'Different Demo'},{headers:{'Idempotency-Key':enrolKey},expected:409});passed('concurrent enrolment retries create one student and retain the original result');
  await poll(async()=>{const p=(await request(`/api/v1/schools/${school}/students/${student.id}`,{token:admin.accessToken})).body;return p.onboardingStatus==='ACCOUNTS_PROVISIONED';},'student and guardian account provisioning');
@@ -125,14 +160,14 @@ async function test(){
  const parentView=(await request(`/api/v1/schools/${school}/students/${student.id}`,{token:parent.accessToken})).body;assert.equal(parentView.id,student.id);assert.ok(!('guardians' in parentView));
  await choose(parent,school,'PRINCIPAL',student.id).then(()=>{throw new Error('Parent granted principal role');},()=>{});
  await request('/api/v1/me/context',{method:'PUT',token:parent.accessToken,body:{schoolId:school,role:'PRINCIPAL'},expected:403});passed('automatic guardian access does not expose staff fields or grant administrator privileges');
- const secondChild=await schoolPost(admin,school,'/students',{...enrolBody,admissionNumber:'SMK-002',fullName:'Mariam Demo',guardian:{existingGuardianId:student.guardianId,relationship:'Mother'}},{expected:202});
+ const secondChild=await schoolPost(admin,school,'/students',{...enrolBody,admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'SMK-002',fullName:'Mariam Demo',guardian:{existingGuardianId:student.guardianId,relationship:'Mother'}},{expected:202});
  await poll(async()=>{const c=(await request('/api/v1/me/contexts',{token:parent.accessToken})).body;return c.items.filter(i=>i.role==='PARENT').length===2;},'existing guardian linked to second child');
  await choose(parent,school,'PARENT',secondChild.id);await request(`/api/v1/schools/${school}/students/${student.id}`,{token:parent.accessToken,expected:404});await choose(parent,school,'PARENT',student.id);passed('a second child reuses the parent account and child selection is enforced');
  const otherRecovery=await activate(other.slip);const otherAdmin=await login(other.slip.loginId);await choose(otherAdmin,other.schoolId,'PRINCIPAL');
  const otherSession=await schoolPost(otherAdmin,other.schoolId,'/academic-sessions',{name:'Other school session',startsOn:day(-120),endsOn:day(240)});
  const otherTerm=await schoolPost(otherAdmin,other.schoolId,'/terms',{sessionId:otherSession.id,number:1,startsOn:day(-120),endsOn:day(90)});
  const otherClass=await schoolPost(otherAdmin,other.schoolId,'/classes',{sessionId:otherSession.id,level:'SSS1',arm:'A'});
- const crossSchoolChild=await schoolPost(otherAdmin,other.schoolId,'/students',{...enrolBody,admissionNumber:'SMK-001',fullName:'Tunde Demo',classId:otherClass.id,department:'SCIENCE',guardian:{fullName:'Ada Demo',phone:'08052345678',existingLoginId:parentSlip.loginId,relationshipVerified:true,verificationReference:'Synthetic verified existing parent',relationship:'Mother'}},{expected:202});
+ const crossSchoolChild=await schoolPost(otherAdmin,other.schoolId,'/students',{...enrolBody,admissionType:'LEGACY_MIGRATION',legacyReference:'Synthetic existing pupil migration',admissionNumber:'SMK-001',fullName:'Tunde Demo',classId:otherClass.id,department:'SCIENCE',guardian:{fullName:'Ada Demo',phone:'08052345678',existingLoginId:parentSlip.loginId,relationshipVerified:true,verificationReference:'Synthetic verified existing parent',relationship:'Mother'}},{expected:202});
  await poll(async()=>{const contexts=(await request('/api/v1/me/contexts',{token:parent.accessToken})).body.items;return contexts.some(c=>c.schoolId===other.schoolId&&c.childId===crossSchoolChild.id);},'global parent linked to another school');
  const stillSame=await login(parentSlip.loginId);assert.equal(stillSame.accountId,parent.accountId);await choose(parent,other.schoolId,'PARENT',crossSchoolChild.id);await request(`/api/v1/schools/${other.schoolId}/students/${crossSchoolChild.id}`,{token:parent.accessToken});
  await schoolPost(otherAdmin,other.schoolId,`/students/${crossSchoolChild.id}/guardians/${crossSchoolChild.guardianId}/revoke`,{reason:'Synthetic school relationship revocation'});
@@ -183,7 +218,14 @@ async function test(){
  const parentCase=(await request(`/api/v1/schools/${school}/complaints/${caseCreated.id}`,{token:parent.accessToken})).body;assert.ok(parentCase.entries.every(e=>e.visibility==='PUBLIC'));assert.ok(!JSON.stringify(parentCase).includes('STAFF ONLY'));
  await schoolPost(parent,school,`/complaints/${caseCreated.id}/replies`,{body:'Attempt staff note',internal:true},{headers:{'If-Match':`"v${parentCase.version}"`},expected:403});
  const replied=await schoolPost(admin,school,`/complaints/${caseCreated.id}/replies`,{body:'The school has reviewed the fictional record.',internal:false},{headers:{'If-Match':`"v${internal.version}"`}});assert.ok(replied.firstResponseAt);
- const closed=await schoolPost(admin,school,`/complaints/${caseCreated.id}/close`,{reason:'The fictional attendance query has been resolved.'},{headers:{'If-Match':`"v${replied.version}"`}});assert.equal(closed.state,'CLOSED');passed('complaint deadlines use teaching days and staff-only notes stay private');
+ const resolved=await schoolPost(admin,school,`/complaints/${caseCreated.id}/status`,{action:'RESOLVE',reason:'The fictional attendance query has been resolved.'},{headers:{'If-Match':`"v${replied.version}"`}});const closed=await schoolPost(parent,school,`/complaints/${caseCreated.id}/status`,{action:'ACCEPT',reason:'Parent accepts the documented fictional resolution.'},{headers:{'If-Match':`"v${resolved.version}"`}});assert.equal(closed.state,'CLOSED');passed('complaint deadlines use teaching days and staff-only notes stay private');
+ const help=(await request('/api/v1/public/access-help')).body;assert.equal(help.assistedRecoveryAvailable,false);
+ await request('/api/v1/auth/recovery/code/review',{method:'POST',body:{loginId:parentSlip.loginId,recoveryCode:'SYNTHETIC-LOST-OR-INCORRECT-PROOF'},expected:401});
+ const knownRecovery=(await request('/api/v1/auth/recovery/email',{method:'POST',body:{identifier:parentSlip.loginId}})).body;
+ const unknownRecovery=(await request('/api/v1/auth/recovery/email',{method:'POST',body:{identifier:'missing-'+key()+'@example.invalid'}})).body;const {requestId:knownRequestId,...knownMessage}=knownRecovery,{requestId:unknownRequestId,...unknownMessage}=unknownRecovery;assert.ok(knownRequestId&&unknownRequestId);assert.deepEqual(knownMessage,unknownMessage);
+ await schoolPost(admin,school,`/onboarding/GUARDIAN/${student.guardianId}/activation-slips`,{},{expected:409});
+ await request('/api/v1/me',{token:parent.accessToken});await login(parentSlip.loginId);
+ passed('lost private proofs leave access help available without disclosing account existence or allowing a school activation slip to reset an active global account');
  const recent=(await request('/api/v1/me/reauthenticate',{method:'POST',token:parent.accessToken,body:{currentPassword:password}})).body;
  const emailAddress='synthetic-'+key()+'@example.invalid';await request('/api/v1/me/email-change-requests',{method:'POST',token:parent.accessToken,headers:{'Idempotency-Key':key()},body:{email:emailAddress,recentAuthToken:recent.recentAuthToken},expected:202});
  assert.equal((await request('/api/v1/me',{token:parent.accessToken})).body.verifiedEmail,undefined);
@@ -197,6 +239,6 @@ async function test(){
  await request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_COMMUNICATION_KEY},body:{},expected:401});passed('a communication receiver credential cannot impersonate academics to identity');
 }
 
-try {await start();await test();writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
+try {await start();await test();const academicsSql=sql=>{const url=new URL(runtime.ACADEMICS_DATABASE_URL.replace(/^jdbc:/,''));return execFileSync('psql',['-X','-v','ON_ERROR_STOP=1','-q','-A','-t','-c',sql],{encoding:'utf8',env:{...process.env,PGHOST:url.hostname,PGPORT:url.port||'5432',PGDATABASE:decodeURIComponent(url.pathname.slice(1)),PGUSER:runtime.ACADEMICS_DATABASE_USER,PGPASSWORD:runtime.ACADEMICS_DATABASE_PASSWORD}});};const helpers={academicsSql,bootstrap,activate,login,choose,request,schoolPost,schoolSlip,poll,passed,key,day,transactions,settlements,refunds,smtpMessages,pushMessages,initializationReplies,identityEvent:(eventId,kind,payload,expected)=>request('/internal/events',{base:'http://127.0.0.1:8091',method:'POST',headers:{'X-Service-Name':'academics','X-Service-Key':runtime.ACADEMICS_TO_IDENTITY_KEY},body:{eventId,kind,payload},expected})};await extendedTests(helpers);const academic=await academicTests(helpers);const learning=await learningTests(helpers);await planningTests(helpers,learning);const finance=await financeTests(helpers,learning);await communicationTests(helpers,finance);const delivery=await deliveryTests(helpers,finance);await importTests(helpers,finance);await rosterTests(helpers,finance);await workspaceTests(helpers);await resourceTests(helpers);await attendanceReviewTests(helpers);await financeWorkspaceTests(helpers);await administrationControlTests(helpers);await reportControlTests(helpers,academic,finance);await deliveryControlTests(helpers,finance,delivery);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:true,checks,total:checks.length},null,2));console.log(`Integration checks passed: ${checks.length}`);}
 catch(error){console.error(error.message);writeFileSync(resolve(temp,'integration-results.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));for(const {module} of services){let log='';try{log=readFileSync(resolve(temp,module+'-integration.log'),'utf8').split('\n').filter(l=>/Caused by:|ERROR|APPLICATION FAILED/.test(l)).slice(-8).join('\n');}catch{}if(log)console.error(module+' diagnostics:\n'+log);}process.exitCode=1;}
-finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();smtp.close();}
+finally {for(const {processHandle} of services)processHandle.kill('SIGTERM');await pause(1000);for(const {processHandle,log} of services){if(processHandle.exitCode===null)processHandle.kill('SIGKILL');log.end();}provider.closeAllConnections();provider.close();pushProvider.closeAllConnections();pushProvider.close();smtp.close();}

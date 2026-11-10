@@ -79,4 +79,43 @@ class PlatformTest {
     assertThrows(Api.Failure.class, () -> Api.email("ayo@"));
     assertEquals("ayo@example.invalid", Api.email(" AYO@example.invalid "));
   }
+
+  @Test
+  void protectedSizesRejectOverflowAndTruncatedOrTamperedData() {
+    assertEquals(28, Crypto.protectedSize(0));
+    assertEquals(Crypto.MAX_PLAIN_BYTES + 28, Crypto.protectedSize(Crypto.MAX_PLAIN_BYTES));
+    for (int invalid : new int[] {-1, Crypto.MAX_PLAIN_BYTES + 1, Integer.MAX_VALUE})
+      assertThrows(IllegalArgumentException.class, () -> Crypto.protectedSize(invalid));
+    var crypto = new Crypto(Base64.getEncoder().encodeToString(new byte[32]));
+    assertArrayEquals(new byte[0], crypto.openBytes(crypto.sealBytes(new byte[0])));
+    assertThrows(IllegalStateException.class, () -> crypto.openBytes(new byte[27]));
+    assertThrows(IllegalStateException.class, () -> crypto.open("not-base64"));
+    assertThrows(
+        IllegalStateException.class,
+        () -> crypto.open(Base64.getEncoder().encodeToString(new byte[12])));
+    byte[] sealed = crypto.sealBytes(new byte[] {1, 2, 3});
+    sealed[sealed.length - 1] ^= 1;
+    assertThrows(IllegalStateException.class, () -> crypto.openBytes(sealed));
+  }
+
+  @Test
+  void existingNonceCiphertextEnvelopeRemainsReadable() throws Exception {
+    byte[] key = new byte[32], nonce = new byte[12];
+    new java.security.SecureRandom().nextBytes(nonce);
+    var cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+    cipher.init(
+        javax.crypto.Cipher.ENCRYPT_MODE,
+        new javax.crypto.spec.SecretKeySpec(key, "AES"),
+        new javax.crypto.spec.GCMParameterSpec(128, nonce));
+    byte[] message =
+        "Previously stored private record".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    byte[] encrypted = cipher.doFinal(message);
+    var envelope =
+        java.nio.ByteBuffer.allocate(12 + encrypted.length).put(nonce).put(encrypted).array();
+    var crypto = new Crypto(Base64.getEncoder().encodeToString(key));
+    assertArrayEquals(message, crypto.openBytes(envelope));
+    assertEquals(
+        "Previously stored private record",
+        crypto.open(Base64.getEncoder().encodeToString(envelope)));
+  }
 }

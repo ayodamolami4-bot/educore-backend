@@ -1,7 +1,7 @@
 name: Backend checks
 on:
   push:
-    branches: [main, backend/foundation]
+    branches: [main, 'backend/**']
   pull_request:
     branches: [main]
 permissions:
@@ -10,6 +10,16 @@ concurrency:
   group: backend-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  bootstrap-portability:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Verify local setup file safety on Windows
+        run: node --test scripts/*.test.mjs
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -40,7 +50,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client fonts-dejavu-core
       - name: Generate isolated test credentials and databases
         env:
           POSTGRES_ADMIN_PASSWORD: educore_ci_only
@@ -51,6 +61,9 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw -B spotless:check verify
+          python3 scripts/check-api-catalogue.py
+          python3 -m unittest discover -s scripts -p '*_test.py'
+          node --test scripts/*.test.mjs
       - name: Run five-service PostgreSQL integration tests
         env:
           EDUCORE_TEST_CONFIG: .dev/local-runtime.json
@@ -64,10 +77,12 @@ jobs:
           POSTGRES_PORT: '55432'
           EDUCORE_MAIL_DELAY_MS: '1000'
           EDUCORE_CONTAINER_TEST: 'true'
+          EDUCORE_DEMO_CHECK: 'true'
         run: |
           docker compose up -d --wait --wait-timeout 180
           node scripts/bootstrap.mjs CONTAINER "EduCore Container Test School" "Demo Principal" "08012345678"
           node scripts/container-check.mjs
+          node scripts/demo-seed-check.mjs
       - name: Container diagnostics on failure
         if: failure()
         run: docker compose logs --tail 250

@@ -36,6 +36,32 @@ public class AcademicController {
     return timetable.addLesson(Actor.current(), s, p, b, Api.version(version), key);
   }
 
+  @GetMapping("/api/v1/schools/{s}/timetable-plans")
+  Object plans(@PathVariable UUID s, @RequestParam(required = false) UUID termId) {
+    return timetable.plans(Actor.current(), s, termId);
+  }
+
+  @PutMapping("/api/v1/schools/{s}/timetable-plans/{p}/lessons/{lesson}")
+  Object replaceLesson(
+      @PathVariable UUID s,
+      @PathVariable UUID p,
+      @PathVariable UUID lesson,
+      @RequestBody TimetableService.LessonInput b,
+      @RequestHeader(value = "If-Match", required = false) String version,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return timetable.replaceLesson(Actor.current(), s, p, lesson, b, Api.version(version), key);
+  }
+
+  @PostMapping("/api/v1/schools/{s}/timetable-plans/{p}/lessons/{lesson}/remove")
+  Object removeLesson(
+      @PathVariable UUID s,
+      @PathVariable UUID p,
+      @PathVariable UUID lesson,
+      @RequestHeader(value = "If-Match", required = false) String version,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return timetable.removeLesson(Actor.current(), s, p, lesson, Api.version(version), key);
+  }
+
   @GetMapping("/api/v1/schools/{s}/timetable-plans/{p}/review")
   Object review(@PathVariable UUID s, @PathVariable UUID p) {
     return timetable.review(Actor.current(), s, p);
@@ -128,19 +154,23 @@ public class AcademicController {
   }
 
   @GetMapping("/api/v1/schools/{s}/teaching-assignments")
-  Object assignments(@PathVariable UUID s, @RequestParam(required = false) UUID classId) {
+  Object assignments(
+      @PathVariable UUID s,
+      @RequestParam(required = false) UUID classId,
+      @RequestParam(defaultValue = "false") boolean includeInactive) {
     var a = Actor.current();
     var c = a.school(s, "PRINCIPAL", "SCHOOL_OFFICE", "TEACHER");
     UUID teacher = "TEACHER".equals(c.role()) ? c.subjectId() : null;
     return Api.map(
         "items",
         school.db.queryForList(
-            "select t.id,t.class_id as \"classId\",t.subject_id as \"subjectId\",su.name as \"subjectName\",t.teacher_id as \"teacherId\",st.full_name as \"teacherName\",t.department,t.weekly_periods as \"weeklyPeriods\",t.version from teaching_assignments t join subjects su on su.id=t.subject_id join staff st on st.id=t.teacher_id where t.school_id=? and (?::uuid is null or t.class_id=?::uuid) and (?::uuid is null or t.teacher_id=?::uuid) order by su.name,t.id",
+            "select t.id,t.class_id as \"classId\",t.subject_id as \"subjectId\",su.name as \"subjectName\",t.teacher_id as \"teacherId\",st.full_name as \"teacherName\",t.department,t.required,t.choice_group as \"choiceGroup\",t.active,t.weekly_periods as \"weeklyPeriods\",t.version from teaching_assignments t join subjects su on su.id=t.subject_id join staff st on st.id=t.teacher_id where t.school_id=? and (?::uuid is null or t.class_id=?::uuid) and (?::uuid is null or t.teacher_id=?::uuid) and (? or t.active) order by su.name,t.id",
             s,
             classId,
             classId,
             teacher,
-            teacher),
+            teacher,
+            includeInactive && teacher == null),
         "hasMore",
         false);
   }
@@ -271,11 +301,12 @@ public class AcademicController {
     Actor.internalOnly("finance", "communication", "academics");
     if (b.guardianId() != null
         && school.db.queryForObject(
-                "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active",
+                "select count(*) from guardian_links where school_id=? and student_id=? and guardian_id=? and active and (?<>'finance' or payer_access)",
                 Integer.class,
                 b.schoolId(),
                 b.studentId(),
-                b.guardianId())
+                b.guardianId(),
+                Actor.internalCaller())
             == 0) throw Api.fail(404, "NOT_FOUND", "The child relationship is unavailable.");
     if (b.termId() != null)
       school.one("select id from terms where school_id=? and id=?", b.schoolId(), b.termId());
