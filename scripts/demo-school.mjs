@@ -31,6 +31,10 @@ export async function seedDemoSchool(options) {
       phone: '08070000001', role: 'PRINCIPAL', staffNumber: 'DEMO-ADMIN'});
     await d.account('admin', {name: 'Frontend Administrator Demo', role: 'PRINCIPAL',
       type: 'STAFF', subjectId: staff.id}, admin);
+    const office = await post('school-office', '/staff', {fullName: 'School Office Demo',
+      phone: '08070000007', role: 'SCHOOL_OFFICE', staffNumber: 'DEMO-OFFICE'});
+    await d.account('schoolOffice', {name: 'School Office Demo', role: 'SCHOOL_OFFICE',
+      type: 'STAFF', subjectId: office.id}, admin);
     const teachers = [];
     const teacherActors = [];
     for (const [i, fullName] of ['Ibrahim Demo', 'Bisi Demo'].entries()) {
