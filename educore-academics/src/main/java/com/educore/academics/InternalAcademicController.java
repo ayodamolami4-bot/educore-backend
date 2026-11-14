@@ -180,7 +180,7 @@ public class InternalAcademicController {
         || !Set.of("PRINCIPAL", "SCHOOL_OFFICE", "ACCOUNTS").contains(b.preferredRole()))
       throw Api.fail(422, "INVALID_STAFF_PRESET", "Choose a school staff preset.");
     return s.one(
-        "select id,staff_role as role,full_name as "fullName" from staff where school_id=? and active and staff_role in (?,'PRINCIPAL') order by case when staff_role=? then 0 else 1 end,id limit 1",
+        "select id,staff_role as role,full_name as \"fullName\" from staff where school_id=? and active and staff_role in (?,'PRINCIPAL') order by case when staff_role=? then 0 else 1 end,id limit 1",
         b.schoolId(),
         b.preferredRole(),
         b.preferredRole());
