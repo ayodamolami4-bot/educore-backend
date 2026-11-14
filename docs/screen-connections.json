@@ -2825,7 +2825,7 @@
         },
         {
           "method": "GET",
-          "path": "/schools/{school}/metadata"
+          "path": "/schools/{school}/complaints/metadata"
         }
       ],
       "notes": "Category determines permitted owner and scope. Upload private evidence only when its complaint resource can own it.",
