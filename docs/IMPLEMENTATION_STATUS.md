@@ -20,7 +20,7 @@
 | Fees | Immutable invoices, partial/manual/test payments, reviewed adjustments/refunds and PDFs; School Office fee-status summary, versioned Principal settlement settings/history, school checkout-attempt filters and preserved payer/settlement snapshots |
 | Reconciliation | Statement/provider settlement review, gross/fee/net differences, permanent school-bound references, historical subaccount selection, reviewed exceptions and finance overview |
 | Communication | School/class/department notices, child-linked parent/class-lead/office threads, current-participant checks and private attachments |
-| Complaints | Parent/walk-in/phone intake, category/owner limits, private notes, teaching-day response target, resolution/parent acceptance or review, visible history |
+| Complaints | Parent-only child-scoped category catalogue, parent/walk-in/phone intake, category/owner limits, private notes, teaching-day response target, resolution/parent acceptance or review, visible history |
 | Delivery | Leased SMTP/Expo workers, preference checks, retries/expiry, provider receipt handling, invalid-device suppression and truthful unconfigured states |
 | Imports/history | Reviewed CSV previews/mapping, row correction, asynchronous resume without repeating successes, verified sibling groups, teacher assignments, independent opening-balance approval, scoped exports and service-owned activity history |
 | Final administration controls | Provisioning status/retry and reviewed unapplied account repair; invitation history/replacement/revocation; versioned session/term edits, active-session preference, subjects and room catalogue |
