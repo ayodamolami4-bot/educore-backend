@@ -56,7 +56,7 @@ All paths below are relative to the base URL. Placeholder names stand for return
 | Accounts reconciliation | `/reconciliation/statements`, `/paystack-sync`, settlements, exceptions and overview | Settlement matching is separate from payment confirmation |
 | Notices | Notice draft/detail/edit, publish and archive | School, class or department audience; publication controls attachment visibility |
 | Parent/class-teacher/office conversations | `/threads`, contacts, messages, read and close actions | Child-linked current participants; former class teachers lose access |
-| Complaints | `/complaints`, replies, owner, status and history | Parent or authorised walk-in/phone intake; category and owner restrictions |
+| Complaints | `/complaints/metadata`, `/complaints`, replies, owner, status and history | Parent-only child-scoped category catalogue; parent or authorised walk-in/phone intake; category and owner restrictions |
 | Imports and exports | `/imports`, template/preview/row-correction/confirm/error CSV; `/invoices/opening-balances`; directory/report/invoice exports | Preview first; stable row references; successful rows are not imported twice |
 | Activity history | `/activity/academics`, `/activity/finance`, `/activity/communication`, `/activity/identity` | Each service owns its history; principal-only access/security and full communication history |
 
