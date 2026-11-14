@@ -187,6 +187,7 @@ POST,/schools/{school}/notices,communication,CommunicationWorkService.Notice,req
 GET,/schools/{school}/notices,communication,,,,"cursor, limit",educore-communication/src/main/java/com/educore/communication/CommunicationController.java
 POST,/schools/{school}/complaints,communication,CommunicationWorkService.Complaint,required,,,educore-communication/src/main/java/com/educore/communication/CommunicationController.java
 GET,/schools/{school}/complaints,communication,,,,"cursor, limit",educore-communication/src/main/java/com/educore/communication/CommunicationController.java
+GET,/schools/{school}/complaints/metadata,communication,,,,,educore-communication/src/main/java/com/educore/communication/CommunicationController.java
 GET,/schools/{school}/complaints/{caseId},communication,,,,,educore-communication/src/main/java/com/educore/communication/CommunicationController.java
 POST,/schools/{school}/complaints/{caseId}/replies,communication,CommunicationWorkService.Reply,required,required,,educore-communication/src/main/java/com/educore/communication/CommunicationController.java
 POST,/schools/{school}/complaints/{caseId}/close,communication,CommunicationController.Close,required,required,,educore-communication/src/main/java/com/educore/communication/CommunicationController.java
