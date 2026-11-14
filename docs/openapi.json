@@ -21377,6 +21377,58 @@
           }
         }
       }
+    },
+    "/schools/{school}/complaints/metadata": {
+      "get": {
+        "tags": [
+          "communication"
+        ],
+        "summary": "GET /schools/{school}/complaints/metadata",
+        "operationId": "get_schools_school_complaints_metadata",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "x-controller": "CommunicationController",
+        "x-source": "educore-communication/src/main/java/com/educore/communication/CommunicationController.java",
+        "responses": {
+          "422": {
+            "description": "Invalid request or business input.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "See API.md for permission, version, conflict and dependency errors.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "2XX": {
+            "description": "Successful operation. Asynchronous workflows can return 202; deletions can return 204. Follow API.md and the returned state."
+          }
+        }
+      }
     }
   },
   "components": {
