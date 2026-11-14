@@ -6,6 +6,11 @@ export async function communicationTests(u,f){
  const get=(path,token)=>call('GET',path,undefined,undefined,200,token);
  const assignments=(await get('/teaching-assignments?classId='+classA.id)).items,teacherId=assignments.find(x=>x.subjectId===english.id).teacherId,otherTeacherId=assignments.find(x=>x.subjectId!==english.id&&x.teacherId!==teacherId).teacherId;
  let classVersion=(await get('/classes/'+classA.id+'/workspace')).class.version;await call('PUT',`/classes/${classA.id}/attendance-teacher`,{teacherId},classVersion);
+ const parentContacts=await get('/threads/contacts?studentId='+children[0].id,parent.accessToken);
+ assert.equal(parentContacts.classTeacherId,teacherId);
+ assert.equal(typeof parentContacts.classTeacherName,'string');
+ assert.ok(parentContacts.classTeacherName.length>0);
+ const originalClassTeacherName=parentContacts.classTeacherName;
  const pdf=Buffer.from('%PDF-1.7\nSynthetic private communication attachment\n%%EOF');
  async function file(token,studentId,classId){const f=await call('POST','/files',{purpose:'COMMUNICATION',...(studentId?{studentId}:{}),...(classId?{classId}:{}),filename:'school-message.pdf',mediaType:'application/pdf',size:pdf.length,sha256:createHash('sha256').update(pdf).digest('hex')},undefined,200,token);const r=await fetch(`http://127.0.0.1:8080/api/v1/schools/${school}/files/${f.id}/content`,{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/octet-stream','If-Match':'"v1"'},body:pdf});assert.equal(r.status,200);return f;}
  const noticeFile=await file(admin.accessToken,undefined,classA.id);
@@ -20,6 +25,11 @@ export async function communicationTests(u,f){
  assert.equal((await get('/threads/'+thread.id,teacher.accessToken)).messages.length,1);await call('GET','/threads/'+thread.id,undefined,undefined,404,otherTeacher.accessToken);await call('GET','/files/'+parentFile.id,undefined,undefined,200,teacher.accessToken);
  let replied=await call('POST','/threads/'+thread.id+'/messages',{body:'The class teacher reviewed the synthetic question.',fileIds:[]},thread.version,200,teacher.accessToken);assert.equal(replied.messages.length,2);await call('PUT','/threads/'+thread.id+'/read',undefined,undefined,200,parent.accessToken);assert.equal((await get('/threads',teacher.accessToken)).items.length,1);
  classVersion=(await get('/classes/'+classA.id+'/workspace')).class.version;await call('PUT',`/classes/${classA.id}/attendance-teacher`,{teacherId:otherTeacherId},classVersion);
+ const updatedContacts=await get('/threads/contacts?studentId='+children[0].id,parent.accessToken);
+ assert.equal(updatedContacts.classTeacherId,otherTeacherId);
+ assert.equal(typeof updatedContacts.classTeacherName,'string');
+ assert.ok(updatedContacts.classTeacherName.length>0);
+ assert.notEqual(updatedContacts.classTeacherName,originalClassTeacherName);
  await call('GET','/threads/'+thread.id,undefined,undefined,404,teacher.accessToken);await call('GET','/files/'+parentFile.id,undefined,undefined,404,teacher.accessToken);
  const closed=await call('POST','/threads/'+thread.id+'/close',{reason:'Parent closed the previous class-teacher conversation after the handover'},replied.version,200,parent.accessToken);assert.equal(closed.state,'CLOSED');await call('POST','/threads/'+thread.id+'/messages',{body:'Attempt to write into a closed conversation'},closed.version,409,parent.accessToken);
  passed('parent conversations have scoped participants, duplicate-safe messages and protected attachments; a former class teacher immediately loses access after handover');
