@@ -690,6 +690,19 @@ public class CommunicationWorkService {
       throw fail(422, "INVALID_COMPLAINT_CATEGORY", "Choose a supported complaint category.");
   }
 
+  public Object complaintMetadata(Actor a, UUID school) {
+    var selected = a.school(school, "PARENT");
+    s.child(a, school, selected.childId());
+    return map(
+        "categories",
+        List.of(
+            map("code", "FEES", "label", "Fees and payments"),
+            map("code", "ATTENDANCE", "label", "Attendance"),
+            map("code", "ACADEMIC_RECORDS", "label", "Academic records"),
+            map("code", "STAFF_CONDUCT", "label", "Staff conduct"),
+            map("code", "GENERAL", "label", "Other school matters")));
+  }
+
   private boolean categoryRole(String role, String category) {
     return "PRINCIPAL".equals(role)
         || "ACCOUNTS".equals(role) && "FEES".equals(category)
