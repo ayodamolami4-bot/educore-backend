@@ -59,6 +59,11 @@ public class CommunicationController {
     return work.notices(Actor.current(), school, cursor, Api.pageSize(limit));
   }
 
+  @GetMapping("/api/v1/schools/{school}/complaints/metadata")
+  Object complaintMetadata(@PathVariable UUID school) {
+    return work.complaintMetadata(Actor.current(), school);
+  }
+
   @PostMapping("/api/v1/schools/{school}/complaints")
   Object complaint(
       @PathVariable UUID school,
