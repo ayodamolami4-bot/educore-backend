@@ -391,6 +391,8 @@ public class CommunicationWorkService {
       var teacher = staff(school, uuid(c.get("classTeacherId").toString()), null);
       result.put("classTeacherName", teacher.get("fullName"));
     }
+    var office = staff(school, null, "SCHOOL_OFFICE");
+    result.put("officeName", office.get("fullName"));
     return result;
   }
 
