@@ -385,7 +385,13 @@ public class CommunicationWorkService {
         && !a.context().subjectId().toString().equals(c.get("classTeacherId")))
       throw fail(
           404, "NOT_FOUND", "Only the current class teacher can open this parent's conversation.");
-    return c;
+
+    var result = new LinkedHashMap<String, Object>(c);
+    if (c.get("classTeacherId") != null) {
+      var teacher = staff(school, uuid(c.get("classTeacherId").toString()), null);
+      result.put("classTeacherName", teacher.get("fullName"));
+    }
+    return result;
   }
 
   public record ThreadInput(
