@@ -14,6 +14,7 @@ class GatewayTest {
     assertEquals("finance", GatewayController.route(school + "/invoices"));
     assertEquals("finance", GatewayController.route("/api/v1/webhooks/paystack"));
     assertEquals("communication", GatewayController.route(school + "/complaints"));
+    assertEquals("communication", GatewayController.route(school + "/complaints/metadata"));
     assertEquals("communication", GatewayController.route(school + "/delivery/notifications"));
     assertEquals("finance", GatewayController.route(school + "/reconciliation/reports/catalogue"));
     assertEquals("academics", GatewayController.route(school + "/school-reports/catalogue"));
