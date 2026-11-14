@@ -194,6 +194,7 @@ Protected requests use `Authorization: Bearer <accessToken>`. Commands retain th
 | GET | `/me/notifications/{notificationId}/delivery` | — | — | — | — |
 | POST | `/schools/{school}/notices` | CommunicationWorkService.Notice | required | — | — |
 | GET | `/schools/{school}/notices` | — | — | — | cursor, limit |
+| GET | `/schools/{school}/complaints/metadata` | — | — | — | — |
 | POST | `/schools/{school}/complaints` | CommunicationWorkService.Complaint | required | — | — |
 | GET | `/schools/{school}/complaints` | — | — | — | cursor, limit |
 | GET | `/schools/{school}/complaints/{caseId}` | — | — | — | — |
