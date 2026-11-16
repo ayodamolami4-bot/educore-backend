@@ -153,7 +153,6 @@ class PlatformSecurityTest {
           "http://127.0.0.1:8091",
           "http://127.0.0.1:8092",
           "http://127.0.0.1:8094",
-          8000L,
           new org.springframework.mock.env.MockEnvironment());
     }
 
