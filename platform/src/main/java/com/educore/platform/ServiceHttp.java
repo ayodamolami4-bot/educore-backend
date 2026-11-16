@@ -20,10 +20,10 @@ public final class ServiceHttp {
       @Value("${educore.identity-url:http://localhost:8091}") String identity,
       @Value("${educore.academics-url:http://localhost:8092}") String academics,
       @Value("${educore.communication-url:http://localhost:8094}") String communication,
-      @Value("${educore.service-read-timeout-ms:8000}") long readTimeoutMs,
       Environment environment) {
     var factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(3));
+    long readTimeoutMs = environment.getProperty("educore.service-read-timeout-ms", Long.class, 8000L);
     factory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
     this.http = RestClient.builder().requestFactory(factory).build();
     this.name = name;
