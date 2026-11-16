@@ -24,12 +24,15 @@ public class GatewayController {
           .connectTimeout(Duration.ofSeconds(3))
           .followRedirects(HttpClient.Redirect.NEVER)
           .build();
+  private final Duration upstreamTimeout;
 
   public GatewayController(
       @Value("${educore.identity-url}") String identity,
       @Value("${educore.academics-url}") String academics,
       @Value("${educore.finance-url}") String finance,
-      @Value("${educore.communication-url}") String communication) {
+      @Value("${educore.communication-url}") String communication,
+      @Value("${educore.upstream-timeout-ms:15000}") long upstreamTimeoutMs) {
+    upstreamTimeout = Duration.ofMillis(upstreamTimeoutMs);
     upstreams =
         Map.of(
             "identity",
@@ -119,8 +122,7 @@ public class GatewayController {
     } catch (IllegalArgumentException ex) {
       return problem(400, "INVALID_REQUEST", "The request URL is invalid.");
     }
-    HttpRequest.Builder builder =
-        HttpRequest.newBuilder(destination).timeout(Duration.ofSeconds(15));
+    HttpRequest.Builder builder = HttpRequest.newBuilder(destination).timeout(upstreamTimeout);
     for (String header :
         List.of(
             "Authorization",
